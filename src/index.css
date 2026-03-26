@@ -606,8 +606,13 @@ body {
 }
 
 .tab.active {
-  color: var(--color-text-primary);
+  color: var(--color-brand-10);
   font-weight: 500;
+}
+
+.tab.active .fa-icon,
+.tab.active > span {
+  color: var(--color-brand-10);
 }
 
 .tab.active::after {
