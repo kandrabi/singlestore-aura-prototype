@@ -2062,3 +2062,335 @@ body {
 .collapse-sidebar-btn .fa-icon {
   margin: -2px;
 }
+
+/* ===================== */
+/* Aura Side Panel */
+/* ===================== */
+.main-content.with-aura-panel {
+  transition: width 0.1s ease;
+}
+
+.aura-side-panel {
+  position: relative;
+  height: calc(100vh - 56px);
+  background: var(--color-white);
+  border-left: 1px solid var(--color-border-default);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.1s ease;
+}
+
+.aura-side-panel.fullscreen {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100% !important;
+  z-index: 100;
+}
+
+.aura-panel-resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+  background: transparent;
+  transition: background 0.2s;
+  z-index: 10;
+}
+
+.aura-panel-resize-handle:hover,
+.aura-panel-resize-handle:active {
+  background: var(--color-brand-8);
+}
+
+.aura-side-panel.fullscreen .aura-panel-resize-handle {
+  display: none;
+}
+
+.aura-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-default);
+  background: var(--color-bg-surface-2);
+  flex-shrink: 0;
+}
+
+.aura-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.aura-panel-title .fa-icon {
+  color: var(--color-brand-10);
+}
+
+.aura-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.aura-panel-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius-md);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.aura-panel-btn:hover {
+  background: var(--color-bg-surface-3);
+  color: var(--color-text-primary);
+}
+
+.aura-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.aura-panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.aura-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-bg-surface-brand) 0%, #f3e8ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.aura-empty-icon .fa-icon {
+  color: var(--color-brand-10);
+}
+
+.aura-panel-empty h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 8px 0;
+}
+
+.aura-panel-empty p {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.aura-suggested-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.aura-prompt-chip {
+  padding: 10px 14px;
+  border-radius: var(--border-radius-md);
+  border: 1px dashed var(--color-neutral-6);
+  background: var(--color-neutral-1);
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-11);
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.aura-prompt-chip:hover {
+  background: var(--color-bg-surface-brand);
+  border-color: var(--color-brand-8);
+  color: var(--color-brand-10);
+}
+
+.aura-panel-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.aura-message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aura-message.user {
+  align-items: flex-end;
+}
+
+.aura-user-bubble {
+  background: var(--color-bg-surface-3);
+  border-radius: var(--border-radius-md);
+  padding: 10px 14px;
+  max-width: 85%;
+}
+
+.aura-user-bubble p {
+  margin: 0;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+.aura-message-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.aura-message-sender {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-brand-10);
+}
+
+.aura-message-time {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.aura-message-text {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.aura-panel-input {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border-default);
+  background: var(--color-white);
+  flex-shrink: 0;
+}
+
+.aura-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--border-radius-lg);
+}
+
+.aura-input-container textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  resize: none;
+  line-height: 1.5;
+  background: transparent;
+}
+
+.aura-input-container textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.aura-input-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.aura-input-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.aura-agent-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-lg);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--color-icon-secondary);
+}
+
+.aura-agent-selector:hover {
+  background: var(--color-bg-surface-3);
+}
+
+.aura-agent-selector svg {
+  width: 14px;
+  height: 14px;
+}
+
+.aura-agent-dropdown-wrapper {
+  position: relative;
+}
+
+.aura-agent-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.aura-agent-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+.aura-agent-option:hover {
+  background: var(--color-bg-surface-3);
+}
+
+.aura-agent-option.selected {
+  background: var(--color-bg-surface-brand);
+  color: var(--color-brand-10);
+}
+
+.aura-agent-option .fa-icon:last-child {
+  margin-left: auto;
+}

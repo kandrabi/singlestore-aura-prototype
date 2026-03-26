@@ -107,6 +107,13 @@ const SUGGESTED_PROMPTS = [
   'Where am I spending the most compute and credits?'
 ]
 
+const MIGRATION_PROMPTS = [
+  'Migrate my PostgreSQL database to SingleStore',
+  'Help me set up CDC from MongoDB',
+  'What data sources can I connect?',
+  'Estimate migration time for my Oracle DB'
+]
+
 const CHAT_FLOW = [
   {
     type: 'agent',
@@ -210,13 +217,40 @@ function App() {
   const [expandedQueries, setExpandedQueries] = useState(true)
   const [expandedOptions, setExpandedOptions] = useState(true)
   const [sidebarExpanded, setSidebarExpanded] = useState(true)
+  const [auraPanelOpen, setAuraPanelOpen] = useState(false)
+  const [auraPanelWidth, setAuraPanelWidth] = useState(35)
+  const [auraPanelFullscreen, setAuraPanelFullscreen] = useState(false)
+  const [auraPanelMessages, setAuraPanelMessages] = useState([])
+  const [auraPanelInput, setAuraPanelInput] = useState('')
   const chatEndRef = useRef(null)
+  const auraChatEndRef = useRef(null)
 
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [chatMessages, isTyping])
+
+  useEffect(() => {
+    if (auraChatEndRef.current) {
+      auraChatEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [auraPanelMessages])
+
+  const handleOpenAuraPanel = () => {
+    setAuraPanelOpen(true)
+  }
+
+  const handleCloseAuraPanel = () => {
+    setAuraPanelOpen(false)
+    setAuraPanelFullscreen(false)
+  }
+
+  const handleAuraPanelSend = (text) => {
+    if (!text.trim()) return
+    setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text, timestamp: new Date() }])
+    setAuraPanelInput('')
+  }
 
   const handleAlertClick = (alert) => {
     if (alert.id === 1) {
@@ -260,7 +294,7 @@ function App() {
   const renderContent = () => {
     switch (view) {
       case 'load-data':
-        return <LoadDataView />
+        return <LoadDataView onOpenAura={handleOpenAuraPanel} />
       case 'portal':
         return (
           <PortalView
@@ -293,7 +327,7 @@ function App() {
 
   return (
     <>
-      <Header onLogoClick={() => setView('portal')} />
+      <Header onLogoClick={() => setView('portal')} onAskAura={handleOpenAuraPanel} />
       <div className="app-container">
         <Sidebar 
           onNavigate={setView} 
@@ -301,11 +335,26 @@ function App() {
           isExpanded={sidebarExpanded}
           onToggleExpand={() => setSidebarExpanded(!sidebarExpanded)}
         />
-        <div className="main-content">
+        <div className={`main-content ${auraPanelOpen && !auraPanelFullscreen ? 'with-aura-panel' : ''}`} style={auraPanelOpen && !auraPanelFullscreen ? { width: `${100 - auraPanelWidth}%` } : {}}>
           <div className="content-area">
             {renderContent()}
           </div>
         </div>
+        {auraPanelOpen && (
+          <AuraSidePanel
+            isOpen={auraPanelOpen}
+            isFullscreen={auraPanelFullscreen}
+            width={auraPanelWidth}
+            onClose={handleCloseAuraPanel}
+            onToggleFullscreen={() => setAuraPanelFullscreen(!auraPanelFullscreen)}
+            onWidthChange={setAuraPanelWidth}
+            messages={auraPanelMessages}
+            inputValue={auraPanelInput}
+            setInputValue={setAuraPanelInput}
+            onSend={handleAuraPanelSend}
+            chatEndRef={auraChatEndRef}
+          />
+        )}
       </div>
     </>
   )
@@ -451,7 +500,7 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
   )
 }
 
-function LoadDataView() {
+function LoadDataView({ onOpenAura }) {
   const [searchValue, setSearchValue] = useState('')
 
   return (
@@ -484,7 +533,7 @@ function LoadDataView() {
             <p className="ai-migration-description">
               Let FlowBot AI handle your end-to-end migration from Oracle, MySQL, PostgreSQL, and more. Automatic schema translation, optimal configuration, and real-time validation.
             </p>
-            <button className="ai-migration-btn">
+            <button className="ai-migration-btn" onClick={onOpenAura}>
               <IconFA name="sparkles" size={14} />
               <span>Migrate with AI</span>
             </button>
@@ -614,7 +663,7 @@ function DataSourceLogo({ name }) {
   }
 }
 
-function Header({ onLogoClick }) {
+function Header({ onLogoClick, onAskAura }) {
   return (
     <header className="header">
       <div className="header-left">
@@ -638,7 +687,7 @@ function Header({ onLogoClick }) {
           <UserPlusIcon />
         </button>
         <div className="header-divider" />
-        <button className="header-btn ask-aura">
+        <button className="header-btn ask-aura" onClick={onAskAura}>
           <SparklesIcon />
           <span>Ask Aura</span>
         </button>
@@ -1162,6 +1211,9 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'xmark': '\uf00d',
     'ellipsis-vertical': '\uf142',
     'arrow-up-right-from-square': '\uf08e',
+    'expand': '\uf065',
+    'compress': '\uf066',
+    'bolt': '\uf0e7',
   }
   
   const weightClass = weight === 'solid' ? 'fa-solid' : weight === 'light' ? 'fa-light' : 'fa-regular'
@@ -1294,6 +1346,193 @@ function SpinnerIcon() {
 
 function CheckIcon() {
   return <IconFA name="check" size={14} weight="solid" />
+}
+
+const AURA_AGENTS = [
+  { id: 'aura', name: 'Aura Agent', icon: 'sparkles' },
+  { id: 'data-migration', name: 'Data Migration Agent', icon: 'database' },
+  { id: 'query-tuning', name: 'Query Tuning Agent', icon: 'chart-line' },
+  { id: 'support', name: 'Support Agent', icon: 'circle-question' },
+  { id: 'observability', name: 'Observability Agent', icon: 'chart-line' },
+  { id: 'incident', name: 'Incident Agent', icon: 'warning' },
+]
+
+function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, chatEndRef }) {
+  const [isResizing, setIsResizing] = useState(false)
+  const [selectedAgent, setSelectedAgent] = useState(AURA_AGENTS[0])
+  const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
+  const panelRef = useRef(null)
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return
+      const windowWidth = window.innerWidth
+      const newWidth = ((windowWidth - e.clientX) / windowWidth) * 100
+      if (newWidth >= 25 && newWidth <= 70) {
+        onWidthChange(newWidth)
+      }
+    }
+
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isResizing, onWidthChange])
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setAgentDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      onSend(inputValue)
+    }
+  }
+
+  const handleAgentSelect = (agent) => {
+    setSelectedAgent(agent)
+    setAgentDropdownOpen(false)
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div 
+      ref={panelRef}
+      className={`aura-side-panel ${isFullscreen ? 'fullscreen' : ''}`}
+      style={!isFullscreen ? { width: `${width}%` } : {}}
+    >
+      <div 
+        className="aura-panel-resize-handle"
+        onMouseDown={() => setIsResizing(true)}
+      />
+      <div className="aura-panel-header">
+        <div className="aura-panel-title">
+          <IconFA name="sparkles" size={16} />
+          <span>Ask Aura</span>
+        </div>
+        <div className="aura-panel-actions">
+          <button className="aura-panel-btn" onClick={onToggleFullscreen} title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+            <IconFA name={isFullscreen ? 'compress' : 'expand'} size={14} />
+          </button>
+          <button className="aura-panel-btn" onClick={onClose} title="Close">
+            <IconFA name="xmark" size={14} />
+          </button>
+        </div>
+      </div>
+
+      <div className="aura-panel-content">
+        {messages.length === 0 ? (
+          <div className="aura-panel-empty">
+            <div className="aura-empty-icon">
+              <IconFA name="sparkles" size={32} />
+            </div>
+            <h3>AI-Powered Migration Assistant</h3>
+            <p>I can help you migrate data from PostgreSQL, MySQL, Oracle, MongoDB, and more to SingleStore.</p>
+            <div className="aura-suggested-prompts">
+              {MIGRATION_PROMPTS.map((prompt, i) => (
+                <button 
+                  key={i} 
+                  className="aura-prompt-chip"
+                  onClick={() => {
+                    setInputValue(prompt)
+                  }}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="aura-panel-messages">
+            {messages.map((message) => (
+              <div key={message.id} className={`aura-message ${message.type}`}>
+                {message.type === 'user' ? (
+                  <div className="aura-user-bubble">
+                    <p>{message.text}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="aura-message-header">
+                      <span className="aura-message-sender">Aura</span>
+                      <span className="dot" />
+                      <span className="aura-message-time">{formatTime(message.timestamp)}</span>
+                    </div>
+                    <p className="aura-message-text">{message.text}</p>
+                  </>
+                )}
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+        )}
+      </div>
+
+      <div className="aura-panel-input">
+        <div className="aura-input-container">
+          <textarea
+            placeholder="Ask about data migration..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={2}
+          />
+          <div className="aura-input-controls">
+            <div className="aura-input-actions">
+              <button className="icon-btn">
+                <PlusIcon />
+              </button>
+              <div className="aura-agent-dropdown-wrapper" ref={dropdownRef}>
+                <button 
+                  className="aura-agent-selector"
+                  onClick={() => setAgentDropdownOpen(!agentDropdownOpen)}
+                >
+                  <IconFA name={selectedAgent.icon} size={14} />
+                  <span>{selectedAgent.name}</span>
+                  <ChevronDownIcon className="chevron" />
+                </button>
+                {agentDropdownOpen && (
+                  <div className="aura-agent-dropdown">
+                    {AURA_AGENTS.map((agent) => (
+                      <button
+                        key={agent.id}
+                        className={`aura-agent-option ${selectedAgent.id === agent.id ? 'selected' : ''}`}
+                        onClick={() => handleAgentSelect(agent)}
+                      >
+                        <IconFA name={agent.icon} size={14} />
+                        <span>{agent.name}</span>
+                        {selectedAgent.id === agent.id && <IconFA name="check" size={12} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <button className="send-btn" disabled={!inputValue.trim()} onClick={() => onSend(inputValue)}>
+              <SendIcon />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default App
