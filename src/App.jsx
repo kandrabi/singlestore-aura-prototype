@@ -124,6 +124,220 @@ const MIGRATION_PROMPTS = [
   'Estimate migration time for my Oracle DB'
 ]
 
+const MIGRATION_CHAT_FLOW = [
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Hello! I am your Data Migration Agent, here to help you migrate data to SingleStore.' },
+        { type: 'text', content: 'I can help you migrate from PostgreSQL, MySQL, Oracle, MongoDB, and more.' }
+      ],
+      connections: [
+        { name: 'PostgreSQL Production', db: 'ecommerce_core', tables: '50 tables', url: 'mcp.internal.acmecorp.com/postgres-prod-cluster' },
+        { name: 'MySQL Analytics', db: 'analytics_warehouse', tables: '32 tables', url: 'mcp.internal.acmecorp.com/mysql-analytics' }
+      ],
+      actions: ['Use existing connection', 'Add new connection']
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Connecting to MCP server...',
+      url: 'https://mcp.internal.acmecorp.com/postgres-prod-cluster'
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'mixed', content: '', bold: 'Secure connection to PostgreSQL established.', after: '' },
+        { type: 'text', content: '→ Introspecting database...' }
+      ]
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Introspection complete. Here is the profile of your source database:' }
+      ],
+      dbProfile: {
+        title: 'Database Profile',
+        stats: [
+          { label: 'Total Data Size:', value: '500 GB' },
+          { label: 'Table Count:', value: '50 tables' },
+          { label: 'Source Database:', value: 'ecommerce_core' }
+        ]
+      },
+      warnings: [
+        { icon: '⚠️', text: 'Data Issue: PostgreSQL UUID types will map to VARCHAR(36) in SingleStore. Consider using BINARY(16) for better performance.' },
+        { icon: '⚠️', text: 'System Constraint: You have 3 tables exceeding 50GB. These will require XL Ingest for optimal performance.' }
+      ],
+      actions: ['Generate schema transformation plan']
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Analyzing query patterns...',
+      steps: [
+        '✓ Parsing 5 analytical queries',
+        '✓ Identifying join patterns and filter columns',
+        '✓ Calculating optimal shard keys'
+      ]
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Schema translation complete. Here is your transformation summary:' }
+      ],
+      transformationSummary: {
+        title: 'Transformation Summary',
+        stats: [
+          { label: 'Analyzed:', value: '50 tables' },
+          { label: 'Transformations applied:', value: '120 (mapped types, stripped FKs, selected shard keys)' },
+          { label: 'Confidence Level:', value: '95%' }
+        ]
+      },
+      warnings: [
+        { icon: '⚠️', text: 'Action Required: 4 tables heavily utilize JSON columns. Review the generated schema for these tables.' }
+      ],
+      reviewItems: [
+        { name: 'products', reason: 'Heavy JSON usage detected', status: 'pending' },
+        { name: 'reviews', reason: 'Complex JSON schema with nested arrays', status: 'pending' },
+        { name: 'cart_items', reason: 'JSON column with high cardinality keys', status: 'pending' },
+        { name: 'audit_logs', reason: 'Flexible schema with variable JSON keys', status: 'pending' }
+      ],
+      actions: ['Approve all & continue']
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'mixed', content: '✓ All ', bold: '4 flagged tables', after: ' have been reviewed and approved.' },
+        { type: 'text', content: 'All generated DDL has been validated against the SingleStore schema.' },
+        { type: 'text', content: 'Your schema is 100% ready. Shall we proceed with table selection?' }
+      ],
+      actions: ['Select tables to migrate']
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Great. I will configure standard Flow Ingest for the smaller tables and XL Ingest for the 3 large tables.' },
+        { type: 'text', content: 'Please review the selected tables below:' }
+      ],
+      tableSelection: {
+        title: 'Table Selection',
+        tables: [
+          { name: 'customers', rows: '2.3M rows', size: '1.2 GB' },
+          { name: 'orders', rows: '12.5M rows', size: '8.4 GB' },
+          { name: 'order_items', rows: '45.8M rows', size: '28.3 GB', xlIngest: true },
+          { name: 'products', rows: '500K rows', size: '245 MB' },
+          { name: 'inventory_logs', rows: '78.2M rows', size: '52.1 GB', xlIngest: true }
+        ],
+        totalSelected: '50 of 50 tables selected'
+      },
+      actions: ['Confirm Selection (50 Tables)']
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Schema is confirmed.' },
+        { type: 'text', content: 'Now we need to provision the underlying Flow infrastructure.' },
+        { type: 'mixed', content: 'Based on your 500GB initial load, I recommend ', bold: 'F2 instance size', after: '.' }
+      ],
+      infoBox: {
+        title: 'Why F2?',
+        items: [
+          'An F1 instance would bottleneck your initial snapshot load',
+          'An F4 instance would be over-provisioned for this workload',
+          'F2 provides optimal throughput for 500GB with room to scale'
+        ]
+      },
+      actions: ['Provision F2 instance (Recommended)', 'Choose different size']
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Provisioning F2 Flow instance...'
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'mixed', content: '', bold: '✓ Infrastructure ready.', after: '' }
+      ],
+      provisionedResources: {
+        title: 'Provisioned Resources',
+        stats: [
+          { label: 'Destination:', value: 'Workspace-Group-Prod' },
+          { label: 'Compute:', value: 'Flow Instance (Size: F2)' },
+          { label: 'Strategy:', value: 'Standard + XL Ingest' }
+        ]
+      },
+      actions: ['Configure CDC', 'Skip CDC for now']
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Your Flow pipeline is fully configured for real-time sync.' }
+      ],
+      warningCard: {
+        icon: '⚠️',
+        title: 'Disclaimer: AI can make mistakes',
+        text: 'Validate schemas and migration results in non-production environments first.'
+      },
+      actions: ['Execute migration', 'Review configuration']
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Executing migration pipeline...',
+      steps: [
+        '✓ Creating tables in SingleStore',
+        '✓ Configuring Flow Ingest pipeline',
+        '→ Loading data from source...'
+      ]
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      success: true,
+      title: 'Migration complete! 🎉',
+      text: 'I verified that the source and destination row counts match.',
+      migrationStats: {
+        stats: [
+          { label: 'Tables migrated:', value: '50 / 50' },
+          { label: 'Total rows:', value: '142,845,721' },
+          { label: 'Source count:', value: '142,845,721' },
+          { label: 'Destination count:', value: '142,845,721 ✓' },
+          { label: 'Data volume:', value: '~140 GB' },
+          { label: 'Duration:', value: '14m 28s' }
+        ]
+      },
+      followUp: 'I notice that some of your complex analytical queries could benefit from optimization. Would you like me to analyze them?',
+      actions: ['Optimize Queries', 'No thanks']
+    }
+  }
+]
+
 const CHAT_FLOW = [
   {
     type: 'agent',
@@ -232,6 +446,8 @@ function App() {
   const [auraPanelFullscreen, setAuraPanelFullscreen] = useState(false)
   const [auraPanelMessages, setAuraPanelMessages] = useState([])
   const [auraPanelInput, setAuraPanelInput] = useState('')
+  const [migrationFlowIndex, setMigrationFlowIndex] = useState(0)
+  const [isAuraTyping, setIsAuraTyping] = useState(false)
   const chatEndRef = useRef(null)
   const auraChatEndRef = useRef(null)
 
@@ -256,10 +472,28 @@ function App() {
     setAuraPanelFullscreen(false)
   }
 
+  const addNextMigrationMessage = (index) => {
+    if (index >= MIGRATION_CHAT_FLOW.length) return
+    setIsAuraTyping(true)
+    setTimeout(() => {
+      setIsAuraTyping(false)
+      setAuraPanelMessages(prev => [...prev, { ...MIGRATION_CHAT_FLOW[index], id: Date.now(), timestamp: new Date() }])
+      setMigrationFlowIndex(index + 1)
+    }, 1000)
+  }
+
   const handleAuraPanelSend = (text) => {
     if (!text.trim()) return
     setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text, timestamp: new Date() }])
     setAuraPanelInput('')
+    const nextIndex = auraPanelMessages.length === 0 ? 0 : migrationFlowIndex
+    setTimeout(() => addNextMigrationMessage(nextIndex), 500)
+  }
+
+  const handleAuraAction = (action) => {
+    const actionText = typeof action === 'string' ? action : action.text
+    setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text: actionText, timestamp: new Date() }])
+    setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
   }
 
   const handleAlertClick = (alert) => {
@@ -362,6 +596,8 @@ function App() {
             inputValue={auraPanelInput}
             setInputValue={setAuraPanelInput}
             onSend={handleAuraPanelSend}
+            onAction={handleAuraAction}
+            isTyping={isAuraTyping}
             chatEndRef={auraChatEndRef}
           />
         )}
@@ -1339,9 +1575,9 @@ const AURA_AGENTS = [
   { id: 'incident', name: 'Incident Agent', icon: 'warning' },
 ]
 
-function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, chatEndRef }) {
+function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, isTyping, chatEndRef }) {
   const [isResizing, setIsResizing] = useState(false)
-  const [selectedAgent, setSelectedAgent] = useState(AURA_AGENTS[0])
+  const [selectedAgent, setSelectedAgent] = useState(AURA_AGENTS[1])
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
   const panelRef = useRef(null)
   const dropdownRef = useRef(null)
@@ -1395,6 +1631,212 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
 
   if (!isOpen) return null
 
+  const renderMigrationMessage = (message) => {
+    const { content } = message
+
+    return (
+      <div className="aura-message-content">
+        {content.text && content.text.map((t, i) => (
+          <p key={i} className="aura-message-text">
+            {t.type === 'bold' && <strong>{t.content}</strong>}
+            {t.type === 'text' && t.content}
+            {t.type === 'mixed' && (
+              <>{t.content}<strong>{t.bold}</strong>{t.after}</>
+            )}
+          </p>
+        ))}
+
+        {content.progress && (
+          <div className="aura-progress-card">
+            <div className="aura-progress-content">
+              <div className="aura-progress-icon">
+                <SpinnerIcon />
+              </div>
+              <span className="aura-progress-text">{content.text}</span>
+            </div>
+            {content.url && <span className="aura-progress-url">{content.url}</span>}
+            {content.steps && (
+              <div className="aura-progress-steps">
+                {content.steps.map((step, i) => (
+                  <div key={i} className="aura-progress-step">{step}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {content.connections && (
+          <div className="aura-connections-list">
+            {content.connections.map((conn, i) => (
+              <div key={i} className="aura-connection-card">
+                <div className="aura-connection-icon">
+                  <IconFA name="database" size={16} />
+                </div>
+                <div className="aura-connection-info">
+                  <span className="aura-connection-name">{conn.name}</span>
+                  <span className="aura-connection-db">{conn.db} • {conn.tables}</span>
+                  <span className="aura-connection-url">{conn.url}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {content.dbProfile && (
+          <div className="aura-info-card">
+            <div className="aura-info-card-header">{content.dbProfile.title}</div>
+            <div className="aura-info-card-stats">
+              {content.dbProfile.stats.map((stat, i) => (
+                <div key={i} className="aura-info-stat">
+                  <span className="aura-info-stat-label">{stat.label}</span>
+                  <span className="aura-info-stat-value">{stat.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.transformationSummary && (
+          <div className="aura-info-card">
+            <div className="aura-info-card-header">{content.transformationSummary.title}</div>
+            <div className="aura-info-card-stats">
+              {content.transformationSummary.stats.map((stat, i) => (
+                <div key={i} className="aura-info-stat">
+                  <span className="aura-info-stat-label">{stat.label}</span>
+                  <span className="aura-info-stat-value">{stat.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.provisionedResources && (
+          <div className="aura-info-card">
+            <div className="aura-info-card-header">{content.provisionedResources.title}</div>
+            <div className="aura-info-card-stats">
+              {content.provisionedResources.stats.map((stat, i) => (
+                <div key={i} className="aura-info-stat">
+                  <span className="aura-info-stat-label">{stat.label}</span>
+                  <span className="aura-info-stat-value">{stat.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.warnings && (
+          <div className="aura-warnings">
+            {content.warnings.map((warning, i) => (
+              <div key={i} className="aura-warning-item">
+                <span className="aura-warning-icon">{warning.icon}</span>
+                <span className="aura-warning-text">{warning.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {content.reviewItems && (
+          <div className="aura-review-widget">
+            <div className="aura-review-header">
+              <IconFA name="warning" size={14} />
+              <span>Manual Review Required</span>
+              <span className="aura-review-count">4 / 4 pending</span>
+            </div>
+            <div className="aura-review-list">
+              {content.reviewItems.map((item, i) => (
+                <div key={i} className="aura-review-item">
+                  <IconFA name="database" size={14} />
+                  <div className="aura-review-item-info">
+                    <span className="aura-review-item-name">{item.name}</span>
+                    <span className="aura-review-item-reason">{item.reason}</span>
+                  </div>
+                  <span className="aura-review-item-status">Pending</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.tableSelection && (
+          <div className="aura-table-selection">
+            <div className="aura-table-selection-header">
+              <IconFA name="database" size={14} />
+              <span>{content.tableSelection.title}</span>
+            </div>
+            <div className="aura-table-list">
+              {content.tableSelection.tables.map((table, i) => (
+                <div key={i} className="aura-table-item">
+                  <IconFA name="check" size={12} />
+                  <div className="aura-table-item-info">
+                    <span className="aura-table-item-name">
+                      {table.name}
+                      {table.xlIngest && <span className="aura-xl-badge">XL Ingest</span>}
+                    </span>
+                    <span className="aura-table-item-size">{table.rows} • {table.size}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="aura-table-selection-footer">{content.tableSelection.totalSelected}</div>
+          </div>
+        )}
+
+        {content.infoBox && (
+          <div className="aura-info-box">
+            <div className="aura-info-box-title">{content.infoBox.title}</div>
+            <ul className="aura-info-box-list">
+              {content.infoBox.items.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {content.warningCard && (
+          <div className="aura-warning-card">
+            <span className="aura-warning-card-icon">{content.warningCard.icon}</span>
+            <div className="aura-warning-card-content">
+              <span className="aura-warning-card-title">{content.warningCard.title}</span>
+              <span className="aura-warning-card-text">{content.warningCard.text}</span>
+            </div>
+          </div>
+        )}
+
+        {content.success && (
+          <div className="aura-success-header">
+            <IconFA name="check" size={18} weight="solid" />
+            <span>{content.title}</span>
+          </div>
+        )}
+
+        {content.migrationStats && (
+          <div className="aura-migration-stats">
+            {content.migrationStats.stats.map((stat, i) => (
+              <div key={i} className="aura-migration-stat">
+                <span className="aura-migration-stat-label">{stat.label}</span>
+                <span className="aura-migration-stat-value">{stat.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {content.followUp && (
+          <p className="aura-message-text aura-followup">{content.followUp}</p>
+        )}
+
+        {content.actions && !content.progress && (
+          <div className="aura-action-buttons">
+            {content.actions.map((action, i) => (
+              <button key={i} className="aura-action-btn" onClick={() => onAction(action)}>
+                {action}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div 
       ref={panelRef}
@@ -1421,7 +1863,7 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
       </div>
 
       <div className="aura-panel-content">
-        {messages.length === 0 ? (
+        {messages.length === 0 && !isTyping ? (
           <div className="aura-panel-empty">
             <div className="aura-empty-icon">
               <IconFA name="sparkles" size={32} />
@@ -1453,15 +1895,29 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
                 ) : (
                   <>
                     <div className="aura-message-header">
-                      <span className="aura-message-sender">Aura</span>
+                      <span className="aura-message-sender">Data Migration Agent</span>
                       <span className="dot" />
                       <span className="aura-message-time">{formatTime(message.timestamp)}</span>
                     </div>
-                    <p className="aura-message-text">{message.text}</p>
+                    {renderMigrationMessage(message)}
                   </>
                 )}
               </div>
             ))}
+            {isTyping && (
+              <div className="aura-message">
+                <div className="aura-message-header">
+                  <span className="aura-message-sender">Data Migration Agent</span>
+                  <span className="dot" />
+                  <span className="aura-message-time">{formatTime(new Date())}</span>
+                </div>
+                <div className="typing-indicator">
+                  <div className="typing-dot" />
+                  <div className="typing-dot" />
+                  <div className="typing-dot" />
+                </div>
+              </div>
+            )}
             <div ref={chatEndRef} />
           </div>
         )}
