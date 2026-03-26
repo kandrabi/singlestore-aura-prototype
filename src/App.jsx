@@ -1,6 +1,39 @@
 import { useState, useRef, useEffect } from 'react'
 import './index.css'
 
+const DATA_SOURCES = [
+  { id: 'load-file', name: 'Load file', description: 'Load your local files into SingleStore', icon: 'file-arrow-up', hasPreview: false },
+  { id: 'mongodb', name: 'MongoDB', description: 'Load your MongoDB data into SingleStore using CDC Pipelines', icon: 'mongodb', hasPreview: false },
+  { id: 's3', name: 'Amazon S3', description: 'Load your S3 data into SingleStore', icon: 's3', hasPreview: false },
+  { id: 'mysql', name: 'MySQL', description: 'Load your MySQL data into SingleStore using Flow', icon: 'mysql', hasPreview: true, suffix: 'by Flow' },
+  { id: 'oracle', name: 'Oracle', description: 'Load your Oracle data into SingleStore using Flow', icon: 'oracle', hasPreview: true, suffix: 'by Flow' },
+  { id: 'postgresql', name: 'PostgreSQL', description: 'Load your PostgreSQL data into SingleStore using Flow', icon: 'postgresql', hasPreview: true, suffix: 'by Flow' },
+  { id: 'sqlserver', name: 'SQL Server', description: 'Load your SQL Server data into SingleStore using Flow', icon: 'sqlserver', hasPreview: true, suffix: 'by Flow' },
+  { id: 'snowflake', name: 'Snowflake', description: 'Load your Snowflake data into SingleStore using Flow', icon: 'snowflake', hasPreview: true, suffix: 'by Flow' },
+]
+
+const SIDEBAR_NAV_ITEMS = [
+  { id: 'home', icon: 'home', label: 'Home' },
+  { id: 'workspaces', icon: 'cloud', label: 'Workspaces' },
+  { id: 'databases', icon: 'database', label: 'Databases' },
+  { 
+    id: 'ingestion', 
+    icon: 'arrow-down-to-bracket', 
+    label: 'Ingestion',
+    expanded: true,
+    children: [
+      { id: 'load-data', label: 'Load Data', active: true },
+      { id: 'pipelines', label: 'Pipelines' },
+      { id: 'flow', label: 'Flow', badge: 'Preview' },
+    ]
+  },
+  { id: 'editor', icon: 'rectangle-terminal', label: 'Editor' },
+  { id: 'ai', icon: 'sparkles', label: 'AI' },
+  { id: 'container-services', icon: 'layer-group', label: 'Container Services' },
+  { id: 'monitoring', icon: 'chart-line', label: 'Monitoring' },
+  { id: 'configuration', icon: 'cog', label: 'Configuration' },
+]
+
 function TypedText({ children, speed = 12, onComplete }) {
   const [displayedText, setDisplayedText] = useState('')
   const text = typeof children === 'string' ? children : ''
@@ -167,7 +200,7 @@ const USER_MESSAGES = [
 ]
 
 function App() {
-  const [view, setView] = useState('portal')
+  const [view, setView] = useState('load-data')
   const [activeTab, setActiveTab] = useState('alerts')
   const [inputValue, setInputValue] = useState('')
   const [chatMessages, setChatMessages] = useState([])
@@ -176,6 +209,7 @@ function App() {
   const [isTyping, setIsTyping] = useState(false)
   const [expandedQueries, setExpandedQueries] = useState(true)
   const [expandedOptions, setExpandedOptions] = useState(true)
+  const [sidebarExpanded, setSidebarExpanded] = useState(true)
   const chatEndRef = useRef(null)
 
   useEffect(() => {
@@ -223,35 +257,53 @@ function App() {
     }
   }
 
+  const renderContent = () => {
+    switch (view) {
+      case 'load-data':
+        return <LoadDataView />
+      case 'portal':
+        return (
+          <PortalView
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            inputValue={inputValue}
+            setInputValue={setInputValue}
+            onAlertClick={handleAlertClick}
+          />
+        )
+      case 'chat':
+        return (
+          <ChatView
+            messages={chatMessages}
+            inputValue={inputValue}
+            setInputValue={setInputValue}
+            isTyping={isTyping}
+            onAction={handleAction}
+            expandedQueries={expandedQueries}
+            setExpandedQueries={setExpandedQueries}
+            expandedOptions={expandedOptions}
+            setExpandedOptions={setExpandedOptions}
+            chatEndRef={chatEndRef}
+          />
+        )
+      default:
+        return null
+    }
+  }
+
   return (
     <>
-      <Header />
+      <Header onLogoClick={() => setView('portal')} />
       <div className="app-container">
-        <Sidebar />
+        <Sidebar 
+          onNavigate={setView} 
+          currentView={view}
+          isExpanded={sidebarExpanded}
+          onToggleExpand={() => setSidebarExpanded(!sidebarExpanded)}
+        />
         <div className="main-content">
           <div className="content-area">
-          {view === 'portal' ? (
-            <PortalView
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              inputValue={inputValue}
-              setInputValue={setInputValue}
-              onAlertClick={handleAlertClick}
-            />
-          ) : (
-            <ChatView
-              messages={chatMessages}
-              inputValue={inputValue}
-              setInputValue={setInputValue}
-              isTyping={isTyping}
-              onAction={handleAction}
-              expandedQueries={expandedQueries}
-              setExpandedQueries={setExpandedQueries}
-              expandedOptions={expandedOptions}
-              setExpandedOptions={setExpandedOptions}
-              chatEndRef={chatEndRef}
-            />
-          )}
+            {renderContent()}
           </div>
         </div>
       </div>
@@ -259,52 +311,314 @@ function App() {
   )
 }
 
-function Sidebar() {
-  const navItems = [
-    { icon: 'home', active: true },
-    { icon: 'database' },
-    { icon: 'arrow-down-to-bracket' },
-    { icon: 'rectangle-terminal' },
-    { icon: 'sparkles' },
-    { icon: 'layer-group' },
-    { icon: 'chart-line' },
-    { icon: 'cog' }
-  ]
-  
-  return (
-    <div className="sidebar">
-      <div className="sidebar-top">
-        <button className="sidebar-create-btn">
-          <PlusIcon />
-        </button>
-        <div className="sidebar-items">
-          {navItems.map((item, i) => (
-            <button key={i} className={`sidebar-item ${item.active ? 'active' : ''}`}>
-              <SidebarIcon name={item.icon} active={item.active} />
-            </button>
-          ))}
+function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
+  const [expandedItems, setExpandedItems] = useState(['ingestion'])
+
+  const toggleExpand = (id) => {
+    setExpandedItems(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    )
+  }
+
+  const getActiveState = (item) => {
+    if (item.id === 'home' && currentView === 'portal') return true
+    if (item.id === 'load-data' && currentView === 'load-data') return true
+    if (item.children) {
+      return item.children.some(child => 
+        (child.id === 'load-data' && currentView === 'load-data')
+      )
+    }
+    return false
+  }
+
+  const handleNavClick = (item) => {
+    if (item.children && isExpanded) {
+      toggleExpand(item.id)
+    } else if (item.id === 'home') {
+      onNavigate('portal')
+    } else if (item.id === 'ingestion' || item.id === 'load-data') {
+      onNavigate('load-data')
+    }
+  }
+
+  const handleChildClick = (child) => {
+    if (child.id === 'load-data') {
+      onNavigate('load-data')
+    }
+  }
+
+  if (!isExpanded) {
+    return (
+      <div className="sidebar">
+        <div className="sidebar-top">
+          <button className="sidebar-create-btn" title="Create New">
+            <PlusIcon />
+          </button>
+          <div className="sidebar-items">
+            {SIDEBAR_NAV_ITEMS.map((item) => (
+              <button 
+                key={item.id} 
+                className={`sidebar-item ${getActiveState(item) ? 'active' : ''}`}
+                onClick={() => handleNavClick(item)}
+                title={item.label}
+              >
+                <SidebarIcon name={item.icon} active={getActiveState(item)} />
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="sidebar-bottom">
+          <button className="sidebar-upgrade-btn-collapsed" title="Upgrade">
+            <IconFA name="bolt" size={14} />
+          </button>
+          <div className="sidebar-user-collapsed" title="Syed Kabeer Andrabi">
+            <span>SA</span>
+          </div>
+          <button className="sidebar-item" onClick={onToggleExpand} title="Expand">
+            <SidebarIcon name="sidebar" />
+          </button>
         </div>
       </div>
-      <div className="sidebar-bottom">
-        <button className="sidebar-create-btn">
-          <SidebarIcon name="laptop-code" />
+    )
+  }
+
+  return (
+    <div className="expanded-sidebar">
+      <div className="expanded-sidebar-top">
+        <button className="expanded-sidebar-create-btn">
+          <PlusIcon />
+          <span>Create New</span>
         </button>
-        <button className="sidebar-item">
-          <SidebarIcon name="sidebar" />
+        
+        <nav className="expanded-sidebar-nav">
+          {SIDEBAR_NAV_ITEMS.map((item) => (
+            <div key={item.id} className="nav-item-wrapper">
+              <button 
+                className={`expanded-nav-item ${getActiveState(item) ? 'active' : ''} ${item.children && expandedItems.includes(item.id) ? 'expanded' : ''}`}
+                onClick={() => handleNavClick(item)}
+              >
+                <div className="nav-item-left">
+                  <SidebarIcon name={item.icon} />
+                  <span>{item.label}</span>
+                </div>
+                {item.children && (
+                  <span className={`nav-chevron ${expandedItems.includes(item.id) ? 'expanded' : ''}`}>
+                    <IconFA name="chevron-down" size={10} />
+                  </span>
+                )}
+              </button>
+              
+              {item.children && expandedItems.includes(item.id) && (
+                <div className="nav-children">
+                  {item.children.map((child) => (
+                    <button 
+                      key={child.id} 
+                      className={`nav-child-item ${child.id === 'load-data' && currentView === 'load-data' ? 'active' : ''}`}
+                      onClick={() => handleChildClick(child)}
+                    >
+                      <span>{child.label}</span>
+                      {child.badge && <span className="nav-badge">{child.badge}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </nav>
+      </div>
+      
+      <div className="expanded-sidebar-bottom">
+        <button className="sidebar-upgrade-btn">
+          <IconFA name="bolt" size={14} />
+          <span>Upgrade</span>
         </button>
-        <button className="sidebar-item">
-          <SidebarIcon name="cookie-bite" />
+        <div className="sidebar-user">
+          <div className="sidebar-user-avatar">SA</div>
+          <div className="sidebar-user-info">
+            <span className="sidebar-user-name">Syed Kabeer Andrabi</span>
+            <span className="sidebar-user-org">S2DB DPS - CLAUDE AI EVALU...</span>
+          </div>
+          <button className="sidebar-user-menu">
+            <IconFA name="chevron-down" size={12} />
+          </button>
+        </div>
+        <button className="sidebar-collapse-btn" onClick={onToggleExpand}>
+          <IconFA name="sidebar" size={14} />
+          <span>Collapse</span>
         </button>
       </div>
     </div>
   )
 }
 
-function Header() {
+function LoadDataView() {
+  const [searchValue, setSearchValue] = useState('')
+
+  return (
+    <div className="load-data-view">
+      <div className="load-data-main">
+        <div className="load-data-header">
+          <div className="load-data-icon">
+            <IconFA name="database" size={20} />
+          </div>
+          <h1>Load Data</h1>
+        </div>
+
+        <div className="load-data-search">
+          <SearchIcon />
+          <input 
+            type="text" 
+            placeholder="Search for a data source" 
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+          />
+        </div>
+
+        <div className="ai-migration-banner">
+          <div className="ai-migration-content">
+            <div className="ai-migration-label">
+              <IconFA name="sparkles" size={12} />
+              <span>NEW: AI-POWERED</span>
+            </div>
+            <h2 className="ai-migration-title">Intelligent Database Migration</h2>
+            <p className="ai-migration-description">
+              Let FlowBot AI handle your end-to-end migration from Oracle, MySQL, PostgreSQL, and more. Automatic schema translation, optimal configuration, and real-time validation.
+            </p>
+            <button className="ai-migration-btn">
+              <IconFA name="sparkles" size={14} />
+              <span>Migrate with AI</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="interactive-wizard-section">
+          <div className="section-header">
+            <h2>Interactive wizard</h2>
+            <button className="info-btn">
+              <IconFA name="circle-question" size={14} />
+            </button>
+          </div>
+
+          <div className="data-sources-grid">
+            {DATA_SOURCES.map((source) => (
+              <DataSourceCard key={source.id} source={source} />
+            ))}
+          </div>
+        </div>
+
+        <div className="notebooks-section">
+          <div className="section-header">
+            <h2>Powered by Notebooks</h2>
+            <button className="info-btn">
+              <IconFA name="circle-question" size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
+function DataSourceCard({ source }) {
+  return (
+    <div className="data-source-card">
+      <div className="data-source-icon">
+        <DataSourceLogo name={source.icon} />
+      </div>
+      <div className="data-source-content">
+        <div className="data-source-name">
+          <span>{source.name}</span>
+          {source.suffix && <span className="data-source-suffix">{source.suffix}</span>}
+        </div>
+        <p className="data-source-description">{source.description}</p>
+        {source.hasPreview && (
+          <span className="data-source-preview">Preview</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DataSourceLogo({ name }) {
+  switch (name) {
+    case 'file-arrow-up':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <polyline points="14,2 14,8 20,8" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12 18V12M12 12L9 15M12 12L15 15" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )
+    case 'mongodb':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.5 2.866C12.266 2.734 12.133 2.668 12 2.668C11.866 2.668 11.734 2.734 11.5 2.866L4.5 6.866C4.266 6.998 4.133 7.064 4 7.264C3.867 7.464 3.867 7.597 3.867 7.866V16.134C3.867 16.402 3.867 16.535 4 16.735C4.133 16.935 4.266 17.001 4.5 17.133L11.5 21.133C11.734 21.265 11.866 21.331 12 21.331C12.133 21.331 12.266 21.265 12.5 21.133L19.5 17.133C19.734 17.001 19.867 16.935 20 16.735C20.133 16.535 20.133 16.402 20.133 16.134V7.866C20.133 7.597 20.133 7.464 20 7.264C19.867 7.064 19.734 6.998 19.5 6.866L12.5 2.866Z" fill="#4DB33D"/>
+          <path d="M12.3 6C12.3 6 12.15 18 12.15 18.5C12.15 19 12.3 19.5 12.3 19.5L12.8 19.5C12.8 19.5 12.95 19 12.95 18.5C12.95 18 12.8 6 12.8 6L12.3 6Z" fill="white"/>
+          <path d="M12.5 6.5C11.5 7 10 9 10 12C10 15 11.5 17.5 12.5 18C12.5 18 12 15 12 12C12 9 12.5 6.5 12.5 6.5Z" fill="#C4E8C2"/>
+          <path d="M12.5 6.5C13.5 7 15 9 15 12C15 15 13.5 17.5 12.5 18C12.5 18 13 15 13 12C13 9 12.5 6.5 12.5 6.5Z" fill="#4DB33D"/>
+        </svg>
+      )
+    case 's3':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L4 6V18L12 22L20 18V6L12 2Z" fill="#E25444"/>
+          <path d="M12 2L4 6L12 10L20 6L12 2Z" fill="#7B1D13"/>
+          <path d="M12 10V22L4 18V6L12 10Z" fill="#58150D"/>
+          <path d="M12 10V22L20 18V6L12 10Z" fill="#E25444"/>
+        </svg>
+      )
+    case 'mysql':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3C7.58 3 4 5.01 4 7.5V16.5C4 18.99 7.58 21 12 21C16.42 21 20 18.99 20 16.5V7.5C20 5.01 16.42 3 12 3Z" fill="#00758F"/>
+          <ellipse cx="12" cy="7.5" rx="8" ry="3.5" fill="#F29111"/>
+          <path d="M4 7.5C4 9.99 7.58 12 12 12C16.42 12 20 9.99 20 7.5" stroke="#00546B" strokeWidth="0.5"/>
+          <path d="M4 12C4 14.49 7.58 16.5 12 16.5C16.42 16.5 20 14.49 20 12" stroke="#00546B" strokeWidth="0.5"/>
+        </svg>
+      )
+    case 'oracle':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="8" width="20" height="8" rx="4" fill="#C74634"/>
+          <text x="12" y="14" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">ORACLE</text>
+        </svg>
+      )
+    case 'postgresql':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 4C15.5 3 13.5 2.5 12 3C10.5 2.5 8.5 3 7 4C5.5 5 4.5 7 4 9C3.5 11 4 14 5 16C6 18 8 20 10 21C11 21.5 12 21.5 13 21C14 20.5 15 20 16 19C17 18 18 16 18.5 14C19 12 19 10 18.5 8C18 6 17.5 5 17 4Z" fill="#336791"/>
+          <path d="M15 8C14.5 8.5 14 9.5 14 10.5C14 11.5 14.5 12 15 12C15.5 12 16 11.5 16 10.5C16 9.5 15.5 8.5 15 8Z" fill="white"/>
+          <path d="M10 8C9.5 8.5 9 9.5 9 10.5C9 11.5 9.5 12 10 12C10.5 12 11 11.5 11 10.5C11 9.5 10.5 8.5 10 8Z" fill="white"/>
+          <path d="M8 15C9 16 10.5 16.5 12 16.5C13.5 16.5 15 16 16 15" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      )
+    case 'sqlserver':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="4" width="16" height="16" rx="2" fill="#CC2927"/>
+          <text x="12" y="14" textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">SQL</text>
+        </svg>
+      )
+    case 'snowflake':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2V22M12 2L8 6M12 2L16 6M12 22L8 18M12 22L16 18" stroke="#29B5E8" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M2 12H22M2 12L6 8M2 12L6 16M22 12L18 8M22 12L18 16" stroke="#29B5E8" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M4.93 4.93L19.07 19.07M4.93 4.93L4.93 9.17M4.93 4.93L9.17 4.93M19.07 19.07L14.83 19.07M19.07 19.07L19.07 14.83" stroke="#29B5E8" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M19.07 4.93L4.93 19.07M19.07 4.93L14.83 4.93M19.07 4.93L19.07 9.17M4.93 19.07L9.17 19.07M4.93 19.07L4.93 14.83" stroke="#29B5E8" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      )
+    default:
+      return <IconFA name="database" size={20} />
+  }
+}
+
+function Header({ onLogoClick }) {
   return (
     <header className="header">
       <div className="header-left">
-        <div className="logo">
+        <div className="logo" onClick={onLogoClick} style={{ cursor: 'pointer' }}>
           <SingleStoreLogo />
         </div>
       </div>
@@ -769,7 +1083,9 @@ function SidebarIcon({ name, active }) {
   const color = active ? '#820ddf' : '#4c4c4c'
   const iconMap = {
     'home': '\uf015',
+    'cloud': '\uf0c2',
     'database': '\uf1c0',
+    'briefcase': '\uf0b1',
     'arrow-down-to-bracket': '\ue094',
     'rectangle-terminal': '\ue236',
     'sparkles': '\uf890',
@@ -840,6 +1156,12 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'magnifying-glass': '\uf002',
     'command': '\ue142',
     'arrow-up': '\uf062',
+    'briefcase': '\uf0b1',
+    'circle-question': '\uf059',
+    'terminal': '\uf120',
+    'xmark': '\uf00d',
+    'ellipsis-vertical': '\uf142',
+    'arrow-up-right-from-square': '\uf08e',
   }
   
   const weightClass = weight === 'solid' ? 'fa-solid' : weight === 'light' ? 'fa-light' : 'fa-regular'
