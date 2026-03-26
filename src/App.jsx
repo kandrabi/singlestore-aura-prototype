@@ -428,10 +428,6 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
       </div>
       
       <div className="expanded-sidebar-bottom">
-        <button className="sidebar-upgrade-btn">
-          <IconFA name="bolt" size={14} />
-          <span>Upgrade</span>
-        </button>
         <div className="sidebar-user">
           <div className="sidebar-user-avatar">SA</div>
           <div className="sidebar-user-info">
