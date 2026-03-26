@@ -14,7 +14,7 @@ const DATA_SOURCES = [
 
 const SIDEBAR_NAV_ITEMS = [
   { id: 'home', icon: 'home', label: 'Home' },
-  { id: 'workspaces', icon: 'briefcase', label: 'Workspaces' },
+  { id: 'workspaces', icon: 'cloud', label: 'Workspaces' },
   { id: 'databases', icon: 'database', label: 'Databases' },
   { 
     id: 'ingestion', 
@@ -209,6 +209,7 @@ function App() {
   const [isTyping, setIsTyping] = useState(false)
   const [expandedQueries, setExpandedQueries] = useState(true)
   const [expandedOptions, setExpandedOptions] = useState(true)
+  const [sidebarExpanded, setSidebarExpanded] = useState(true)
   const chatEndRef = useRef(null)
 
   useEffect(() => {
@@ -290,13 +291,16 @@ function App() {
     }
   }
 
-  const showExpandedSidebar = view === 'load-data'
-
   return (
     <>
       <Header onLogoClick={() => setView('portal')} />
       <div className="app-container">
-        {showExpandedSidebar ? <ExpandedSidebar onNavigate={setView} /> : <Sidebar onNavigate={setView} />}
+        <Sidebar 
+          onNavigate={setView} 
+          currentView={view}
+          isExpanded={sidebarExpanded}
+          onToggleExpand={() => setSidebarExpanded(!sidebarExpanded)}
+        />
         <div className="main-content">
           <div className="content-area">
             {renderContent()}
@@ -307,58 +311,7 @@ function App() {
   )
 }
 
-function Sidebar({ onNavigate }) {
-  const navItems = [
-    { icon: 'home', active: true, action: 'portal' },
-    { icon: 'cloud' },
-    { icon: 'arrow-down-to-bracket', action: 'load-data' },
-    { icon: 'rectangle-terminal' },
-    { icon: 'sparkles' },
-    { icon: 'layer-group' },
-    { icon: 'chart-line' },
-    { icon: 'cog' }
-  ]
-
-  const handleNavClick = (item) => {
-    if (item.action && onNavigate) {
-      onNavigate(item.action)
-    }
-  }
-  
-  return (
-    <div className="sidebar">
-      <div className="sidebar-top">
-        <button className="sidebar-create-btn">
-          <PlusIcon />
-        </button>
-        <div className="sidebar-items">
-          {navItems.map((item, i) => (
-            <button 
-              key={i} 
-              className={`sidebar-item ${item.active ? 'active' : ''}`}
-              onClick={() => handleNavClick(item)}
-            >
-              <SidebarIcon name={item.icon} active={item.active} />
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="sidebar-bottom">
-        <button className="sidebar-create-btn">
-          <SidebarIcon name="laptop-code" />
-        </button>
-        <button className="sidebar-item">
-          <SidebarIcon name="sidebar" />
-        </button>
-        <button className="sidebar-item">
-          <SidebarIcon name="cookie-bite" />
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function ExpandedSidebar({ onNavigate }) {
+function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
   const [expandedItems, setExpandedItems] = useState(['ingestion'])
 
   const toggleExpand = (id) => {
@@ -367,12 +320,66 @@ function ExpandedSidebar({ onNavigate }) {
     )
   }
 
-  const handleNavClick = (item) => {
+  const getActiveState = (item) => {
+    if (item.id === 'home' && currentView === 'portal') return true
+    if (item.id === 'load-data' && currentView === 'load-data') return true
     if (item.children) {
+      return item.children.some(child => 
+        (child.id === 'load-data' && currentView === 'load-data')
+      )
+    }
+    return false
+  }
+
+  const handleNavClick = (item) => {
+    if (item.children && isExpanded) {
       toggleExpand(item.id)
     } else if (item.id === 'home') {
       onNavigate('portal')
+    } else if (item.id === 'ingestion' || item.id === 'load-data') {
+      onNavigate('load-data')
     }
+  }
+
+  const handleChildClick = (child) => {
+    if (child.id === 'load-data') {
+      onNavigate('load-data')
+    }
+  }
+
+  if (!isExpanded) {
+    return (
+      <div className="sidebar">
+        <div className="sidebar-top">
+          <button className="sidebar-create-btn" title="Create New">
+            <PlusIcon />
+          </button>
+          <div className="sidebar-items">
+            {SIDEBAR_NAV_ITEMS.map((item) => (
+              <button 
+                key={item.id} 
+                className={`sidebar-item ${getActiveState(item) ? 'active' : ''}`}
+                onClick={() => handleNavClick(item)}
+                title={item.label}
+              >
+                <SidebarIcon name={item.icon} active={getActiveState(item)} />
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="sidebar-bottom">
+          <button className="sidebar-upgrade-btn-collapsed" title="Upgrade">
+            <IconFA name="bolt" size={14} />
+          </button>
+          <div className="sidebar-user-collapsed" title="Syed Kabeer Andrabi">
+            <span>SA</span>
+          </div>
+          <button className="sidebar-item" onClick={onToggleExpand} title="Expand">
+            <SidebarIcon name="sidebar" />
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -387,7 +394,7 @@ function ExpandedSidebar({ onNavigate }) {
           {SIDEBAR_NAV_ITEMS.map((item) => (
             <div key={item.id} className="nav-item-wrapper">
               <button 
-                className={`expanded-nav-item ${item.children && expandedItems.includes(item.id) ? 'expanded' : ''}`}
+                className={`expanded-nav-item ${getActiveState(item) ? 'active' : ''} ${item.children && expandedItems.includes(item.id) ? 'expanded' : ''}`}
                 onClick={() => handleNavClick(item)}
               >
                 <div className="nav-item-left">
@@ -406,7 +413,8 @@ function ExpandedSidebar({ onNavigate }) {
                   {item.children.map((child) => (
                     <button 
                       key={child.id} 
-                      className={`nav-child-item ${child.active ? 'active' : ''}`}
+                      className={`nav-child-item ${child.id === 'load-data' && currentView === 'load-data' ? 'active' : ''}`}
+                      onClick={() => handleChildClick(child)}
                     >
                       <span>{child.label}</span>
                       {child.badge && <span className="nav-badge">{child.badge}</span>}
@@ -421,7 +429,7 @@ function ExpandedSidebar({ onNavigate }) {
       
       <div className="expanded-sidebar-bottom">
         <button className="sidebar-upgrade-btn">
-          <IconFA name="arrow-up-right-from-square" size={14} />
+          <IconFA name="bolt" size={14} />
           <span>Upgrade</span>
         </button>
         <div className="sidebar-user">
@@ -431,10 +439,10 @@ function ExpandedSidebar({ onNavigate }) {
             <span className="sidebar-user-org">S2DB DPS - CLAUDE AI EVALU...</span>
           </div>
           <button className="sidebar-user-menu">
-            <IconFA name="ellipsis-vertical" size={14} />
+            <IconFA name="chevron-down" size={12} />
           </button>
         </div>
-        <button className="sidebar-collapse-btn">
+        <button className="sidebar-collapse-btn" onClick={onToggleExpand}>
           <IconFA name="sidebar" size={14} />
           <span>Collapse</span>
         </button>
@@ -1075,6 +1083,7 @@ function SidebarIcon({ name, active }) {
   const color = active ? '#820ddf' : '#4c4c4c'
   const iconMap = {
     'home': '\uf015',
+    'cloud': '\uf0c2',
     'database': '\uf1c0',
     'briefcase': '\uf0b1',
     'arrow-down-to-bracket': '\ue094',
