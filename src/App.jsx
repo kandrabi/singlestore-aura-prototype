@@ -127,7 +127,7 @@ const CHAT_FLOW = [
         { icon: 'grid-2', title: 'Batch small writes', description: 'Group the 14k heartbeat inserts into batches of 100–500. Reduces WAL pressure significantly.', impact: 'Low - Mid Impact', impactType: 'neutral' }
       ],
       footer: "If optimizing queries isn't feasible right now, resizing to S-4 remains the fastest fix with immediate effect.",
-      actions: ['Other options', { text: 'Resize anyway', primary: true }]
+      actions: ['Resize anyway']
     }
   },
   {
@@ -745,9 +745,9 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         {!content.progress && (!isTyping || paragraphsCompleted) && (
           <div className={`toolbar-row fade-in ${isLast ? '' : ''}`}>
             <div className="toolbar">
-              <button className="toolbar-btn"><IconFA name="copy" /></button>
-              <button className="toolbar-btn"><IconFA name="refresh" /></button>
-              <button className="toolbar-btn"><IconFA name="bug" /></button>
+              <button className="toolbar-btn"><IconFA name="copy" size={12} /></button>
+              <button className="toolbar-btn"><IconFA name="refresh" size={12} /></button>
+              <button className="toolbar-btn"><IconFA name="bug" size={12} /></button>
             </div>
             {isLast && (
               <div className="toolbar-right">

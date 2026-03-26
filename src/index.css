@@ -713,7 +713,7 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-icon-secondary);
+  background: rgba(217, 217, 217, 1);
   flex-shrink: 0;
   color: rgba(25, 25, 25, 0.8);
 }
@@ -1016,6 +1016,8 @@ body {
   gap: 8px;
   cursor: pointer;
   color: var(--color-text-primary);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
 }
 
 .expandable-header svg {
@@ -1317,7 +1319,7 @@ body {
   gap: 4px;
 }
 
-.chat-input-bottom .agent-selector span {
+.chat-input-bottom .agent-selector > span:not(.chevron) {
   font-family: 'Museo Sans', var(--font-family);
   font-size: 13px;
   font-weight: 500;
