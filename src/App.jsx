@@ -117,6 +117,104 @@ const SUGGESTED_PROMPTS = [
   'Where am I spending the most compute and credits?'
 ]
 
+const CPU_SPIKE_CHAT_FLOW = [
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'bold', content: 'CPU Spike detected' },
+        { type: 'mixed', content: 'A CPU spike was detected on your cluster ', bold: '"1b5e7b2d-5fdc-459a-b413-940377dc8c06"', after: ' earlier today.' },
+        { type: 'mixed', content: 'At around ', bold: '06:50 UTC', after: ', CPU usage increased from ', bold2: '~65% to 130+ cores (~2× baseline)', after2: ' and remained elevated for ', bold3: '~5 minutes.' },
+        { type: 'text', content: 'This spike impacted query latency and workload stability during that window.' }
+      ],
+      actions: ['Show affected queries', 'Investigate spike']
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'bold', content: 'CPU Spike — monitoring workspace leaf nodes (2026-03-03 06:40–07:20 UTC)' }
+      ],
+      chart: {
+        type: 'cpu-spike',
+        title: 'CPU Spike — monitoring workspace leaf nodes (2026-03-03 06:40–07:20 UTC)',
+        data: [
+          { time: '06:40', value: 65 },
+          { time: '06:45', value: 68 },
+          { time: '06:50', value: 132 },
+          { time: '06:55', value: 128 },
+          { time: '07:00', value: 85 },
+          { time: '07:05', value: 62 },
+          { time: '07:10', value: 58 },
+          { time: '07:15', value: 55 }
+        ]
+      },
+      table: {
+        headers: ['Database', 'Activity Name', 'Total CPU (s)', 'Total Elapsed (s)'],
+        rows: [
+          ['monitoring_v2', 'insert_label_index_dc98ea213d73b25', '21982.4', '29045.6'],
+          ['monitoring', 'Select_act_samples_new_5a38a5e9774b8b2', '5397.8', '8560.9'],
+          ['monitoring', 'InsertSelect_latest_metrics_at_at_8e5dd2a59705c21c', '4042.3', '6810.5'],
+          ['_prom', 'insert_metrics_4372b1ea90d1946', '2813', '4356.1'],
+          ['monitoring', 'insert_act_samples_new_b5a63986a53f47', '749.3', '1105.8']
+        ]
+      },
+      analysis: {
+        summary: 'The CPU spike on cluster 1b5e7b2d-5fdc-459a peaked at 06:50 UTC, jumping from ~65 to 132 cores (~2× increase) for ~5 minutes before stabilizing around 55–65 cores.',
+        contributors: {
+          title: 'Main contributors:',
+          items: [
+            'Primary driver: insert_label_index (monitoring_v2) — 21,982 CPU seconds across 82,785 executions, indicating sustained high-frequency insert activity.',
+            'Major outlier: Select_act_samples_new — 5,398 CPU seconds from a single execution, likely a heavy scan or aggregation that triggered the spike.',
+            'Secondary contributor: InsertSelect_latest_metrics — 4,042 CPU seconds across 39 batch operations.'
+          ]
+        },
+        rootCause: {
+          title: 'Root cause:',
+          text: 'A long-running Select_act_samples_new query overlapped with already elevated insert load from insert_label_index, saturating monitoring leaf nodes around 06:50 UTC.'
+        }
+      },
+      actions: ['Get more details on Select_act_samples_new', 'View optimization recommendations']
+    }
+  },
+  {
+    type: 'agent',
+    content: {
+      thinking: {
+        title: 'Thoughts',
+        items: [
+          'Outside the spike window, Select_act_samples_new is normally inexpensive. Query history shows only one execution in the last 7 days, indicating this was a one-off event.',
+          'Next, I examined the node-level execution and leaf-level samples to understand how the query distributed across leaves during the spike.',
+          'I now have the full picture and will display the per-node CPU contribution chart.'
+        ]
+      },
+      chart: {
+        type: 'per-node',
+        title: 'Select_act_samples_new — CPU & Memory per Leaf Node/Partition',
+        data: [
+          { node: 'node-149 / part-5', cpu: 1374, elapsed: 1936, memory: 6.9 },
+          { node: 'node-148 / part-4', cpu: 1042, elapsed: 1548, memory: 4.8 },
+          { node: 'node-147 / part-3', cpu: 731, elapsed: 1052, memory: 3.2 },
+          { node: 'node-146 / part-2', cpu: 720, elapsed: 968, memory: 2.8 },
+          { node: 'node-150 / part-7', cpu: 608, elapsed: 824, memory: 2.1 }
+        ]
+      },
+      analysis: {
+        summary: 'The chart shows per-node resource usage for Select_act_samples_new across 5 leaf partitions.',
+        items: [
+          'node-149 / part-5 handled the most load (1,374s CPU, 6.93 GB memory).',
+          'node-148 / part-4 was second (1,042s CPU, 4.83 GB memory).',
+          'The remaining nodes used ~608–731s CPU each.'
+        ],
+        conclusion: 'The query executed once but fanned out across all partitions, totaling ~4,474s CPU. With a CPU/elapsed ratio ~0.7, it was largely CPU-bound.',
+        insight: 'The uneven load (node-149 using ~2.3× more CPU than node-150) suggests partition skew, likely due to a larger or more complex data slice in part-5.'
+      },
+      actions: ['Show optimization recommendations', 'Set up alert for similar spikes']
+    }
+  }
+]
+
 const MIGRATION_PROMPTS = [
   'Migrate my PostgreSQL database to SingleStore',
   'Help me set up CDC from MongoDB',
@@ -557,13 +655,14 @@ const USER_MESSAGES = [
 ]
 
 function App() {
-  const [view, setView] = useState('load-data')
+  const [view, setView] = useState('portal')
   const [activeTab, setActiveTab] = useState('alerts')
   const [inputValue, setInputValue] = useState('')
   const [chatMessages, setChatMessages] = useState([])
   const [currentFlowIndex, setCurrentFlowIndex] = useState(0)
   const [userMsgIndex, setUserMsgIndex] = useState(0)
   const [isTyping, setIsTyping] = useState(false)
+  const [activeChatFlow, setActiveChatFlow] = useState('default')
   const [expandedQueries, setExpandedQueries] = useState(true)
   const [expandedOptions, setExpandedOptions] = useState(true)
   const [sidebarExpanded, setSidebarExpanded] = useState(true)
@@ -667,7 +766,59 @@ function App() {
       setChatMessages([])
       setCurrentFlowIndex(0)
       setUserMsgIndex(0)
+      setActiveChatFlow('default')
       setTimeout(() => addNextMessage(0), 500)
+    }
+  }
+
+  const handleNotificationClick = (notification) => {
+    if (notification.id === 1) {
+      setView('chat')
+      setChatMessages([])
+      setCurrentFlowIndex(0)
+      setUserMsgIndex(0)
+      setActiveChatFlow('cpu-spike')
+      setTimeout(() => addNextCpuSpikeMessage(0), 500)
+    }
+  }
+
+  const addNextCpuSpikeMessage = (index) => {
+    if (index >= CPU_SPIKE_CHAT_FLOW.length) return
+    const message = CPU_SPIKE_CHAT_FLOW[index]
+    
+    if (message.content.thinking) {
+      setIsTyping(true)
+      setTimeout(() => {
+        const messageId = Date.now()
+        setChatMessages(prev => [...prev, { 
+          ...message, 
+          id: messageId, 
+          timestamp: new Date(),
+          thinkingExpanded: true,
+          showContent: false 
+        }])
+        setIsTyping(false)
+        
+        setTimeout(() => {
+          setChatMessages(prev => prev.map(m => 
+            m.id === messageId ? { ...m, thinkingExpanded: false } : m
+          ))
+          
+          setTimeout(() => {
+            setChatMessages(prev => prev.map(m => 
+              m.id === messageId ? { ...m, showContent: true } : m
+            ))
+            setCurrentFlowIndex(index + 1)
+          }, 500)
+        }, 4000)
+      }, 1500)
+    } else {
+      setIsTyping(true)
+      setTimeout(() => {
+        setChatMessages(prev => [...prev, { ...message, id: Date.now(), timestamp: new Date() }])
+        setIsTyping(false)
+        setCurrentFlowIndex(index + 1)
+      }, 1500)
     }
   }
 
@@ -684,19 +835,31 @@ function App() {
   const handleAction = (action) => {
     const actionText = typeof action === 'string' ? action : action.text
     
-    if (['View recommended actions', 'Suggest alternate options', 'Show affected queries'].includes(actionText)) {
-      setChatMessages(prev => [...prev, { type: 'user', id: Date.now(), text: actionText, timestamp: new Date() }])
-      setUserMsgIndex(prev => prev + 1)
-      setTimeout(() => addNextMessage(currentFlowIndex), 500)
-    } else if (actionText === 'Apply resize' || actionText === 'Resize anyway') {
-      setChatMessages(prev => [...prev, { type: 'user', id: Date.now(), text: 'Resize anyway', timestamp: new Date() }])
-      setUserMsgIndex(prev => prev + 1)
-      setTimeout(() => addNextMessage(3), 500)
-    } else if (actionText === 'Confirm') {
-      setChatMessages(prev => [...prev, { type: 'user', id: Date.now(), text: 'Confirm', timestamp: new Date() }])
-      setUserMsgIndex(prev => prev + 1)
-      setTimeout(() => addNextMessage(4), 500)
-      setTimeout(() => addNextMessage(5), 5000)
+    if (activeChatFlow === 'cpu-spike') {
+      if (['Investigate spike', 'Show affected queries'].includes(actionText)) {
+        setChatMessages(prev => [...prev, { type: 'user', id: Date.now(), text: actionText, timestamp: new Date() }])
+        setUserMsgIndex(prev => prev + 1)
+        setTimeout(() => addNextCpuSpikeMessage(currentFlowIndex), 500)
+      } else if (actionText === 'Get more details on Select_act_samples_new') {
+        setChatMessages(prev => [...prev, { type: 'user', id: Date.now(), text: "Get more details on Select_act_samples_new", timestamp: new Date() }])
+        setUserMsgIndex(prev => prev + 1)
+        setTimeout(() => addNextCpuSpikeMessage(currentFlowIndex), 500)
+      }
+    } else {
+      if (['View recommended actions', 'Suggest alternate options', 'Show affected queries'].includes(actionText)) {
+        setChatMessages(prev => [...prev, { type: 'user', id: Date.now(), text: actionText, timestamp: new Date() }])
+        setUserMsgIndex(prev => prev + 1)
+        setTimeout(() => addNextMessage(currentFlowIndex), 500)
+      } else if (actionText === 'Apply resize' || actionText === 'Resize anyway') {
+        setChatMessages(prev => [...prev, { type: 'user', id: Date.now(), text: 'Resize anyway', timestamp: new Date() }])
+        setUserMsgIndex(prev => prev + 1)
+        setTimeout(() => addNextMessage(3), 500)
+      } else if (actionText === 'Confirm') {
+        setChatMessages(prev => [...prev, { type: 'user', id: Date.now(), text: 'Confirm', timestamp: new Date() }])
+        setUserMsgIndex(prev => prev + 1)
+        setTimeout(() => addNextMessage(4), 500)
+        setTimeout(() => addNextMessage(5), 5000)
+      }
     }
   }
 
@@ -727,6 +890,7 @@ function App() {
             expandedOptions={expandedOptions}
             setExpandedOptions={setExpandedOptions}
             chatEndRef={chatEndRef}
+            activeChatFlow={activeChatFlow}
           />
         )
       default:
@@ -736,7 +900,7 @@ function App() {
 
   return (
     <>
-      <Header onLogoClick={() => setView('portal')} onAskAura={handleOpenAuraPanel} />
+      <Header onLogoClick={() => setView('portal')} onAskAura={handleOpenAuraPanel} onNotificationClick={handleNotificationClick} />
       <div className="app-container">
         <Sidebar 
           onNavigate={setView} 
@@ -784,11 +948,6 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
   const getActiveState = (item) => {
     if (item.id === 'home' && currentView === 'portal') return true
     if (item.id === 'load-data' && currentView === 'load-data') return true
-    if (item.children) {
-      return item.children.some(child => 
-        (child.id === 'load-data' && currentView === 'load-data')
-      )
-    }
     return false
   }
 
@@ -829,9 +988,6 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
           </div>
         </div>
         <div className="sidebar-bottom">
-          <button className="sidebar-upgrade-btn-collapsed" title="Upgrade">
-            <IconFA name="bolt" size={14} />
-          </button>
           <div className="sidebar-user-collapsed" title="Syed Kabeer Andrabi">
             <span>SA</span>
           </div>
@@ -1046,7 +1202,71 @@ function DataSourceLogo({ name }) {
   }
 }
 
-function Header({ onLogoClick, onAskAura }) {
+const NOTIFICATIONS = [
+  {
+    id: 1,
+    type: 'alert',
+    icon: 'chart-line',
+    title: 'CPU spike detected',
+    message: 'Cluster 1b5e7b2d-5fdc-459a-b413-940377dc8c06 experienced high CPU usage',
+    time: 'Today at 04:12 AM',
+    action: 'Click here to investigate',
+    unread: true
+  },
+  {
+    id: 2,
+    type: 'warning',
+    icon: 'database',
+    title: 'Storage threshold reached',
+    message: 'Workspace "prod-analytics" is at 85% storage capacity',
+    time: 'Today at 06:30 AM',
+    action: 'Review storage options',
+    unread: true
+  },
+  {
+    id: 3,
+    type: 'info',
+    icon: 'arrow-down-to-bracket',
+    title: 'Pipeline completed',
+    message: 'Data ingestion from PostgreSQL finished successfully',
+    time: 'Yesterday at 11:45 PM',
+    action: 'View details',
+    unread: false
+  },
+  {
+    id: 4,
+    type: 'success',
+    icon: 'check',
+    title: 'Backup completed',
+    message: 'Scheduled backup for "analytics-db" completed',
+    time: 'Yesterday at 02:00 AM',
+    action: null,
+    unread: false
+  }
+]
+
+function Header({ onLogoClick, onAskAura, onNotificationClick }) {
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const notificationsRef = useRef(null)
+  const unreadCount = NOTIFICATIONS.filter(n => n.unread).length
+
+  const handleNotificationClick = (notification) => {
+    setNotificationsOpen(false)
+    if (onNotificationClick) {
+      onNotificationClick(notification)
+    }
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
+        setNotificationsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   return (
     <header className="header">
       <div className="header-left">
@@ -1066,9 +1286,52 @@ function Header({ onLogoClick, onAskAura }) {
         </div>
       </div>
       <div className="header-right">
-        <button className="header-btn">
-          <UserPlusIcon />
-        </button>
+        <div className="notifications-wrapper" ref={notificationsRef}>
+          <button 
+            className={`header-btn notifications-btn ${notificationsOpen ? 'active' : ''}`}
+            onClick={() => setNotificationsOpen(!notificationsOpen)}
+          >
+            <BellIcon />
+            {unreadCount > 0 && <span className="notifications-badge">{unreadCount}</span>}
+          </button>
+          {notificationsOpen && (
+            <div className="notifications-dropdown">
+              <div className="notifications-header">
+                <span className="notifications-title">Notifications</span>
+                <button className="notifications-mark-read">Mark all as read</button>
+              </div>
+              <div className="notifications-list">
+                {NOTIFICATIONS.map(notification => (
+                  <div 
+                    key={notification.id} 
+                    className={`notification-item ${notification.unread ? 'unread' : ''} ${notification.type}`}
+                    onClick={() => handleNotificationClick(notification)}
+                  >
+                    <div className="notification-icon">
+                      <IconFA name={notification.icon} size={14} />
+                    </div>
+                    <div className="notification-content">
+                      <div className="notification-header">
+                        <span className="notification-item-title">{notification.title}</span>
+                        {notification.unread && <span className="notification-dot" />}
+                      </div>
+                      <p className="notification-message">{notification.message}</p>
+                      <div className="notification-footer">
+                        <span className="notification-time">{notification.time}</span>
+                        {notification.action && (
+                          <button className="notification-action">{notification.action}</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="notifications-footer">
+                <button className="notifications-view-all">View all notifications</button>
+              </div>
+            </div>
+          )}
+        </div>
         <div className="header-divider" />
         <button className="header-btn ask-aura" onClick={onAskAura}>
           <SparklesIcon />
@@ -1178,7 +1441,9 @@ function PortalView({ activeTab, setActiveTab, inputValue, setInputValue, onAler
   )
 }
 
-function ChatView({ messages, inputValue, setInputValue, isTyping, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, chatEndRef }) {
+function ChatView({ messages, inputValue, setInputValue, isTyping, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, chatEndRef, activeChatFlow }) {
+  const agentName = activeChatFlow === 'cpu-spike' ? 'Observability Agent' : 'Aura Agent'
+  
   return (
     <div className="chat-view">
       <div className="chat-messages">
@@ -1195,12 +1460,13 @@ function ChatView({ messages, inputValue, setInputValue, isTyping, onAction, exp
             onTypingComplete={() => {
               message.typingComplete = true
             }}
+            agentName={agentName}
           />
         ))}
         {isTyping && (
           <div className="message">
             <div className="message-header">
-              <span className="message-sender">Aura Agent</span>
+              <span className="message-sender">{agentName}</span>
               <span className="dot" />
               <span className="message-time">{formatTime(new Date())}</span>
             </div>
@@ -1234,7 +1500,7 @@ function ChatView({ messages, inputValue, setInputValue, isTyping, onAction, exp
               </button>
               <button className="agent-selector">
                 <AgentIcon />
-                <span>Agent</span>
+                <span>{agentName}</span>
                 <ChevronDownIcon className="chevron" />
               </button>
             </div>
@@ -1248,7 +1514,7 @@ function ChatView({ messages, inputValue, setInputValue, isTyping, onAction, exp
   )
 }
 
-function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete }) {
+function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete, agentName = 'Aura Agent' }) {
   const [currentParagraph, setCurrentParagraph] = useState(0)
   const [paragraphsCompleted, setParagraphsCompleted] = useState(false)
   const textItems = message.type === 'agent' && message.content?.text ? message.content.text : []
@@ -1293,7 +1559,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
       if (textItem.type === 'bold') return textItem.content
       if (textItem.type === 'text') return textItem.content
       if (textItem.type === 'mixed') {
-        return `${textItem.content}${textItem.bold}${textItem.after || ''}${textItem.bold2 || ''}`
+        return `${textItem.content}${textItem.bold}${textItem.after || ''}${textItem.bold2 || ''}${textItem.after2 || ''}${textItem.bold3 || ''}`
       }
       return ''
     }
@@ -1314,7 +1580,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         {t.type === 'text' && t.content}
         {t.type === 'mixed' && (
           <>
-            {t.content}<strong>{t.bold}</strong>{t.after}{t.bold2 && <strong>{t.bold2}</strong>}
+            {t.content}<strong>{t.bold}</strong>{t.after}{t.bold2 && <strong>{t.bold2}</strong>}{t.after2}{t.bold3 && <strong>{t.bold3}</strong>}
           </>
         )}
       </p>
@@ -1324,7 +1590,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
   return (
     <div className="message">
       <div className="message-header">
-        <span className="message-sender">Aura Agent</span>
+        <span className="message-sender">{agentName}</span>
         <span className="dot" />
         <span className="message-time">{timeDisplay}</span>
       </div>
@@ -1474,7 +1740,173 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
-        {content.actions && !content.progress && (!isTyping || paragraphsCompleted) && (
+        {content.thinking && (
+          <div className={`thinking-card fade-in ${message.thinkingExpanded ? 'expanded' : 'collapsed'}`}>
+            <div className="thinking-header">
+              <span>Thoughts</span>
+              <IconFA name="chevron-down" size={12} />
+            </div>
+            <div className="thinking-collapsed-info">
+              <IconFA name="clock" size={8} />
+              <span>Just now</span>
+              <IconFA name="database" size={8} />
+              <span>Executed in 138ms</span>
+            </div>
+            {message.thinkingExpanded && (
+              <ul className="thinking-list">
+                {content.thinking.items.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {content.chart && (message.showContent !== false) && (
+          <div className="cpu-chart-container fade-in">
+            <div className="cpu-chart">
+              {content.chart.type === 'cpu-spike' && (
+                <div className="cpu-line-chart">
+                  <div className="cpu-line-y-axis">
+                    <span>150</span>
+                    <span>100</span>
+                    <span>50</span>
+                    <span>0</span>
+                  </div>
+                  <div className="cpu-line-graph-area">
+                    <svg className="cpu-line-svg" viewBox="0 0 700 180" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      {[0, 1, 2, 3].map(i => (
+                        <line key={i} className="cpu-grid-line" x1="0" y1={i * 60} x2="700" y2={i * 60} />
+                      ))}
+                      <path
+                        className="cpu-line-fill"
+                        d={`M ${content.chart.data.map((d, i) => 
+                          `${(i / (content.chart.data.length - 1)) * 700},${180 - (Math.min(d.value, 150) / 150) * 180}`
+                        ).join(' L ')} L 700,180 L 0,180 Z`}
+                        fill="url(#lineGradient)"
+                      />
+                      <path
+                        className="cpu-line-path"
+                        d={`M ${content.chart.data.map((d, i) => 
+                          `${(i / (content.chart.data.length - 1)) * 700},${180 - (Math.min(d.value, 150) / 150) * 180}`
+                        ).join(' L ')}`}
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth="2"
+                      />
+                    </svg>
+                    <div className="cpu-line-x-axis">
+                      {content.chart.data.map((d, i) => (
+                        <span key={i}>{d.time}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {content.chart.type === 'per-node' && (
+                <div className="per-node-chart">
+                  <div className="per-node-chart-body">
+                    <div className="per-node-y-axis-wrapper">
+                      <div className="per-node-y-label">Value</div>
+                      <div className="per-node-y-axis">
+                        <span>2000</span>
+                        <span>1500</span>
+                        <span>1000</span>
+                        <span>500</span>
+                        <span>0</span>
+                      </div>
+                    </div>
+                    <div className="per-node-graph">
+                      <div className="per-node-grid">
+                        {[0, 1, 2, 3, 4].map(i => <div key={i} className="per-node-grid-line" />)}
+                      </div>
+                      <div className="per-node-bars">
+                        {content.chart.data.map((d, i) => (
+                          <div key={i} className="per-node-bar-group">
+                            <div className="per-node-bar-set">
+                              <div className="per-node-bar cpu" style={{ height: `${(d.cpu / 2000) * 100}%` }} />
+                              <div className="per-node-bar elapsed" style={{ height: `${(d.elapsed / 2000) * 100}%` }} />
+                              <div className="per-node-bar memory" style={{ height: `${(d.memory * 10 / 2000) * 100}%` }} />
+                            </div>
+                            <span className="per-node-label">{d.node}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="per-node-legend">
+                      <div className="legend-item"><span className="legend-color cpu"></span>Peak CPU (s)</div>
+                      <div className="legend-item"><span className="legend-color elapsed"></span>Peak Elapsed (s)</div>
+                      <div className="legend-item"><span className="legend-color memory"></span>Peak Memory (GB)</div>
+                    </div>
+                  </div>
+                  <div className="per-node-x-label">Node / Partition</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {content.table && (message.showContent !== false) && (
+          <div className="cpu-table-container fade-in">
+            <table className="cpu-table">
+              <thead>
+                <tr>
+                  {content.table.headers.map((h, i) => (
+                    <th key={i}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {content.table.rows.map((row, i) => (
+                  <tr key={i}>
+                    {row.map((cell, j) => (
+                      <td key={j}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {content.analysis && (message.showContent !== false) && (
+          <div className="analysis-section fade-in">
+            {content.analysis.summary && <p className="message-text">{content.analysis.summary}</p>}
+            {content.analysis.contributors && (
+              <>
+                <p className="message-text"><strong>{content.analysis.contributors.title}</strong></p>
+                <ul className="analysis-list">
+                  {content.analysis.contributors.items.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {content.analysis.rootCause && (
+              <>
+                <p className="message-text"><strong>{content.analysis.rootCause.title}</strong></p>
+                <p className="message-text">{content.analysis.rootCause.text}</p>
+              </>
+            )}
+            {content.analysis.items && (
+              <ul className="analysis-list">
+                {content.analysis.items.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            )}
+            {content.analysis.conclusion && <p className="message-text">{content.analysis.conclusion}</p>}
+            {content.analysis.insight && <p className="message-text">{content.analysis.insight}</p>}
+          </div>
+        )}
+
+        {content.actions && !content.progress && (message.showContent !== false) && paragraphsCompleted && (
           <div className="action-buttons fade-in">
             {content.actions.map((action, i) => {
               const isPrimary = typeof action === 'object' && action.primary
@@ -1488,7 +1920,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
-        {!content.progress && (!isTyping || paragraphsCompleted) && (
+        {!content.progress && (message.showContent !== false) && paragraphsCompleted && (
           <div className={`toolbar-row fade-in ${isLast ? '' : ''}`}>
             <div className="toolbar">
               <button className="toolbar-btn"><IconFA name="copy" size={12} /></button>
@@ -1586,6 +2018,7 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'spinner': '\uf110',
     'circle-info': '\uf05a',
     'user-plus': '\uf234',
+    'bell': '\uf0f3',
     'magnifying-glass': '\uf002',
     'command': '\ue142',
     'arrow-up': '\uf062',
@@ -1680,6 +2113,10 @@ function CommandIcon() {
 
 function UserPlusIcon() {
   return <IconFA name="user-plus" size={16} />
+}
+
+function BellIcon() {
+  return <IconFA name="bell" size={16} />
 }
 
 function SparklesIcon() {
