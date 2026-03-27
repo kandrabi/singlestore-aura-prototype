@@ -3019,6 +3019,155 @@ body {
   gap: 16px;
 }
 
+/* Side panel message styling */
+.aura-panel-messages .message {
+  margin-bottom: 0;
+}
+
+.aura-panel-messages .message-header {
+  gap: 6px;
+}
+
+.aura-panel-messages .message-sender {
+  font-size: var(--font-size-sm);
+}
+
+.aura-panel-messages .message-time {
+  font-size: var(--font-size-xs);
+}
+
+.aura-panel-messages .message-text {
+  font-size: var(--font-size-md);
+}
+
+.aura-panel-messages .user-bubble {
+  max-width: 85%;
+}
+
+/* Scale down charts in side panel */
+.aura-panel-messages .cpu-chart-container {
+  max-width: 100%;
+}
+
+.aura-panel-messages .cpu-line-chart,
+.aura-panel-messages .per-node-chart {
+  max-width: 100%;
+}
+
+/* Scale down stat cards in side panel */
+.aura-panel-messages .stats-grid {
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.aura-panel-messages .stat-card {
+  padding: 10px;
+}
+
+.aura-panel-messages .stat-label {
+  font-size: 11px;
+}
+
+.aura-panel-messages .stat-value {
+  font-size: 18px;
+}
+
+/* Scale down recommendation card in side panel */
+.aura-panel-messages .recommendation-card {
+  max-width: 100%;
+}
+
+.aura-panel-messages .recommendation-card-content {
+  padding: 12px;
+}
+
+/* Scale down query list in side panel */
+.aura-panel-messages .query-list {
+  gap: 8px;
+}
+
+.aura-panel-messages .query-item {
+  padding: 10px;
+}
+
+.aura-panel-messages .query-name {
+  font-size: 12px;
+}
+
+/* Scale down options grid in side panel */
+.aura-panel-messages .options-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.aura-panel-messages .option-card {
+  padding: 10px;
+}
+
+/* Scale down table in side panel */
+.aura-panel-messages .cpu-table-container {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.aura-panel-messages .cpu-table {
+  font-size: 11px;
+}
+
+.aura-panel-messages .cpu-table th,
+.aura-panel-messages .cpu-table td {
+  padding: 8px 10px;
+}
+
+/* Scale down action buttons in side panel */
+.aura-panel-messages .action-buttons {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aura-panel-messages .action-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+/* Hide toolbar in side panel */
+.aura-panel-messages .toolbar-row {
+  display: none;
+}
+
+/* Scale down resize progress card in side panel */
+.aura-panel-messages .resize-progress-card {
+  width: 100%;
+  max-width: none;
+}
+
+/* Scale down progress card in side panel */
+.aura-panel-messages .aura-progress-card {
+  padding: 12px;
+}
+
+/* Scale down info cards in side panel */
+.aura-panel-messages .aura-info-card {
+  padding: 12px;
+}
+
+/* Scale down migration stats in side panel */
+.aura-panel-messages .aura-migration-stats {
+  gap: 8px;
+}
+
+/* Scale down interactive components in side panel */
+.aura-panel-messages .aura-flow-instance-options,
+.aura-panel-messages .aura-cdc-selector-options {
+  flex-wrap: wrap;
+}
+
+.aura-panel-messages .aura-flow-instance-btn,
+.aura-panel-messages .aura-cdc-selector-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
 .aura-message {
   display: flex;
   flex-direction: column;

@@ -689,6 +689,8 @@ function App() {
   const [auraPanelMessages, setAuraPanelMessages] = useState([])
   const [auraPanelInput, setAuraPanelInput] = useState('')
   const [auraPanelAgentName, setAuraPanelAgentName] = useState('Aura Agent')
+  const [auraPanelFlow, setAuraPanelFlow] = useState('none') // 'none', 'default', 'cpu-spike', 'migration'
+  const [auraPanelFlowIndex, setAuraPanelFlowIndex] = useState(0)
   const [migrationFlowIndex, setMigrationFlowIndex] = useState(0)
   const [isAuraTyping, setIsAuraTyping] = useState(false)
   const chatEndRef = useRef(null)
@@ -753,6 +755,9 @@ function App() {
       // Transfer chat messages to side panel - keep the same agent (Aura Agent for all home-initiated chats)
       setAuraPanelMessages(chatMessages)
       setAuraPanelAgentName('Aura Agent')
+      // Also transfer the active flow and flow index
+      setAuraPanelFlow(activeChatFlow)
+      setAuraPanelFlowIndex(currentFlowIndex)
       setAuraPanelOpen(true)
     }
     // Note: If side panel already has an active conversation, we don't change the agent (Priority 1)
@@ -771,6 +776,8 @@ function App() {
     setAuraPanelMessages([])
     setAuraPanelInput('')
     setMigrationFlowIndex(0)
+    setAuraPanelFlow('none')
+    setAuraPanelFlowIndex(0)
     setIsAuraTyping(false)
     // Set the new agent
     setAuraPanelAgentName(newAgentName)
@@ -835,15 +842,68 @@ function App() {
     // (In production, this would call an AI backend)
   }
 
+  // Add next message for default (workspace capacity) flow in side panel
+  const addNextPanelMessage = (index) => {
+    if (index >= CHAT_FLOW.length) return
+    const message = CHAT_FLOW[index]
+    setIsAuraTyping(true)
+    setTimeout(() => {
+      setAuraPanelMessages(prev => [...prev, { ...message, id: Date.now(), timestamp: new Date() }])
+      setAuraPanelFlowIndex(index + 1)
+      setIsAuraTyping(false)
+    }, 500)
+  }
+
+  // Add next message for CPU spike flow in side panel
+  const addNextPanelCpuSpikeMessage = (index) => {
+    if (index >= CPU_SPIKE_CHAT_FLOW.length) return
+    const message = CPU_SPIKE_CHAT_FLOW[index]
+    setIsAuraTyping(true)
+    setTimeout(() => {
+      setAuraPanelMessages(prev => [...prev, { ...message, id: Date.now(), timestamp: new Date() }])
+      setAuraPanelFlowIndex(index + 1)
+      setIsAuraTyping(false)
+    }, 500)
+  }
+
   const handleAuraAction = (action) => {
     const actionText = typeof action === 'string' ? action : action.text
     setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text: actionText, timestamp: new Date() }])
     
-    // Route to correct flow based on active agent
-    if (auraPanelAgentName === 'Data Migration Agent') {
+    // Route to correct flow based on active flow type
+    if (auraPanelAgentName === 'Data Migration Agent' || auraPanelFlow === 'migration') {
       setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
+    } else if (auraPanelFlow === 'cpu-spike') {
+      // Handle CPU spike flow actions
+      if (['Investigate spike', 'Show affected queries'].includes(actionText)) {
+        setTimeout(() => addNextPanelCpuSpikeMessage(auraPanelFlowIndex), 500)
+      } else if (actionText === 'Get more details on Select_act_samples_new') {
+        setTimeout(() => addNextPanelCpuSpikeMessage(auraPanelFlowIndex), 500)
+      }
+    } else if (auraPanelFlow === 'default') {
+      // Handle workspace capacity flow actions
+      if (['View recommended actions', 'Suggest alternate options', 'Show affected queries'].includes(actionText)) {
+        setTimeout(() => addNextPanelMessage(auraPanelFlowIndex), 500)
+      } else if (actionText === 'Apply resize' || actionText === 'Resize anyway') {
+        setTimeout(() => addNextPanelMessage(3), 500)
+      } else if (actionText === 'Confirm') {
+        // Add progress message
+        const progressMessageId = Date.now() + 1
+        setTimeout(() => {
+          setIsAuraTyping(false)
+          setAuraPanelMessages(prev => [...prev, { ...CHAT_FLOW[4], id: progressMessageId, timestamp: new Date(), typingComplete: true }])
+        }, 500)
+        // After 5 seconds, remove progress message and add success message
+        setTimeout(() => {
+          setAuraPanelMessages(prev => {
+            const filtered = prev.filter(m => m.id !== progressMessageId)
+            return [...filtered, { ...CHAT_FLOW[5], id: Date.now(), timestamp: new Date(), typingComplete: true }]
+          })
+          setAuraPanelFlowIndex(6)
+        }, 5500)
+      }
     }
-    // For other agents, no automated flow
+    // For other cases, no automated flow
   }
 
   const advanceMigrationFlowSilently = () => {
@@ -1954,9 +2014,10 @@ function AnimatedResizeProgress({ resizeProgress }) {
   )
 }
 
-function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete, agentName = 'Aura Agent' }) {
+function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete, agentName = 'Aura Agent', compact = false, onAdvanceSilently }) {
   const [currentParagraph, setCurrentParagraph] = useState(0)
   const [paragraphsCompleted, setParagraphsCompleted] = useState(false)
+  const [showConnections, setShowConnections] = useState(false)
   const textItems = message.type === 'agent' && message.content?.text ? message.content.text : []
 
   useEffect(() => {
@@ -2035,7 +2096,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         <span className="message-time">{timeDisplay}</span>
       </div>
       <div className="message-content">
-        {content.text && content.text.map((t, i) => renderTextContent(t, i))}
+        {content.text && Array.isArray(content.text) && content.text.map((t, i) => renderTextContent(t, i))}
 
         {content.stats && (!isTyping || paragraphsCompleted) && (
           <div className="stats-grid fade-in">
@@ -2151,15 +2212,30 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         {content.footer && (!isTyping || paragraphsCompleted) && <p className="message-text fade-in">{content.footer}</p>}
 
         {content.progress && (!isTyping || paragraphsCompleted) && (
-          <div className="progress-card fade-in">
-            <div className="progress-content">
-              <div className="progress-icon">
-                <SpinnerIcon />
+          <div className={`aura-progress-card fade-in ${content.completed ? 'completed' : ''}`}>
+            <div className="aura-progress-content">
+              <div className="aura-progress-icon">
+                {content.completed ? (
+                  <span className="aura-progress-check">✓</span>
+                ) : (
+                  <SpinnerIcon />
+                )}
               </div>
-              <span className="progress-text">{content.text}</span>
-              <span className="progress-time">{content.time}</span>
+              <span className="aura-progress-text">
+                {content.completed && content.completedState ? content.completedState.text : content.text}
+              </span>
             </div>
-            <span className="progress-link">View steps</span>
+            {content.completed && content.completedState?.subtext && (
+              <span className="aura-progress-subtext">{content.completedState.subtext}</span>
+            )}
+            {!content.completed && content.url && <span className="aura-progress-url">{content.url}</span>}
+            {content.steps && (
+              <div className="aura-progress-steps">
+                {content.steps.map((step, i) => (
+                  <div key={i} className="aura-progress-step">{step}</div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -2350,13 +2426,310 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
-        {content.actions && !content.progress && (message.showContent !== false) && paragraphsCompleted && (
+        {/* Migration-specific content types */}
+        {content.footerText && (!isTyping || paragraphsCompleted) && (
+          <p className="message-text fade-in"><strong>{content.footerText}</strong></p>
+        )}
+
+        {content.whyCard && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-why-card fade-in">
+            <div className="aura-why-card-title">{content.whyCard.title}</div>
+            <ul className="aura-why-card-list">
+              {content.whyCard.items.map((item, i) => (
+                <li key={i}>{item.prefix}<strong>{item.bold}</strong>{item.suffix}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {content.flowInstanceSelector && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-flow-instance-selector fade-in">
+            <div className="aura-flow-instance-label">{content.flowInstanceSelector.label}</div>
+            <div className="aura-flow-instance-options">
+              {content.flowInstanceSelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className={`aura-flow-instance-btn ${opt.recommended ? 'recommended' : ''}`}
+                  onClick={() => onAction(opt.label)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.provisionedResourcesGreen && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-provisioned-resources-green fade-in">
+            <div className="aura-provisioned-resources-green-title">{content.provisionedResourcesGreen.title}</div>
+            <div className="aura-provisioned-resources-green-stats">
+              {content.provisionedResourcesGreen.stats.map((stat, i) => (
+                <div key={i} className="aura-provisioned-stat-row">
+                  <span className="aura-provisioned-stat-label">{stat.label}</span>
+                  <span className="aura-provisioned-stat-value">{stat.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.cdcSelector && (!isTyping || paragraphsCompleted) && (
+          <div className="fade-in">
+            <p className="message-text"><strong>{content.cdcSelector.question}</strong></p>
+            <div className="aura-cdc-selector">
+              <div className="aura-cdc-selector-label">{content.cdcSelector.label}</div>
+              <div className="aura-cdc-selector-options">
+                {content.cdcSelector.options.map((opt) => (
+                  <button
+                    key={opt}
+                    className="aura-cdc-selector-btn"
+                    onClick={() => onAction(opt)}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {content.steps && !content.progress && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-steps-list fade-in">
+            {content.steps.map((step, i) => (
+              <div key={i} className="aura-step-item">{step}</div>
+            ))}
+          </div>
+        )}
+
+        {content.connectionSelect && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-connection-select fade-in">
+            <div className="aura-connection-card selected">
+              <div className="aura-connection-icon">
+                <IconFA name="database" size={16} />
+              </div>
+              <div className="aura-connection-info">
+                <span className="aura-connection-name">{content.connectionSelect.name}</span>
+                <span className="aura-connection-db">{content.connectionSelect.db} · {content.connectionSelect.tables}</span>
+                <span className="aura-connection-url">{content.connectionSelect.url}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {content.connections && showConnections && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-connections-list fade-in">
+            {content.connections.map((conn, i) => (
+              <div 
+                key={i} 
+                className="aura-connection-card aura-connection-card-clickable"
+                onClick={() => onAction(`Connect to ${conn.name}`)}
+              >
+                <div className="aura-connection-icon">
+                  <IconFA name="database" size={16} />
+                </div>
+                <div className="aura-connection-info">
+                  <span className="aura-connection-name">{conn.name}</span>
+                  <span className="aura-connection-db">{conn.db} • {conn.tables}</span>
+                  <span className="aura-connection-url">{conn.url}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {content.dbProfile && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-info-card aura-db-profile fade-in">
+            <div className="aura-info-card-header">{content.dbProfile.title}</div>
+            <div className="aura-info-card-stats">
+              {content.dbProfile.stats.map((stat, i) => (
+                <div key={i} className="aura-info-stat">
+                  <span className="aura-info-stat-label">{stat.label}</span>
+                  <span className="aura-info-stat-value">{stat.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.migrationConsiderations && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-migration-considerations fade-in">
+            <p className="message-text">{content.migrationConsiderations.intro}</p>
+            <div className="aura-considerations-list">
+              {content.migrationConsiderations.warnings.map((warning, i) => (
+                <div key={i} className="aura-consideration-item">
+                  <span className="aura-consideration-icon">⚠️</span>
+                  <div className="aura-consideration-content">
+                    <span className="aura-consideration-type">{warning.type}:</span>
+                    <span className="aura-consideration-text">{warning.text}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.transformationSummary && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-info-card aura-transformation-summary fade-in">
+            <div className="aura-info-card-header">{content.transformationSummary.title}</div>
+            <div className="aura-info-card-stats">
+              {content.transformationSummary.stats.map((stat, i) => (
+                <div key={i} className="aura-info-stat">
+                  <span className="aura-info-stat-label">{stat.label}</span>
+                  <span className={`aura-info-stat-value ${stat.highlight ? 'highlight' : ''}`}>{stat.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.actionRequired && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-action-required fade-in">
+            <span className="aura-action-required-icon">⚠️</span>
+            <div className="aura-action-required-content">
+              <span className="aura-action-required-label">Action Required:</span>
+              <span className="aura-action-required-text">{content.actionRequired.text}</span>
+            </div>
+          </div>
+        )}
+
+        {content.interactiveManualReview && (!isTyping || paragraphsCompleted) && (
+          <div className="fade-in">
+            <InteractiveManualReview
+              items={content.interactiveManualReview.items}
+              onAllApproved={onAdvanceSilently}
+            />
+          </div>
+        )}
+
+        {content.manualReview && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-manual-review fade-in">
+            <div className="aura-manual-review-header">
+              <div className="aura-manual-review-title">
+                <IconFA name="circle-info" size={14} />
+                <span>Manual Review Required</span>
+              </div>
+              <span className="aura-manual-review-count">{content.manualReview.count}</span>
+            </div>
+            <div className="aura-manual-review-list">
+              {content.manualReview.items.map((item, i) => (
+                <div key={i} className="aura-manual-review-item">
+                  <IconFA name="chevron-right" size={12} />
+                  <div className="aura-review-check">
+                    <IconFA name="check" size={10} />
+                  </div>
+                  <div className="aura-review-item-info">
+                    <span className="aura-review-item-name">{item.name}</span>
+                    <span className="aura-review-item-reason">{item.reason}</span>
+                  </div>
+                  <span className="aura-review-item-status">{item.status}</span>
+                </div>
+              ))}
+            </div>
+            {content.manualReview.allApproved && (
+              <div className="aura-manual-review-footer">
+                <IconFA name="check" size={14} />
+                <span>All tables reviewed and approved</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {content.migrationPlan && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-migration-plan fade-in">
+            <div className="aura-migration-plan-header">{content.migrationPlan.title}</div>
+            <div className="aura-migration-plan-items">
+              {content.migrationPlan.items.map((item, i) => (
+                <div key={i} className="aura-migration-plan-item">{item}</div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.codePreview && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-code-preview fade-in">
+            <div className="aura-code-preview-header">
+              <span>{content.codePreview.title}</span>
+              <span className="aura-code-preview-lang">{content.codePreview.language}</span>
+            </div>
+            <pre className="aura-code-preview-code">
+              <code>{content.codePreview.code}</code>
+            </pre>
+          </div>
+        )}
+
+        {content.provisionedResources && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-info-card fade-in">
+            <div className="aura-info-card-header">{content.provisionedResources.title}</div>
+            <div className="aura-info-card-stats">
+              {content.provisionedResources.stats.map((stat, i) => (
+                <div key={i} className="aura-info-stat">
+                  <span className="aura-info-stat-label">{stat.label}</span>
+                  <span className="aura-info-stat-value">{stat.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.warnings && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-warnings fade-in">
+            {content.warnings.map((warning, i) => (
+              <div key={i} className="aura-warning-item">
+                <span className="aura-warning-icon">{warning.icon}</span>
+                <span className="aura-warning-text">{warning.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {content.interactiveTableSelection && (!isTyping || paragraphsCompleted) && (
+          <div className="fade-in">
+            <InteractiveTableSelector 
+              tables={content.interactiveTableSelection.tables}
+              totalTables={content.interactiveTableSelection.totalTables}
+              onConfirm={onAction}
+            />
+          </div>
+        )}
+
+        {content.warningCard && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-warning-card fade-in">
+            <span className="aura-warning-card-icon">{content.warningCard.icon}</span>
+            <div className="aura-warning-card-content">
+              <span className="aura-warning-card-title">{content.warningCard.title}</span>
+              <span className="aura-warning-card-text">{content.warningCard.text}</span>
+            </div>
+          </div>
+        )}
+
+        {content.migrationStats && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-migration-stats fade-in">
+            {content.migrationStats.stats.map((stat, i) => (
+              <div key={i} className="aura-migration-stat">
+                <span className="aura-migration-stat-label">{stat.label}</span>
+                <span className="aura-migration-stat-value">{stat.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {content.followUp && (!isTyping || paragraphsCompleted) && (
+          <p className="message-text fade-in">{content.followUp}</p>
+        )}
+
+        {content.actions && !content.progress && (message.showContent !== false) && paragraphsCompleted && !(content.connections && showConnections) && (
           <div className="action-buttons fade-in">
             {content.actions.map((action, i) => {
               const isPrimary = typeof action === 'object' && action.primary
               const text = typeof action === 'string' ? action : action.text
+              const handleClick = () => {
+                if (text === 'Use existing connection') {
+                  setShowConnections(true)
+                }
+                onAction(action)
+              }
               return (
-                <button key={i} className={`action-btn ${isPrimary ? 'primary' : ''}`} onClick={() => onAction(action)}>
+                <button key={i} className={`action-btn ${isPrimary ? 'primary' : ''}`} onClick={handleClick}>
                   {text}
                 </button>
               )
@@ -3801,41 +4174,31 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
           </div>
         ) : (
           <div className="aura-panel-messages">
-            {messages.map((message, index) => {
-              const isLastAgentMessage = message.type === 'agent' && 
-                messages.slice(index + 1).every(m => m.type === 'user')
-              const isTyped = typedMessageIds.has(message.id) || !isLastAgentMessage
-              
-              return (
-                <div key={message.id} className={`aura-message ${message.type}`}>
-                  {message.type === 'user' ? (
-                    <div className="aura-user-bubble">
-                      <p>{message.text}</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="aura-message-header">
-                        <span className="aura-message-sender">{agentName}</span>
-                        <span className="dot" />
-                        <span className="aura-message-time">{formatTime(message.timestamp)}</span>
-                      </div>
-                      <AgentMessageContent 
-                        message={message} 
-                        isTyped={isTyped} 
-                        renderMigrationMessage={renderMigrationMessage}
-                        onTypingComplete={() => markAsTyped(message.id)}
-                      />
-                    </>
-                  )}
-                </div>
-              )
-            })}
+            {messages.map((message, index) => (
+              <Message
+                key={message.id}
+                message={message}
+                onAction={handleAction}
+                expandedQueries={true}
+                setExpandedQueries={() => {}}
+                expandedOptions={true}
+                setExpandedOptions={() => {}}
+                isTyping={index === messages.length - 1 && message.type === 'agent' && !message.typingComplete}
+                onTypingComplete={() => {
+                  message.typingComplete = true
+                  markAsTyped(message.id)
+                }}
+                agentName={agentName}
+                compact={true}
+                onAdvanceSilently={onAdvanceSilently}
+              />
+            ))}
             {isTyping && (
-              <div className="aura-message">
-                <div className="aura-message-header">
-                  <span className="aura-message-sender">{agentName}</span>
+              <div className="message">
+                <div className="message-header">
+                  <span className="message-sender">{agentName}</span>
                   <span className="dot" />
-                  <span className="aura-message-time">{formatTime(new Date())}</span>
+                  <span className="message-time">{formatTime(new Date())}</span>
                 </div>
                 <div className="typing-indicator">
                   <div className="typing-dot" />
