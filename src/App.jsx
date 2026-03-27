@@ -676,6 +676,21 @@ function App() {
   const chatEndRef = useRef(null)
   const auraChatEndRef = useRef(null)
 
+  // Auto-collapse sidebar on smaller screens
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarExpanded(false)
+      }
+    }
+    
+    // Check on mount
+    handleResize()
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' })
@@ -773,12 +788,26 @@ function App() {
 
   const handleNotificationClick = (notification) => {
     if (notification.id === 1) {
-      setView('chat')
-      setChatMessages([])
-      setCurrentFlowIndex(0)
-      setUserMsgIndex(0)
-      setActiveChatFlow('cpu-spike')
-      setTimeout(() => addNextCpuSpikeMessage(0), 500)
+      // If on home/portal page, open full screen chat
+      // Otherwise, open as side panel
+      if (view === 'portal' || view === 'chat') {
+        setView('chat')
+        setChatMessages([])
+        setCurrentFlowIndex(0)
+        setUserMsgIndex(0)
+        setActiveChatFlow('cpu-spike')
+        setTimeout(() => addNextCpuSpikeMessage(0), 500)
+      } else {
+        // Open as side panel on other pages
+        setAuraPanelOpen(true)
+        setAuraPanelMessages([])
+        setMigrationFlowIndex(0)
+        // Start the CPU spike flow in the side panel
+        setTimeout(() => {
+          const message = CPU_SPIKE_CHAT_FLOW[0]
+          setAuraPanelMessages([{ ...message, id: Date.now(), timestamp: new Date() }])
+        }, 500)
+      }
     }
   }
 
@@ -893,6 +922,8 @@ function App() {
             activeChatFlow={activeChatFlow}
           />
         )
+      case 'workspaces':
+        return <WorkspacesView />
       default:
         return null
     }
@@ -946,7 +977,8 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
   }
 
   const getActiveState = (item) => {
-    if (item.id === 'home' && currentView === 'portal') return true
+    if (item.id === 'home' && (currentView === 'portal' || currentView === 'chat')) return true
+    if (item.id === 'workspaces' && currentView === 'workspaces') return true
     if (item.id === 'load-data' && currentView === 'load-data') return true
     return false
   }
@@ -956,6 +988,8 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
       toggleExpand(item.id)
     } else if (item.id === 'home') {
       onNavigate('portal')
+    } else if (item.id === 'workspaces') {
+      onNavigate('workspaces')
     } else if (item.id === 'ingestion' || item.id === 'load-data') {
       onNavigate('load-data')
     }
@@ -1342,6 +1376,261 @@ function Header({ onLogoClick, onAskAura, onNotificationClick }) {
         </button>
       </div>
     </header>
+  )
+}
+
+const WORKSPACES_DATA = [
+  {
+    id: 1,
+    name: 'Workspace-2',
+    group: 'Group 1',
+    environment: 'Prod',
+    project: 'Acme',
+    edition: 'Standard',
+    cloudRegion: 'AWS • US East',
+    size: 'S-2',
+    sizeDetail: '2x 4x',
+    vCPU: 33.54,
+    memory: 33.54,
+    cache: 33.54,
+    attachedDBs: { rw: 4, ro: 2 },
+    status: 'active'
+  },
+  {
+    id: 2,
+    name: 'Workspace-1',
+    group: 'Group 1',
+    environment: 'Non-Prod',
+    project: 'Acme',
+    edition: 'Shared',
+    cloudRegion: 'AWS • US East',
+    size: 'S-2',
+    sizeDetail: '2x 4x',
+    vCPU: null,
+    memory: null,
+    cache: null,
+    attachedDBs: { rw: 4, ro: 2 },
+    status: 'suspended'
+  },
+  {
+    id: 3,
+    name: 'Workspace-1',
+    group: 'Group 1',
+    environment: 'Non-Prod',
+    project: 'Kixo',
+    edition: 'Standard',
+    cloudRegion: 'AWS • US East',
+    size: 'S-2',
+    sizeDetail: '2x 4x',
+    vCPU: null,
+    memory: null,
+    cache: null,
+    attachedDBs: { rw: 4, ro: 2 },
+    status: 'suspended'
+  },
+  {
+    id: 4,
+    name: 'Workspace-2',
+    group: 'Group 1',
+    environment: 'Prod',
+    project: 'Kixo',
+    edition: 'Enterprise',
+    cloudRegion: 'GCP • US East',
+    size: 'S-2',
+    sizeDetail: '2x 4x',
+    vCPU: 33.54,
+    memory: 33.54,
+    cache: 33.54,
+    attachedDBs: { rw: 4, ro: 2 },
+    status: 'active'
+  },
+  {
+    id: 5,
+    name: 'Workspace-2',
+    group: 'Group 1',
+    environment: 'Prod',
+    project: 'Acme',
+    edition: 'Standard',
+    cloudRegion: 'AWS • US East',
+    size: 'S-2',
+    sizeDetail: '2x 4x',
+    vCPU: 33.54,
+    memory: 33.54,
+    cache: 33.54,
+    attachedDBs: { rw: 4, ro: 2 },
+    status: 'active'
+  }
+]
+
+function WorkspaceIconActive() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M31.15 15.7991C30.95 12.9509 28.55 10.6429 25.6 10.6429C25.2 10.6429 24.8 10.692 24.45 10.7902C22.85 8.82589 20.4 7.5 17.6 7.5C13.35 7.5 9.8 10.4464 8.95 14.375C5.95 15.6027 4 18.4509 4 21.6429C4 26.0134 7.55 29.5 12 29.5H28.8C32.75 29.5 36 26.3571 36 22.4286C36 19.433 34 16.7812 31.15 15.7991ZM28.8 27.1429H12C8.9 27.1429 6.4 24.6875 6.4 21.6429C6.4 18.8929 8.45 16.5848 11.2 16.2411V16.1429C11.2 12.7054 14.05 9.85714 17.6 9.85714C20.25 9.85714 22.55 11.4777 23.5 13.7857C24.05 13.2946 24.8 13 25.6 13C27.35 13 28.8 14.4241 28.8 16.1429C28.8 16.7321 28.6 17.2723 28.35 17.7634C28.5 17.7634 28.65 17.7143 28.8 17.7143C31.45 17.7143 33.6 19.8259 33.6 22.4286C33.6 25.0312 31.45 27.1429 28.8 27.1429Z" fill="#4C4A57"/>
+      <path d="M30 16C34.6632 16 38.5 19.8368 38.5 24.5C38.5 29.1968 34.6619 33 30 33C25.3045 33 21.5 29.1955 21.5 24.5C21.5 19.8381 25.3032 16 30 16ZM33.9023 21.7246L29.0635 26.5635L28.7119 26.9141L28.3584 26.5654L26.0684 24.3076L26.0645 24.3037L26.0557 24.3125L25.3252 25.0098C25.3237 25.014 25.3223 25.022 25.3223 25.0322C25.3223 25.0426 25.3246 25.0506 25.3262 25.0547L28.6709 28.3994C28.675 28.401 28.6829 28.4033 28.6934 28.4033C28.7037 28.4033 28.7117 28.401 28.7158 28.3994L34.6416 22.4727C34.6431 22.4683 34.6455 22.4606 34.6455 22.4512C34.6455 22.4413 34.6431 22.4339 34.6416 22.4297L33.9121 21.7324L33.9023 21.7227V21.7246Z" fill="#00873F" stroke="white"/>
+    </svg>
+  )
+}
+
+function WorkspaceIconSuspended() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M31.15 15.6763C30.95 12.6987 28.55 10.2857 25.6 10.2857C25.2 10.2857 24.8 10.3371 24.45 10.4397C22.85 8.38616 20.4 7 17.6 7C13.35 7 9.8 10.0804 8.95 14.1875C5.95 15.471 4 18.4487 4 21.7857C4 26.3549 7.55 30 12 30H28.8C32.75 30 36 26.7143 36 22.6071C36 19.4754 34 16.7031 31.15 15.6763ZM28.8 27.5357H12C8.9 27.5357 6.4 24.9688 6.4 21.7857C6.4 18.9107 8.45 16.4978 11.2 16.1384V16.0357C11.2 12.442 14.05 9.46429 17.6 9.46429C20.25 9.46429 22.55 11.1585 23.5 13.5714C24.05 13.058 24.8 12.75 25.6 12.75C27.35 12.75 28.8 14.2388 28.8 16.0357C28.8 16.6518 28.6 17.2165 28.35 17.7299C28.5 17.7299 28.65 17.6786 28.8 17.6786C31.45 17.6786 33.6 19.8862 33.6 22.6071C33.6 25.3281 31.45 27.5357 28.8 27.5357Z" fill="#4C4A57"/>
+      <path d="M30 15.5C34.6955 15.5 38.5 19.3045 38.5 24C38.5 28.6955 34.6955 32.5 30 32.5C25.3045 32.5 21.5 28.6955 21.5 24C21.5 19.3045 25.3045 15.5 30 15.5ZM27.4131 21.4102C27.408 21.4155 27.405 21.4218 27.4033 21.4258V26.5811C27.4034 26.5874 27.4048 26.5906 27.4053 26.5918C27.4058 26.593 27.4061 26.5936 27.4062 26.5938C27.4064 26.5939 27.407 26.5942 27.4082 26.5947C27.4094 26.5952 27.4126 26.5966 27.4189 26.5967H28.9619C28.9658 26.595 28.9714 26.5918 28.9766 26.5869C28.9808 26.5829 28.9825 26.5788 28.9834 26.5771V21.4365C28.9826 21.4352 28.9816 21.4333 28.9805 21.4316C28.9774 21.4273 28.9733 21.4225 28.9688 21.418C28.9642 21.4134 28.9594 21.4093 28.9551 21.4062C28.9536 21.4052 28.9524 21.4041 28.9512 21.4033H27.4229C27.4212 21.4042 27.4173 21.4058 27.4131 21.4102ZM31.0264 21.4102C31.0213 21.4155 31.0183 21.4218 31.0166 21.4258V26.5811C31.0166 26.5871 31.0171 26.5904 31.0176 26.5918L31.0186 26.5938C31.0187 26.5939 31.0195 26.5943 31.0205 26.5947C31.0214 26.5951 31.025 26.5967 31.0322 26.5967H32.5742C32.5782 26.595 32.5845 26.592 32.5898 26.5869C32.5942 26.5827 32.5958 26.5788 32.5967 26.5771V21.4365C32.5959 21.4352 32.595 21.4334 32.5938 21.4316C32.5906 21.4273 32.5867 21.4226 32.582 21.418C32.5774 21.4133 32.5727 21.4094 32.5684 21.4062C32.5666 21.405 32.5648 21.4041 32.5635 21.4033H31.0352C31.0334 21.4043 31.0301 21.4063 31.0264 21.4102Z" fill="#777582" stroke="white"/>
+    </svg>
+  )
+}
+
+function WorkspacesView() {
+  const [searchQuery, setSearchQuery] = useState('')
+
+  return (
+    <div className="workspaces-view">
+      <div className="workspaces-header">
+        <h1>Workspaces</h1>
+        <div className="workspaces-header-actions">
+          <button className="workspaces-btn-secondary">Manage Projects</button>
+          <button className="workspaces-btn-primary">
+            <PlusIcon />
+            <span>Create Workspace</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="workspaces-filters">
+        <div className="workspaces-search">
+          <IconFA name="search" size={14} />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <button className="workspaces-filter-btn">
+          <IconFA name="folder" size={14} />
+          <span className="filter-value">All</span>
+          <IconFA name="chevron-down" size={10} />
+        </button>
+        <div className="workspaces-filter-divider" />
+        <button className="workspaces-filter-btn">
+          <span className="filter-label">Status:</span>
+          <span className="filter-value">All</span>
+          <IconFA name="chevron-down" size={10} />
+        </button>
+        <button className="workspaces-filter-btn">
+          <span className="filter-label">Cloud:</span>
+          <span className="filter-value">All</span>
+          <IconFA name="chevron-down" size={10} />
+        </button>
+        <button className="workspaces-filter-btn">
+          <span className="filter-label">Region:</span>
+          <span className="filter-value">All</span>
+          <IconFA name="chevron-down" size={10} />
+        </button>
+      </div>
+
+      <div className="workspaces-table-container">
+        <table className="workspaces-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Project</th>
+              <th>Cloud & Region</th>
+              <th>Size</th>
+              <th>vCPU</th>
+              <th>Memory</th>
+              <th>Cache</th>
+              <th>Attached DBs</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {WORKSPACES_DATA.map((workspace) => (
+              <tr key={workspace.id}>
+                <td>
+                  <div className="workspace-name-cell">
+                    <div className="workspace-icon">
+                      {workspace.status === 'active' ? <WorkspaceIconActive /> : <WorkspaceIconSuspended />}
+                    </div>
+                    <div className="workspace-name-info">
+                      <span className="workspace-name">{workspace.name}</span>
+                      <div className="workspace-meta">
+                        <span className="workspace-group">{workspace.group}</span>
+                        <span className={`workspace-env-badge ${workspace.environment === 'Prod' ? 'prod' : 'non-prod'}`}>
+                          {workspace.environment}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div className="workspace-project">
+                    <span className="project-name">{workspace.project}</span>
+                    <span className={`workspace-edition ${workspace.edition.toLowerCase()}`}>
+                      {workspace.edition}
+                    </span>
+                  </div>
+                </td>
+                <td className="workspace-cloud-region">{workspace.cloudRegion}</td>
+                <td>
+                  <div className="workspace-size">
+                    <span>{workspace.size}</span>
+                    <span className="size-detail">{workspace.sizeDetail}</span>
+                  </div>
+                </td>
+                <td>
+                  {workspace.status === 'suspended' ? (
+                    <span className="workspace-suspended">Suspended</span>
+                  ) : (
+                    <div className="workspace-metric">
+                      <span>{workspace.vCPU}%</span>
+                      <div className="metric-bar">
+                        <div className="metric-bar-fill" style={{ width: `${workspace.vCPU}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </td>
+                <td>
+                  {workspace.status === 'suspended' ? (
+                    <span className="workspace-suspended">Suspended</span>
+                  ) : (
+                    <div className="workspace-metric">
+                      <span>{workspace.memory}%</span>
+                      <div className="metric-bar">
+                        <div className="metric-bar-fill" style={{ width: `${workspace.memory}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </td>
+                <td>
+                  {workspace.status === 'suspended' ? (
+                    <span className="workspace-suspended">Suspended</span>
+                  ) : (
+                    <div className="workspace-metric">
+                      <span>{workspace.cache}%</span>
+                      <div className="metric-bar">
+                        <div className="metric-bar-fill" style={{ width: `${workspace.cache}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </td>
+                <td>
+                  <div className="workspace-dbs">
+                    <span className="db-rw">{workspace.attachedDBs.rw} RW</span>
+                    <span className="db-ro">{workspace.attachedDBs.ro} RO</span>
+                  </div>
+                </td>
+                <td>
+                  <button className={`workspace-action-btn ${workspace.status === 'suspended' ? 'secondary' : 'tertiary'}`}>
+                    {workspace.status === 'suspended' ? 'Resume' : 'Connect'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }
 
@@ -1989,6 +2278,8 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'database': '\uf1c0',
     'floppy-disk': '\uf0c7',
     'cloud': '\uf0c2',
+    'folder': '\uf07b',
+    'folders': '\uf660',
     'list-timeline': '\ue1d1',
     'clock': '\uf017',
     'grid-2': '\ue196',
@@ -2020,6 +2311,7 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'user-plus': '\uf234',
     'bell': '\uf0f3',
     'magnifying-glass': '\uf002',
+    'search': '\uf002',
     'command': '\ue142',
     'arrow-up': '\uf062',
     'briefcase': '\uf0b1',
