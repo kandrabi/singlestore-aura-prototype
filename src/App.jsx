@@ -2027,11 +2027,27 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
   const textItems = message.type === 'agent' && message.content?.text ? message.content.text : []
 
   useEffect(() => {
-    if (!isTyping) {
+    if (!isTyping || textItems.length === 0) {
       setCurrentParagraph(textItems.length)
       setParagraphsCompleted(true)
     }
   }, [isTyping, textItems.length])
+
+  // For progress-only messages (no text items), call onTypingComplete after a brief delay
+  useEffect(() => {
+    if (isTyping && textItems.length === 0 && message.content?.progress) {
+      // Calculate delay based on steps
+      const steps = message.content?.steps || []
+      const delay = steps.length > 0 
+        ? 800 + (steps.length * 700) + 400 + 500  // initial + steps + completion + buffer
+        : 2500 + 500  // default delay + buffer
+      
+      const timer = setTimeout(() => {
+        onTypingComplete?.()
+      }, delay)
+      return () => clearTimeout(timer)
+    }
+  }, [isTyping, textItems.length, message.content?.progress, message.content?.steps, onTypingComplete])
 
   const handleParagraphComplete = () => {
     if (currentParagraph < textItems.length - 1) {
@@ -2218,31 +2234,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         {content.footer && (!isTyping || paragraphsCompleted) && <p className="message-text fade-in">{content.footer}</p>}
 
         {content.progress && (!isTyping || paragraphsCompleted) && (
-          <div className={`aura-progress-card fade-in ${content.completed ? 'completed' : ''}`}>
-            <div className="aura-progress-content">
-              <div className="aura-progress-icon">
-                {content.completed ? (
-                  <span className="aura-progress-check">✓</span>
-                ) : (
-                  <SpinnerIcon />
-                )}
-              </div>
-              <span className="aura-progress-text">
-                {content.completed && content.completedState ? content.completedState.text : content.text}
-              </span>
-            </div>
-            {content.completed && content.completedState?.subtext && (
-              <span className="aura-progress-subtext">{content.completedState.subtext}</span>
-            )}
-            {!content.completed && content.url && <span className="aura-progress-url">{content.url}</span>}
-            {content.steps && (
-              <div className="aura-progress-steps">
-                {content.steps.map((step, i) => (
-                  <div key={i} className="aura-progress-step">{step}</div>
-                ))}
-              </div>
-            )}
-          </div>
+          <AnimatedProgressCard content={content} isTyped={!isTyping} />
         )}
 
         {content.resizeProgress && (!isTyping || paragraphsCompleted) && (
