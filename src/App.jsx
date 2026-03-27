@@ -34,7 +34,6 @@ const SIDEBAR_NAV_ITEMS = [
     children: [
       { id: 'load-data', label: 'Load Data', active: true },
       { id: 'pipelines', label: 'Pipelines' },
-      { id: 'flow', label: 'Flow', badge: 'Preview' },
     ]
   },
   { id: 'editor', icon: 'rectangle-terminal', label: 'Editor' },
@@ -917,6 +916,7 @@ function App() {
           <AuraSidePanel
             isOpen={auraPanelOpen}
             isFullscreen={auraPanelFullscreen}
+            sidebarExpanded={sidebarExpanded}
             width={auraPanelWidth}
             onClose={handleCloseAuraPanel}
             onToggleFullscreen={() => setAuraPanelFullscreen(!auraPanelFullscreen)}
@@ -967,73 +967,45 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
     }
   }
 
-  if (!isExpanded) {
-    return (
-      <div className="sidebar">
-        <div className="sidebar-top">
-          <button className="sidebar-create-btn" title="Create New">
-            <PlusIcon />
-          </button>
-          <div className="sidebar-items">
-            {SIDEBAR_NAV_ITEMS.map((item) => (
-              <button 
-                key={item.id} 
-                className={`sidebar-item ${getActiveState(item) ? 'active' : ''}`}
-                onClick={() => handleNavClick(item)}
-                title={item.label}
-              >
-                <SidebarIcon name={item.icon} active={getActiveState(item)} />
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="sidebar-bottom">
-          <div className="sidebar-user-collapsed" title="Syed Kabeer Andrabi">
-            <span>SA</span>
-          </div>
-          <button className="sidebar-item" onClick={onToggleExpand} title="Expand">
-            <SidebarIcon name="sidebar" />
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="expanded-sidebar">
-      <div className="expanded-sidebar-top">
-        <button className="expanded-sidebar-create-btn">
+    <div className={`unified-sidebar ${isExpanded ? 'expanded' : 'collapsed'}`}>
+      <div className="unified-sidebar-top">
+        <button 
+          className="unified-create-btn" 
+          title={!isExpanded ? "Create New" : undefined}
+        >
           <PlusIcon />
-          <span>Create New</span>
+          <span className="unified-label">Create New</span>
         </button>
         
-        <nav className="expanded-sidebar-nav">
+        <nav className="unified-sidebar-nav">
           {SIDEBAR_NAV_ITEMS.map((item) => (
-            <div key={item.id} className="nav-item-wrapper">
+            <div key={item.id} className="unified-nav-wrapper">
               <button 
-                className={`expanded-nav-item ${getActiveState(item) ? 'active' : ''} ${item.children && expandedItems.includes(item.id) ? 'expanded' : ''}`}
+                className={`unified-nav-item ${getActiveState(item) ? 'active' : ''}`}
                 onClick={() => handleNavClick(item)}
+                title={!isExpanded ? item.label : undefined}
               >
-                <div className="nav-item-left">
-                  <SidebarIcon name={item.icon} />
-                  <span>{item.label}</span>
+                <div className="unified-nav-icon">
+                  <SidebarIcon name={item.icon} active={getActiveState(item)} />
                 </div>
-                {item.children && (
+                <span className="unified-label">{item.label}</span>
+                {item.children && isExpanded && (
                   <span className={`nav-chevron ${expandedItems.includes(item.id) ? 'expanded' : ''}`}>
                     <IconFA name="chevron-down" size={10} />
                   </span>
                 )}
               </button>
               
-              {item.children && expandedItems.includes(item.id) && (
-                <div className="nav-children">
+              {item.children && isExpanded && expandedItems.includes(item.id) && (
+                <div className="unified-nav-children">
                   {item.children.map((child) => (
                     <button 
                       key={child.id} 
-                      className={`nav-child-item ${child.id === 'load-data' && currentView === 'load-data' ? 'active' : ''}`}
+                      className={`unified-child-item ${child.id === 'load-data' && currentView === 'load-data' ? 'active' : ''}`}
                       onClick={() => handleChildClick(child)}
                     >
-                      <span>{child.label}</span>
+                      <span className="unified-label">{child.label}</span>
                       {child.badge && <span className="nav-badge">{child.badge}</span>}
                     </button>
                   ))}
@@ -1044,20 +1016,26 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
         </nav>
       </div>
       
-      <div className="expanded-sidebar-bottom">
-        <div className="sidebar-user">
-          <div className="sidebar-user-avatar">SA</div>
-          <div className="sidebar-user-info">
-            <span className="sidebar-user-name">Syed Kabeer Andrabi</span>
-            <span className="sidebar-user-org">S2DB DPS - CLAUDE AI EVALU...</span>
+      <div className="unified-sidebar-bottom">
+        <div className="unified-user" title={!isExpanded ? "Syed Kabeer Andrabi" : undefined}>
+          <div className="unified-user-avatar">SA</div>
+          <div className="unified-user-info">
+            <span className="unified-user-name">Syed Kabeer Andrabi</span>
+            <span className="unified-user-org">S2DB DPS - CLAUDE AI EVALU...</span>
           </div>
-          <button className="sidebar-user-menu">
-            <IconFA name="chevron-down" size={12} />
-          </button>
+          {isExpanded && (
+            <button className="unified-user-menu">
+              <IconFA name="chevron-down" size={12} />
+            </button>
+          )}
         </div>
-        <button className="sidebar-collapse-btn" onClick={onToggleExpand}>
-          <IconFA name="sidebar" size={14} />
-          <span>Collapse</span>
+        <button 
+          className="unified-toggle-btn" 
+          onClick={onToggleExpand}
+          title={!isExpanded ? "Expand" : undefined}
+        >
+          <SidebarIcon name="sidebar" />
+          <span className="unified-label">{isExpanded ? 'Collapse' : ''}</span>
         </button>
       </div>
     </div>
@@ -1101,6 +1079,9 @@ function LoadDataView({ onOpenAura }) {
               <IconFA name="sparkles" size={14} />
               <span>Data Migration with AI</span>
             </button>
+          </div>
+          <div className="ai-migration-image">
+            <img src="/images/data-migration-banner.png" alt="Data Migration Illustration" />
           </div>
         </div>
 
@@ -2331,13 +2312,107 @@ function InteractiveTableSelector({ tables: initialTables, totalTables, onConfir
   )
 }
 
-function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef }) {
+function TypewriterLine({ text, speed = 18, onComplete, isActive, isTyped }) {
+  const [displayedText, setDisplayedText] = useState(isTyped ? text : '')
+  const [showCursor, setShowCursor] = useState(false)
+  const completedRef = useRef(false)
+  
+  useEffect(() => {
+    if (isTyped) {
+      setDisplayedText(text || '')
+      setShowCursor(false)
+      return
+    }
+    
+    if (!isActive || !text) {
+      return
+    }
+    
+    let index = 0
+    setDisplayedText('')
+    setShowCursor(true)
+    completedRef.current = false
+    
+    const timer = setInterval(() => {
+      if (index < text.length) {
+        setDisplayedText(text.slice(0, index + 1))
+        index++
+      } else {
+        clearInterval(timer)
+        setShowCursor(false)
+        if (!completedRef.current) {
+          completedRef.current = true
+          setTimeout(() => onComplete?.(), 150)
+        }
+      }
+    }, speed)
+    
+    return () => clearInterval(timer)
+  }, [text, speed, isActive, isTyped])
+  
+  if (!isActive && !isTyped && !displayedText) {
+    return null
+  }
+  
+  return <>{displayedText}{showCursor && <span className="typing-cursor" />}</>
+}
+
+function useSequentialTyping(totalLines, isTyped, onAllComplete) {
+  const [currentLine, setCurrentLine] = useState(isTyped ? totalLines : 0)
+  const [allDone, setAllDone] = useState(isTyped)
+  const completedRef = useRef(false)
+  
+  useEffect(() => {
+    if (isTyped) {
+      setCurrentLine(totalLines)
+      setAllDone(true)
+      completedRef.current = true
+    } else {
+      setCurrentLine(0)
+      setAllDone(false)
+      completedRef.current = false
+    }
+  }, [isTyped, totalLines])
+  
+  const advanceLine = () => {
+    setCurrentLine(prev => {
+      const next = prev + 1
+      if (next >= totalLines && !completedRef.current) {
+        completedRef.current = true
+        setTimeout(() => {
+          setAllDone(true)
+          onAllComplete?.()
+        }, 200)
+      }
+      return next
+    })
+  }
+  
+  return { currentLine, allDone, advanceLine }
+}
+
+function AgentMessageContent({ message, isTyped, renderMigrationMessage, onTypingComplete }) {
+  const textLines = message.content?.text || []
+  const totalLines = textLines.length
+  const typingState = useSequentialTyping(totalLines, isTyped, onTypingComplete)
+  
+  return renderMigrationMessage(message, isTyped, typingState)
+}
+
+function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef }) {
   const [isResizing, setIsResizing] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState(AURA_AGENTS[1])
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
   const [showConnections, setShowConnections] = useState(false)
+  const [typedMessageIds, setTypedMessageIds] = useState(new Set())
   const panelRef = useRef(null)
   const dropdownRef = useRef(null)
+  
+  const sidebarWidth = sidebarExpanded ? 220 : 48
+  
+  const markAsTyped = (messageId) => {
+    setTypedMessageIds(prev => new Set([...prev, messageId]))
+  }
 
   const handleAction = (action) => {
     if (action === 'Use existing connection') {
@@ -2395,28 +2470,80 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
 
   if (!isOpen) return null
 
-  const renderMigrationMessage = (message) => {
+  const renderMigrationMessage = (message, isTyped, typingState) => {
     const { content } = message
+    const { currentLine, allDone, advanceLine } = typingState
+    
+    const getTextContent = (t) => {
+      if (t.type === 'bold') return t.content
+      if (t.type === 'text') return t.content
+      if (t.type === 'success') return t.content
+      if (t.type === 'mixed') return `${t.content || ''}${t.bold || ''}${t.after || ''}${t.bold2 || ''}${t.after2 || ''}`
+      return ''
+    }
+
+    const renderTextLine = (t, lineIndex) => {
+      const isLineTyped = isTyped || lineIndex < currentLine
+      const isLineActive = !isTyped && lineIndex === currentLine
+      const text = getTextContent(t)
+      
+      if (!isLineTyped && !isLineActive) return null
+      
+      return (
+        <TypewriterLine
+          key={lineIndex}
+          text={text}
+          isTyped={isLineTyped}
+          isActive={isLineActive}
+          onComplete={advanceLine}
+          speed={18}
+        />
+      )
+    }
+
+    const textLines = content.text && Array.isArray(content.text) ? content.text : []
 
     return (
       <div className="aura-message-content">
-        {content.text && Array.isArray(content.text) && content.text.map((t, i) => (
-          <p key={i} className={`aura-message-text ${t.type === 'success' ? 'aura-text-success' : ''}`}>
-            {t.type === 'bold' && <strong>{t.content}</strong>}
-            {t.type === 'text' && t.content}
-            {t.type === 'success' && <><span className="success-check">✓</span> {t.content}</>}
-            {t.type === 'mixed' && (
-              <>{t.content}<strong>{t.bold}</strong>{t.after}{t.bold2 && <><strong>{t.bold2}</strong>{t.after2}</>}</>
-            )}
-          </p>
-        ))}
+        {textLines.map((t, i) => {
+          const isLineTyped = isTyped || i < currentLine
+          const isLineActive = !isTyped && i === currentLine
+          
+          if (!isLineTyped && !isLineActive) return null
+          
+          return (
+            <p key={i} className={`aura-message-text ${t.type === 'success' ? 'aura-text-success' : ''}`}>
+              {t.type === 'success' && <span className="success-check">✓</span>}
+              {t.type === 'success' && ' '}
+              {t.type === 'bold' ? (
+                <strong>
+                  <TypewriterLine
+                    text={t.content}
+                    isTyped={isLineTyped}
+                    isActive={isLineActive}
+                    onComplete={advanceLine}
+                    speed={18}
+                  />
+                </strong>
+              ) : (
+                <TypewriterLine
+                  text={getTextContent(t)}
+                  isTyped={isLineTyped}
+                  isActive={isLineActive}
+                  onComplete={advanceLine}
+                  speed={18}
+                />
+              )}
+            </p>
+          )
+        })}
 
-        {content.footerText && (
+        {allDone && content.footerText && (
           <p className="aura-message-text aura-footer-text"><strong>{content.footerText}</strong></p>
         )}
 
-        {content.whyCard && (
-          <div className="aura-why-card">
+        {allDone && content.whyCard && (
+          <div className="aura-why-card aura-fade-in">
             <div className="aura-why-card-title">{content.whyCard.title}</div>
             <ul className="aura-why-card-list">
               {content.whyCard.items.map((item, i) => (
@@ -2426,8 +2553,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.flowInstanceSelector && (
-          <div className="aura-flow-instance-selector">
+        {allDone && content.flowInstanceSelector && (
+          <div className="aura-flow-instance-selector aura-fade-in">
             <div className="aura-flow-instance-label">{content.flowInstanceSelector.label}</div>
             <div className="aura-flow-instance-options">
               {content.flowInstanceSelector.options.map((opt) => (
@@ -2443,8 +2570,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.provisionedResourcesGreen && (
-          <div className="aura-provisioned-resources-green">
+        {allDone && content.provisionedResourcesGreen && (
+          <div className="aura-provisioned-resources-green aura-fade-in">
             <div className="aura-provisioned-resources-green-title">{content.provisionedResourcesGreen.title}</div>
             <div className="aura-provisioned-resources-green-stats">
               {content.provisionedResourcesGreen.stats.map((stat, i) => (
@@ -2457,8 +2584,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.cdcSelector && (
-          <>
+        {allDone && content.cdcSelector && (
+          <div className="aura-fade-in">
             <p className="aura-message-text aura-cdc-question"><strong>{content.cdcSelector.question}</strong></p>
             <div className="aura-cdc-selector">
               <div className="aura-cdc-selector-label">{content.cdcSelector.label}</div>
@@ -2474,19 +2601,19 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
                 ))}
               </div>
             </div>
-          </>
+          </div>
         )}
 
-        {content.steps && !content.progress && (
-          <div className="aura-steps-list">
+        {allDone && content.steps && !content.progress && (
+          <div className="aura-steps-list aura-fade-in">
             {content.steps.map((step, i) => (
               <div key={i} className="aura-step-item">{step}</div>
             ))}
           </div>
         )}
 
-        {content.progress && (
-          <div className={`aura-progress-card ${content.completed ? 'completed' : ''}`}>
+        {allDone && content.progress && (
+          <div className={`aura-progress-card aura-fade-in ${content.completed ? 'completed' : ''}`}>
             <div className="aura-progress-content">
               <div className="aura-progress-icon">
                 {content.completed ? (
@@ -2513,8 +2640,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.connections && showConnections && (
-          <div className="aura-connections-list">
+        {allDone && content.connections && showConnections && (
+          <div className="aura-connections-list aura-fade-in">
             {content.connections.map((conn, i) => (
               <div 
                 key={i} 
@@ -2534,8 +2661,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.connectionSelect && (
-          <div className="aura-connection-select">
+        {allDone && content.connectionSelect && (
+          <div className="aura-connection-select aura-fade-in">
             <div className="aura-connection-card selected">
               <div className="aura-connection-icon">
                 <IconFA name="database" size={16} />
@@ -2549,8 +2676,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.dbProfile && (
-          <div className="aura-info-card aura-db-profile">
+        {allDone && content.dbProfile && (
+          <div className="aura-info-card aura-db-profile aura-fade-in">
             <div className="aura-info-card-header">{content.dbProfile.title}</div>
             <div className="aura-info-card-stats">
               {content.dbProfile.stats.map((stat, i) => (
@@ -2563,8 +2690,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.migrationConsiderations && (
-          <div className="aura-migration-considerations">
+        {allDone && content.migrationConsiderations && (
+          <div className="aura-migration-considerations aura-fade-in">
             <p className="aura-message-text">{content.migrationConsiderations.intro}</p>
             <div className="aura-considerations-list">
               {content.migrationConsiderations.warnings.map((warning, i) => (
@@ -2580,8 +2707,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.transformationSummary && (
-          <div className="aura-info-card aura-transformation-summary">
+        {allDone && content.transformationSummary && (
+          <div className="aura-info-card aura-transformation-summary aura-fade-in">
             <div className="aura-info-card-header">{content.transformationSummary.title}</div>
             <div className="aura-info-card-stats">
               {content.transformationSummary.stats.map((stat, i) => (
@@ -2594,8 +2721,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.actionRequired && (
-          <div className="aura-action-required">
+        {allDone && content.actionRequired && (
+          <div className="aura-action-required aura-fade-in">
             <span className="aura-action-required-icon">⚠️</span>
             <div className="aura-action-required-content">
               <span className="aura-action-required-label">Action Required:</span>
@@ -2604,8 +2731,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.manualReview && (
-          <div className="aura-manual-review">
+        {allDone && content.manualReview && (
+          <div className="aura-manual-review aura-fade-in">
             <div className="aura-manual-review-header">
               <div className="aura-manual-review-title">
                 <IconFA name="circle-info" size={14} />
@@ -2637,15 +2764,17 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.interactiveManualReview && (
-          <InteractiveManualReview
-            items={content.interactiveManualReview.items}
-            onAllApproved={onAdvanceSilently}
-          />
+        {allDone && content.interactiveManualReview && (
+          <div className="aura-fade-in">
+            <InteractiveManualReview
+              items={content.interactiveManualReview.items}
+              onAllApproved={onAdvanceSilently}
+            />
+          </div>
         )}
 
-        {content.migrationPlan && (
-          <div className="aura-migration-plan">
+        {allDone && content.migrationPlan && (
+          <div className="aura-migration-plan aura-fade-in">
             <div className="aura-migration-plan-header">{content.migrationPlan.title}</div>
             <div className="aura-migration-plan-items">
               {content.migrationPlan.items.map((item, i) => (
@@ -2655,8 +2784,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.codePreview && (
-          <div className="aura-code-preview">
+        {allDone && content.codePreview && (
+          <div className="aura-code-preview aura-fade-in">
             <div className="aura-code-preview-header">
               <span>{content.codePreview.title}</span>
               <span className="aura-code-preview-lang">{content.codePreview.language}</span>
@@ -2667,8 +2796,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.provisionedResources && (
-          <div className="aura-info-card">
+        {allDone && content.provisionedResources && (
+          <div className="aura-info-card aura-fade-in">
             <div className="aura-info-card-header">{content.provisionedResources.title}</div>
             <div className="aura-info-card-stats">
               {content.provisionedResources.stats.map((stat, i) => (
@@ -2681,8 +2810,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.warnings && (
-          <div className="aura-warnings">
+        {allDone && content.warnings && (
+          <div className="aura-warnings aura-fade-in">
             {content.warnings.map((warning, i) => (
               <div key={i} className="aura-warning-item">
                 <span className="aura-warning-icon">{warning.icon}</span>
@@ -2692,8 +2821,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.reviewItems && (
-          <div className="aura-review-widget">
+        {allDone && content.reviewItems && (
+          <div className="aura-review-widget aura-fade-in">
             <div className="aura-review-header">
               <IconFA name="warning" size={14} />
               <span>Manual Review Required</span>
@@ -2714,8 +2843,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.tableSelection && (
-          <div className="aura-table-selection">
+        {allDone && content.tableSelection && (
+          <div className="aura-table-selection aura-fade-in">
             <div className="aura-table-selection-header">
               <IconFA name="database" size={14} />
               <span>{content.tableSelection.title}</span>
@@ -2738,16 +2867,18 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.interactiveTableSelection && (
-          <InteractiveTableSelector 
-            tables={content.interactiveTableSelection.tables}
-            totalTables={content.interactiveTableSelection.totalTables}
-            onConfirm={handleAction}
-          />
+        {allDone && content.interactiveTableSelection && (
+          <div className="aura-fade-in">
+            <InteractiveTableSelector 
+              tables={content.interactiveTableSelection.tables}
+              totalTables={content.interactiveTableSelection.totalTables}
+              onConfirm={handleAction}
+            />
+          </div>
         )}
 
-        {content.infoBox && (
-          <div className="aura-info-box">
+        {allDone && content.infoBox && (
+          <div className="aura-info-box aura-fade-in">
             <div className="aura-info-box-title">{content.infoBox.title}</div>
             <ul className="aura-info-box-list">
               {content.infoBox.items.map((item, i) => (
@@ -2757,8 +2888,8 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.warningCard && (
-          <div className="aura-warning-card">
+        {allDone && content.warningCard && (
+          <div className="aura-warning-card aura-fade-in">
             <span className="aura-warning-card-icon">{content.warningCard.icon}</span>
             <div className="aura-warning-card-content">
               <span className="aura-warning-card-title">{content.warningCard.title}</span>
@@ -2767,15 +2898,15 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.success && (
-          <div className="aura-success-header">
+        {allDone && content.success && (
+          <div className="aura-success-header aura-fade-in">
             <IconFA name="check" size={18} weight="solid" />
             <span>{content.title}</span>
           </div>
         )}
 
-        {content.migrationStats && (
-          <div className="aura-migration-stats">
+        {allDone && content.migrationStats && (
+          <div className="aura-migration-stats aura-fade-in">
             {content.migrationStats.stats.map((stat, i) => (
               <div key={i} className="aura-migration-stat">
                 <span className="aura-migration-stat-label">{stat.label}</span>
@@ -2785,12 +2916,12 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.followUp && (
-          <p className="aura-message-text aura-followup">{content.followUp}</p>
+        {allDone && content.followUp && (
+          <p className="aura-message-text aura-followup aura-fade-in">{content.followUp}</p>
         )}
 
-        {content.actions && !content.progress && !(content.connections && showConnections) && (
-          <div className="aura-action-buttons">
+        {allDone && content.actions && !content.progress && !(content.connections && showConnections) && (
+          <div className="aura-action-buttons aura-fade-in">
             {content.actions.map((action, i) => (
               <button key={i} className="aura-action-btn" onClick={() => handleAction(action)}>
                 {action}
@@ -2803,10 +2934,10 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
   }
 
   return (
-    <div 
+    <div
       ref={panelRef}
       className={`aura-side-panel ${isFullscreen ? 'fullscreen' : ''}`}
-      style={!isFullscreen ? { width: `${width}%` } : {}}
+      style={isFullscreen ? { left: `${sidebarWidth}px` } : { width: `${width}%` }}
     >
       <div 
         className="aura-panel-resize-handle"
@@ -2851,24 +2982,35 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         ) : (
           <div className="aura-panel-messages">
-            {messages.map((message) => (
-              <div key={message.id} className={`aura-message ${message.type}`}>
-                {message.type === 'user' ? (
-                  <div className="aura-user-bubble">
-                    <p>{message.text}</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="aura-message-header">
-                      <span className="aura-message-sender">Data Migration Agent</span>
-                      <span className="dot" />
-                      <span className="aura-message-time">{formatTime(message.timestamp)}</span>
+            {messages.map((message, index) => {
+              const isLastAgentMessage = message.type === 'agent' && 
+                messages.slice(index + 1).every(m => m.type === 'user')
+              const isTyped = typedMessageIds.has(message.id) || !isLastAgentMessage
+              
+              return (
+                <div key={message.id} className={`aura-message ${message.type}`}>
+                  {message.type === 'user' ? (
+                    <div className="aura-user-bubble">
+                      <p>{message.text}</p>
                     </div>
-                    {renderMigrationMessage(message)}
-                  </>
-                )}
-              </div>
-            ))}
+                  ) : (
+                    <>
+                      <div className="aura-message-header">
+                        <span className="aura-message-sender">Data Migration Agent</span>
+                        <span className="dot" />
+                        <span className="aura-message-time">{formatTime(message.timestamp)}</span>
+                      </div>
+                      <AgentMessageContent 
+                        message={message} 
+                        isTyped={isTyped} 
+                        renderMigrationMessage={renderMigrationMessage}
+                        onTypingComplete={() => markAsTyped(message.id)}
+                      />
+                    </>
+                  )}
+                </div>
+              )
+            })}
             {isTyping && (
               <div className="aura-message">
                 <div className="aura-message-header">
