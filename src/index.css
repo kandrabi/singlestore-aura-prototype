@@ -2464,6 +2464,191 @@ body {
   font-weight: 600;
 }
 
+.aura-message-content .aura-text-success {
+  color: var(--color-success, #10b981);
+}
+
+.aura-message-content .success-check {
+  color: var(--color-success, #10b981);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.aura-footer-text {
+  margin-top: 8px;
+}
+
+.aura-why-card {
+  background: #eff6ff;
+  border: 1px solid #bedbff;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-top: 12px;
+}
+
+.aura-why-card-title {
+  font-weight: 700;
+  color: #1c398e;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.aura-why-card-list {
+  list-style: disc;
+  padding-left: 20px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aura-why-card-list li {
+  color: #193cb8;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.aura-why-card-list li strong {
+  font-weight: 700;
+}
+
+.aura-flow-instance-selector {
+  background: #fff;
+  border-top: none;
+  margin: 12px -16px -16px -16px;
+  padding: 13px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aura-flow-instance-label {
+  font-size: 12px;
+  color: #6a7282;
+}
+
+.aura-flow-instance-options {
+  display: flex;
+  gap: 8px;
+}
+
+.aura-flow-instance-btn {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 6px 13px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0a0a0a;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.aura-flow-instance-btn:hover {
+  background: #f3f4f6;
+}
+
+.aura-flow-instance-btn.recommended {
+  background: #9810fa;
+  color: white;
+  border-color: #9810fa;
+}
+
+.aura-flow-instance-btn.recommended:hover {
+  background: #7a0dc7;
+}
+
+.aura-provisioned-resources-green {
+  background: #f0fdf4;
+  border: 1px solid #b9f8cf;
+  border-radius: 10px;
+  padding: 13px;
+  margin-top: 12px;
+}
+
+.aura-provisioned-resources-green-title {
+  font-weight: 500;
+  color: #0d542b;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.aura-provisioned-resources-green-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aura-provisioned-stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.aura-provisioned-stat-label {
+  color: #016630;
+}
+
+.aura-provisioned-stat-value {
+  color: #016630;
+  font-weight: 600;
+  font-family: 'Menlo', monospace;
+}
+
+.aura-cdc-question {
+  margin-top: 12px;
+}
+
+.aura-cdc-selector {
+  background: #fff;
+  border-top: none;
+  margin: 12px -16px -16px -16px;
+  padding: 13px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aura-cdc-selector-label {
+  font-size: 12px;
+  color: #6a7282;
+}
+
+.aura-cdc-selector-options {
+  display: flex;
+  gap: 8px;
+}
+
+.aura-cdc-selector-btn {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 6px 13px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0a0a0a;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.aura-cdc-selector-btn:hover {
+  background: #f3f4f6;
+}
+
+.aura-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.aura-step-item {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  padding-left: 8px;
+}
+
 .aura-progress-card {
   background: var(--color-bg-surface-2);
   border: 1px solid var(--color-border);
@@ -2485,7 +2670,27 @@ body {
   align-items: center;
   justify-content: center;
   color: var(--color-brand-10);
-  animation: spin 1s linear infinite;
+}
+
+.aura-progress-card.completed {
+  background: var(--color-bg-surface-2);
+  border-color: var(--color-success, #10b981);
+}
+
+.aura-progress-card.completed .aura-progress-icon {
+  color: var(--color-success, #10b981);
+}
+
+.aura-progress-check {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-success, #10b981);
+}
+
+.aura-progress-subtext {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-left: 34px;
 }
 
 .aura-progress-text {
@@ -2537,6 +2742,22 @@ body {
   border-color: var(--color-brand-10);
 }
 
+.aura-connection-select {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aura-connection-card.selected {
+  background: var(--color-bg-surface-2);
+  border-color: var(--color-brand-9);
+  cursor: default;
+}
+
+.aura-connection-card.selected:hover {
+  background: var(--color-bg-surface-2);
+}
+
 .aura-connection-icon {
   width: 40px;
   height: 40px;
@@ -2577,6 +2798,27 @@ body {
   overflow: hidden;
 }
 
+.aura-info-card.aura-db-profile {
+  background: #eff6ff;
+  border-color: #bedbff;
+}
+
+.aura-info-card.aura-db-profile .aura-info-card-header {
+  background: transparent;
+  border-bottom: none;
+  color: #1c398e;
+  padding-bottom: 4px;
+}
+
+.aura-info-card.aura-db-profile .aura-info-stat-label,
+.aura-info-card.aura-db-profile .aura-info-stat-value {
+  color: #193cb8;
+}
+
+.aura-info-card.aura-db-profile .aura-info-stat-value {
+  font-weight: 600;
+}
+
 .aura-info-card-header {
   padding: 10px 14px;
   font-size: var(--font-size-sm);
@@ -2584,6 +2826,386 @@ body {
   color: var(--color-text-secondary);
   background: var(--color-bg-surface-3);
   border-bottom: 1px solid var(--color-border);
+}
+
+.aura-migration-considerations {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aura-considerations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aura-consideration-item {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fee685;
+  border-radius: var(--border-radius-sm);
+}
+
+.aura-consideration-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.aura-consideration-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  line-height: 1.5;
+}
+
+.aura-consideration-type {
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  color: #7b3306;
+}
+
+.aura-consideration-text {
+  font-size: var(--font-size-md);
+  color: #973c00;
+}
+
+/* Transformation Summary (purple card) */
+.aura-info-card.aura-transformation-summary {
+  background: #faf5ff;
+  border-color: #e9d4ff;
+}
+
+.aura-info-card.aura-transformation-summary .aura-info-card-header {
+  background: transparent;
+  border-bottom: none;
+  color: #59168b;
+  padding-bottom: 4px;
+}
+
+.aura-info-card.aura-transformation-summary .aura-info-stat-label,
+.aura-info-card.aura-transformation-summary .aura-info-stat-value {
+  color: #6e11b0;
+}
+
+.aura-info-card.aura-transformation-summary .aura-info-stat-value {
+  font-weight: 600;
+}
+
+.aura-info-card.aura-transformation-summary .aura-info-stat-value.highlight {
+  color: #008236;
+}
+
+/* Action Required warning */
+.aura-action-required {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fee685;
+  border-radius: var(--border-radius-sm);
+}
+
+.aura-action-required-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.aura-action-required-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  line-height: 1.5;
+}
+
+.aura-action-required-label {
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  color: #7b3306;
+}
+
+.aura-action-required-text {
+  font-size: var(--font-size-md);
+  color: #973c00;
+}
+
+/* Manual Review Widget */
+.aura-manual-review {
+  border: 1px solid #ffd230;
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  background: #fffbeb;
+}
+
+.aura-manual-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #fef3c6;
+  border-bottom: 1px solid #ffd230;
+}
+
+.aura-manual-review-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: #7b3306;
+}
+
+.aura-manual-review-title .fa-icon {
+  color: #7b3306;
+}
+
+.aura-manual-review-count {
+  font-size: var(--font-size-sm);
+  color: #bb4d00;
+}
+
+.aura-manual-review-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.aura-manual-review-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border-bottom: 1px solid #fee685;
+}
+
+.aura-manual-review-item:last-child {
+  border-bottom: none;
+}
+
+.aura-manual-review-item > .fa-icon {
+  color: var(--color-text-tertiary);
+}
+
+.aura-review-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #00c950;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.aura-review-check .fa-icon {
+  color: white;
+}
+
+.aura-review-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aura-review-item-name {
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+
+.aura-review-item-reason {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.aura-review-item-status {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: #008236;
+}
+
+.aura-manual-review-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f0fdf4;
+  border-top: 1px solid #b9f8cf;
+}
+
+.aura-manual-review-footer .fa-icon {
+  color: #008236;
+}
+
+.aura-manual-review-footer span {
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  color: #008236;
+}
+
+/* Interactive Manual Review Widget */
+.aura-manual-review-interactive {
+  border: 1px solid #ffd230;
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  background: #fffbeb;
+}
+
+.aura-manual-review-interactive .aura-manual-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #fef3c6;
+  border-bottom: 1px solid #ffd230;
+}
+
+.aura-manual-review-item-interactive {
+  background: white;
+  border-bottom: 1px solid #fee685;
+}
+
+.aura-manual-review-item-interactive:last-child {
+  border-bottom: none;
+}
+
+.aura-review-item-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.aura-review-item-header:hover {
+  background: #fffbeb;
+}
+
+.aura-review-item-header > .fa-icon {
+  color: var(--color-text-tertiary);
+  transition: transform 0.2s ease;
+}
+
+.aura-manual-review-item-interactive.expanded .aura-review-item-header > .fa-icon:first-child {
+  transform: rotate(0deg);
+}
+
+.aura-review-pending {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fef3c6;
+  border: 1px solid #ffd230;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.aura-review-pending .fa-icon {
+  color: #bb4d00;
+}
+
+.aura-review-item-status.pending {
+  color: #bb4d00;
+}
+
+.aura-review-item-status.approved {
+  color: #008236;
+}
+
+.aura-review-item-content {
+  padding: 0 16px 16px 16px;
+  margin-left: 44px;
+}
+
+.aura-ddl-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.aura-ddl-panel {
+  background: var(--color-neutral-12);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.aura-ddl-panel.generated {
+  background: #1a1a2e;
+}
+
+.aura-ddl-header {
+  padding: 8px 12px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aura-ddl-panel.generated .aura-ddl-header {
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.1);
+}
+
+.aura-ddl-code {
+  margin: 0;
+  padding: 12px;
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #e6e6e6;
+  overflow-x: auto;
+  white-space: pre;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.aura-ddl-code code {
+  font-family: inherit;
+}
+
+.aura-review-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.aura-approve-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #00c950;
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.aura-approve-btn:hover {
+  background: #00a843;
+}
+
+.aura-approve-btn .fa-icon {
+  color: white;
+}
+
+.aura-manual-review-interactive .aura-manual-review-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f0fdf4;
+  border-top: 1px solid #b9f8cf;
 }
 
 .aura-info-card-stats {
@@ -2783,6 +3405,122 @@ body {
   border-top: 1px solid var(--color-border);
 }
 
+/* Interactive Table Selector */
+.aura-interactive-table-selector {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.aura-table-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface-2);
+}
+
+.aura-table-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+.aura-table-search input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.aura-table-search svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-tertiary);
+}
+
+.aura-table-list-interactive {
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.aura-table-item-interactive {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.aura-table-item-interactive:hover {
+  background: var(--color-bg-surface-2);
+}
+
+.aura-table-item-interactive:last-child {
+  border-bottom: none;
+}
+
+.aura-table-item-interactive.selected {
+  background: rgba(152, 16, 250, 0.04);
+}
+
+.aura-table-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.aura-table-checkbox.checked {
+  background: var(--color-brand-9);
+  border-color: var(--color-brand-9);
+}
+
+.aura-table-checkbox .fa-icon {
+  color: white;
+}
+
+.aura-table-selector-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--color-bg-surface-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.aura-table-count {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.aura-confirm-btn {
+  padding: 8px 16px;
+  background: var(--color-brand-9);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.aura-confirm-btn:hover {
+  background: var(--color-brand-10);
+}
+
 .aura-info-box {
   background: var(--color-bg-surface-2);
   border: 1px solid var(--color-border);
@@ -2809,6 +3547,82 @@ body {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   line-height: 1.4;
+}
+
+.aura-migration-plan {
+  background: var(--color-bg-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.aura-migration-plan-header {
+  padding: 10px 14px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-surface-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.aura-migration-plan-items {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aura-migration-plan-item {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  padding-left: 4px;
+}
+
+.aura-code-preview {
+  background: var(--color-neutral-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.aura-code-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--color-neutral-11);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.aura-code-preview-header span:first-child {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.aura-code-preview-lang {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  background: var(--color-bg-surface-3);
+  padding: 2px 8px;
+  border-radius: var(--border-radius-sm);
+}
+
+.aura-code-preview-code {
+  margin: 0;
+  padding: 14px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e6e6e6;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.aura-code-preview-code code {
+  font-family: inherit;
 }
 
 .aura-warning-card {

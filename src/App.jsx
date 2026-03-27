@@ -125,35 +125,45 @@ const MIGRATION_PROMPTS = [
 ]
 
 const MIGRATION_CHAT_FLOW = [
+  // Scene 1: Initial greeting & frictionless input
   {
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'Hello! I am your Data Migration Agent, here to help you migrate data to SingleStore.' },
-        { type: 'text', content: 'I can help you migrate from PostgreSQL, MySQL, Oracle, MongoDB, and more.' }
-      ],
-      connections: [
-        { name: 'PostgreSQL Production', db: 'ecommerce_core', tables: '50 tables', url: 'mcp.internal.acmecorp.com/postgres-prod-cluster' },
-        { name: 'MySQL Analytics', db: 'analytics_warehouse', tables: '32 tables', url: 'mcp.internal.acmecorp.com/mysql-analytics' }
+        { type: 'text', content: 'I can help you migrate your PostgreSQL database to SingleStore.' },
+        { type: 'text', content: "Let's start by connecting to your source database." }
       ],
       actions: ['Use existing connection', 'Add new connection']
     }
   },
+  // Scene 1b: Show filtered PostgreSQL connections
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Select a PostgreSQL connection:' }
+      ],
+      connectionSelect: {
+        name: 'PostgreSQL Production',
+        db: 'ecommerce_core',
+        tables: '50 tables',
+        url: 'mcp.internal.acmecorp.com/postgres-prod-cluster'
+      },
+      actions: ['Connect']
+    }
+  },
+  // Scene 2: Connecting progress (will update in place)
   {
     type: 'agent',
     content: {
       progress: true,
       text: 'Connecting to MCP server...',
-      url: 'https://mcp.internal.acmecorp.com/postgres-prod-cluster'
-    }
-  },
-  {
-    type: 'agent',
-    content: {
-      text: [
-        { type: 'mixed', content: '', bold: 'Secure connection to PostgreSQL established.', after: '' },
-        { type: 'text', content: '→ Introspecting database...' }
-      ]
+      url: 'https://mcp.internal.acmecorp.com/postgres-prod-cluster',
+      // After completion, update to this state
+      completedState: {
+        text: 'Secure connection to PostgreSQL established.',
+        subtext: '→ Introspecting database...'
+      }
     }
   },
   {
@@ -170,13 +180,24 @@ const MIGRATION_CHAT_FLOW = [
           { label: 'Source Database:', value: 'ecommerce_core' }
         ]
       },
-      warnings: [
-        { icon: '⚠️', text: 'Data Issue: PostgreSQL UUID types will map to VARCHAR(36) in SingleStore. Consider using BINARY(16) for better performance.' },
-        { icon: '⚠️', text: 'System Constraint: You have 3 tables exceeding 50GB. These will require XL Ingest for optimal performance.' }
-      ],
-      actions: ['Generate schema transformation plan']
+      migrationConsiderations: {
+        intro: 'As we map this to SingleStore, I want to highlight a few known PostgreSQL migration considerations:',
+        warnings: [
+          { 
+            type: 'Data Issue', 
+            text: 'PostgreSQL UUID types will map to VARCHAR(36). If you join heavily on these columns, we should ensure they are indexed appropriately in SingleStore.' 
+          },
+          { 
+            type: 'System Constraint', 
+            text: 'You have 3 tables exceeding 50GB. Standard ingestion will be too slow for these, so I will automatically route them to our heavy-duty XL Ingest pipeline.' 
+          }
+        ]
+      },
+      followUp: 'Would you like me to generate the schema transformation plan with these best practices applied?',
+      actions: ['Yes, generate the plan', 'Skip (use defaults)']
     }
   },
+  // Scene 3: Analyzing query patterns (progress)
   {
     type: 'agent',
     content: {
@@ -189,6 +210,7 @@ const MIGRATION_CHAT_FLOW = [
       ]
     }
   },
+  // Scene 3b: Schema translation complete with review widget
   {
     type: 'agent',
     content: {
@@ -200,86 +222,181 @@ const MIGRATION_CHAT_FLOW = [
         stats: [
           { label: 'Analyzed:', value: '50 tables' },
           { label: 'Transformations applied:', value: '120 (mapped types, stripped FKs, selected shard keys)' },
-          { label: 'Confidence Level:', value: '95%' }
+          { label: 'Confidence Level:', value: '95%', highlight: true }
         ]
       },
-      warnings: [
-        { icon: '⚠️', text: 'Action Required: 4 tables heavily utilize JSON columns. Review the generated schema for these tables.' }
-      ],
-      reviewItems: [
-        { name: 'products', reason: 'Heavy JSON usage detected', status: 'pending' },
-        { name: 'reviews', reason: 'Complex JSON schema with nested arrays', status: 'pending' },
-        { name: 'cart_items', reason: 'JSON column with high cardinality keys', status: 'pending' },
-        { name: 'audit_logs', reason: 'Flexible schema with variable JSON keys', status: 'pending' }
-      ],
-      actions: ['Approve all & continue']
-    }
-  },
-  {
-    type: 'agent',
-    content: {
-      text: [
-        { type: 'mixed', content: '✓ All ', bold: '4 flagged tables', after: ' have been reviewed and approved.' },
-        { type: 'text', content: 'All generated DDL has been validated against the SingleStore schema.' },
-        { type: 'text', content: 'Your schema is 100% ready. Shall we proceed with table selection?' }
-      ],
-      actions: ['Select tables to migrate']
-    }
-  },
-  {
-    type: 'agent',
-    content: {
-      text: [
-        { type: 'text', content: 'Great. I will configure standard Flow Ingest for the smaller tables and XL Ingest for the 3 large tables.' },
-        { type: 'text', content: 'Please review the selected tables below:' }
-      ],
-      tableSelection: {
-        title: 'Table Selection',
-        tables: [
-          { name: 'customers', rows: '2.3M rows', size: '1.2 GB' },
-          { name: 'orders', rows: '12.5M rows', size: '8.4 GB' },
-          { name: 'order_items', rows: '45.8M rows', size: '28.3 GB', xlIngest: true },
-          { name: 'products', rows: '500K rows', size: '245 MB' },
-          { name: 'inventory_logs', rows: '78.2M rows', size: '52.1 GB', xlIngest: true }
-        ],
-        totalSelected: '50 of 50 tables selected'
+      actionRequired: {
+        text: '4 tables heavily utilize JSON columns. I have suggested specialized Multi-Value Indexes for them, but they require your manual review before we can proceed.'
       },
-      actions: ['Confirm Selection (50 Tables)']
+      interactiveManualReview: {
+        items: [
+          { 
+            name: 'products', 
+            reason: 'Heavy JSON usage detected',
+            originalDDL: `CREATE TABLE products (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255),
+  metadata JSONB,
+  attributes JSONB
+);`,
+            generatedDDL: `CREATE TABLE products (
+  id BIGINT AUTO_INCREMENT,
+  name VARCHAR(255),
+  metadata JSON,
+  attributes JSON,
+  PRIMARY KEY (id),
+  -- Multi-Value Index for JSON queries
+  INDEX mv_idx_metadata (metadata)
+);`
+          },
+          { 
+            name: 'reviews', 
+            reason: 'Complex JSON schema with nested arrays',
+            originalDDL: `CREATE TABLE reviews (
+  id SERIAL PRIMARY KEY,
+  product_id INT,
+  ratings JSONB,
+  comments JSONB
+);`,
+            generatedDDL: `CREATE TABLE reviews (
+  id BIGINT AUTO_INCREMENT,
+  product_id BIGINT,
+  ratings JSON,
+  comments JSON,
+  PRIMARY KEY (id),
+  SHARD KEY (product_id)
+);`
+          },
+          { 
+            name: 'cart_items', 
+            reason: 'JSON column with high cardinality keys',
+            originalDDL: `CREATE TABLE cart_items (
+  id SERIAL PRIMARY KEY,
+  user_id INT,
+  items JSONB
+);`,
+            generatedDDL: `CREATE TABLE cart_items (
+  id BIGINT AUTO_INCREMENT,
+  user_id BIGINT,
+  items JSON,
+  PRIMARY KEY (id),
+  SHARD KEY (user_id)
+);`
+          },
+          { 
+            name: 'audit_logs', 
+            reason: 'Flexible schema with variable JSON keys',
+            originalDDL: `CREATE TABLE audit_logs (
+  id SERIAL PRIMARY KEY,
+  event_data JSONB,
+  created_at TIMESTAMP
+);`,
+            generatedDDL: `CREATE TABLE audit_logs (
+  id BIGINT AUTO_INCREMENT,
+  event_data JSON,
+  created_at DATETIME,
+  PRIMARY KEY (id)
+);`
+          }
+        ]
+      }
     }
   },
+  // Scene 2b: All tables reviewed confirmation
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'success', content: 'All 4 flagged tables have been reviewed and resolved.' },
+        { type: 'text', content: 'All generated DDL has been validated against the SingleStore parser.' },
+        { type: 'bold', content: 'Your schema is 100% ready. Shall we move on to provisioning the Flow instance for data ingestion?' }
+      ],
+      actions: ['Yes', 'Review DDL again']
+    }
+  },
+  // Scene 3: Pipeline orchestration with interactive table selection
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Great. Since I already have your source connection context via the MCP server, I am automatically selecting the tables for ingestion based on your migration plan.' },
+        { type: 'mixed', content: 'I will configure ', bold: 'standard Flow Ingest', after: ' for the small tables, and ' },
+        { type: 'mixed', content: '', bold: 'XL Ingest', after: ' for the 3 large tables.' },
+        { type: 'text', content: 'Please review the selected tables below. You can deselect any tables you do not wish to include in the pipeline.' }
+      ],
+      interactiveTableSelection: {
+        tables: [
+          { name: 'customers', rows: '2.3M', size: '1.2 GB', selected: true },
+          { name: 'orders', rows: '12.5M', size: '8.4 GB', selected: true },
+          { name: 'order_items', rows: '45.8M', size: '28.3 GB', selected: true, xlIngest: true },
+          { name: 'products', rows: '500K', size: '245 MB', selected: true },
+          { name: 'categories', rows: '1.2K', size: '128 KB', selected: true },
+          { name: 'users', rows: '890K', size: '412 MB', selected: true },
+          { name: 'sessions', rows: '5.2M', size: '2.1 GB', selected: true },
+          { name: 'inventory_logs', rows: '78.2M', size: '52.1 GB', selected: true, xlIngest: true },
+          { name: 'transactions', rows: '95.1M', size: '61.8 GB', selected: true, xlIngest: true },
+          { name: 'reviews', rows: '3.4M', size: '1.8 GB', selected: true },
+          { name: 'wishlists', rows: '1.1M', size: '320 MB', selected: true },
+          { name: 'cart_items', rows: '2.8M', size: '890 MB', selected: true },
+          { name: 'shipping_addresses', rows: '1.5M', size: '680 MB', selected: true },
+          { name: 'payment_methods', rows: '920K', size: '210 MB', selected: true },
+          { name: 'coupons', rows: '45K', size: '12 MB', selected: true },
+          { name: 'promotions', rows: '8.2K', size: '4.5 MB', selected: true },
+          { name: 'legacy_system_logs', rows: '156M', size: '42 GB', selected: true },
+          { name: 'temp_events', rows: '89M', size: '18 GB', selected: true }
+        ],
+        totalTables: 50
+      }
+    }
+  },
+  // Scene 3b: Table selection confirmed, Flow instance provisioning
   {
     type: 'agent',
     content: {
       text: [
         { type: 'text', content: 'Schema is confirmed.' },
-        { type: 'text', content: 'Now we need to provision the underlying Flow infrastructure.' },
-        { type: 'mixed', content: 'Based on your 500GB initial load, I recommend ', bold: 'F2 instance size', after: '.' }
+        { type: 'text', content: 'Great. Now we need to provision the underlying Flow instance to handle the data movement.' },
+        { type: 'mixed', content: 'Based on your ', bold: '500GB initial load', after: ' and the requirement for real-time CDC, I recommend provisioning an ', bold2: 'F2 Flow Instance', after2: '.' }
       ],
-      infoBox: {
+      whyCard: {
         title: 'Why F2?',
         items: [
-          'An F1 instance would bottleneck your initial snapshot load',
-          'An F4 instance would be over-provisioned for this workload',
-          'F2 provides optimal throughput for 500GB with room to scale'
+          { prefix: 'An ', bold: 'F1 instance', suffix: ' would bottleneck your initial snapshot' },
+          { prefix: 'An ', bold: 'F4 instance', suffix: ' would be over-provisioned for this data volume' },
+          { prefix: '', bold: 'F2', suffix: ' provides optimal throughput for 500GB with real-time CDC' }
         ]
       },
-      actions: ['Provision F2 instance (Recommended)', 'Choose different size']
+      flowInstanceSelector: {
+        label: 'Select Flow Instance Size:',
+        options: [
+          { id: 'f2', label: 'F2 (Recommended)', recommended: true },
+          { id: 'f1', label: 'F1' },
+          { id: 'f4', label: 'F4' }
+        ]
+      },
+      footerText: 'Please confirm your destination workspace and instance size:'
     }
   },
+  // Scene 3c: Provisioning F2 Flow instance (progress)
   {
     type: 'agent',
     content: {
       progress: true,
-      text: 'Provisioning F2 Flow instance...'
+      text: 'Provisioning F2 Flow instance...',
+      completedState: {
+        text: 'Provisioning F2 Flow instance...',
+        subtext: 'Complete'
+      }
     }
   },
+  // Scene 3d: Infrastructure ready with CDC selector
   {
     type: 'agent',
     content: {
       text: [
-        { type: 'mixed', content: '', bold: '✓ Infrastructure ready.', after: '' }
+        { type: 'success', content: 'Infrastructure ready.' }
       ],
-      provisionedResources: {
+      provisionedResourcesGreen: {
         title: 'Provisioned Resources',
         stats: [
           { label: 'Destination:', value: 'Workspace-Group-Prod' },
@@ -287,23 +404,30 @@ const MIGRATION_CHAT_FLOW = [
           { label: 'Strategy:', value: 'Standard + XL Ingest' }
         ]
       },
-      actions: ['Configure CDC', 'Skip CDC for now']
+      cdcSelector: {
+        label: 'Select CDC schedule:',
+        question: 'Would you like to configure your Change Data Capture (CDC) schedule as real-time, periodic, or daily?',
+        options: ['Real-time', 'Periodic', 'Daily']
+      }
     }
   },
+  // Scene 4: Guardrails & execution confirmation
   {
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'Your Flow pipeline is fully configured for real-time sync.' }
+        { type: 'text', content: 'Your Flow pipeline is fully configured for real-time CDC.' }
       ],
       warningCard: {
         icon: '⚠️',
-        title: 'Disclaimer: AI can make mistakes',
-        text: 'Validate schemas and migration results in non-production environments first.'
+        title: 'Explain Before Execute',
+        text: 'AI can make mistakes. Please validate your schemas and migration results in a non-production environment before applying them to production.'
       },
+      followUp: 'Would you like to execute the migration now?',
       actions: ['Execute migration', 'Review configuration']
     }
   },
+  // Scene 5: Migration execution
   {
     type: 'agent',
     content: {
@@ -311,29 +435,31 @@ const MIGRATION_CHAT_FLOW = [
       text: 'Executing migration pipeline...',
       steps: [
         '✓ Creating tables in SingleStore',
-        '✓ Configuring Flow Ingest pipeline',
+        '✓ Configuring Flow Ingest pipelines',
+        '✓ Starting XL Ingest for large tables',
         '→ Loading data from source...'
       ]
     }
   },
+  // Scene 5: Verification & cross-agent handoff
   {
     type: 'agent',
     content: {
       success: true,
-      title: 'Migration complete! 🎉',
-      text: 'I verified that the source and destination row counts match.',
+      title: 'Migration complete!',
+      text: 'I have verified that the source and destination row counts match.',
       migrationStats: {
         stats: [
           { label: 'Tables migrated:', value: '50 / 50' },
           { label: 'Total rows:', value: '142,845,721' },
           { label: 'Source count:', value: '142,845,721' },
           { label: 'Destination count:', value: '142,845,721 ✓' },
-          { label: 'Data volume:', value: '~140 GB' },
-          { label: 'Duration:', value: '14m 28s' }
+          { label: 'Data volume:', value: '~500 GB' },
+          { label: 'Duration:', value: '18m 42s' }
         ]
       },
-      followUp: 'I notice that some of your complex analytical queries could benefit from optimization. Would you like me to analyze them?',
-      actions: ['Optimize Queries', 'No thanks']
+      followUp: 'I notice that some of your complex analytical queries might run slower than expected on the new schema. Would you like me to hand this off to the Query Tuning Agent to analyze your post-migration query performance?',
+      actions: ['Yes, tune my queries', 'No thanks']
     }
   }
 ]
@@ -477,8 +603,43 @@ function App() {
     setIsAuraTyping(true)
     setTimeout(() => {
       setIsAuraTyping(false)
-      setAuraPanelMessages(prev => [...prev, { ...MIGRATION_CHAT_FLOW[index], id: Date.now(), timestamp: new Date() }])
+      const message = MIGRATION_CHAT_FLOW[index]
+      
+      // Mark previous progress messages as completed (without completedState)
+      setAuraPanelMessages(prev => {
+        const updated = prev.map(msg => 
+          (msg.content?.progress && !msg.content?.completedState) 
+            ? { ...msg, content: { ...msg.content, completed: true } } 
+            : msg
+        )
+        return [...updated, { ...message, id: Date.now(), timestamp: new Date() }]
+      })
       setMigrationFlowIndex(index + 1)
+      
+      // Auto-advance progress messages after a delay
+      if (message.content?.progress) {
+        setTimeout(() => {
+          // If this message has a completedState, update it in place first
+          if (message.content?.completedState) {
+            setAuraPanelMessages(prev => 
+              prev.map(msg => 
+                msg.content?.progress && msg.content?.completedState && !msg.content?.completed
+                  ? { ...msg, content: { ...msg.content, completed: true } }
+                  : msg
+              )
+            )
+            // Then advance to next message after another delay
+            setTimeout(() => addNextMigrationMessage(index + 1), 2000)
+          } else {
+            addNextMigrationMessage(index + 1)
+          }
+        }, 2500)
+      }
+      
+      // Auto-advance autoAdvance messages (but not if progress already handles it)
+      if (message.content?.autoAdvance && !message.content?.progress) {
+        setTimeout(() => addNextMigrationMessage(index + 1), 2500)
+      }
     }, 1000)
   }
 
@@ -493,6 +654,10 @@ function App() {
   const handleAuraAction = (action) => {
     const actionText = typeof action === 'string' ? action : action.text
     setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text: actionText, timestamp: new Date() }])
+    setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
+  }
+
+  const advanceMigrationFlowSilently = () => {
     setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
   }
 
@@ -597,6 +762,7 @@ function App() {
             setInputValue={setAuraPanelInput}
             onSend={handleAuraPanelSend}
             onAction={handleAuraAction}
+            onAdvanceSilently={advanceMigrationFlowSilently}
             isTyping={isAuraTyping}
             chatEndRef={auraChatEndRef}
           />
@@ -1575,12 +1741,173 @@ const AURA_AGENTS = [
   { id: 'incident', name: 'Incident Agent', icon: 'warning' },
 ]
 
-function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, isTyping, chatEndRef }) {
+function InteractiveManualReview({ items: initialItems, onAllApproved }) {
+  const [items, setItems] = useState(initialItems.map(item => ({ ...item, approved: false, expanded: false })))
+  const hasAdvancedRef = useRef(false)
+  
+  const approvedCount = items.filter(item => item.approved).length
+  const allApproved = approvedCount === items.length
+  
+  const toggleExpand = (name) => {
+    setItems(prev => prev.map(item => 
+      item.name === name ? { ...item, expanded: !item.expanded } : item
+    ))
+  }
+  
+  const approveItem = (name) => {
+    setItems(prev => {
+      const updated = prev.map(item => 
+        item.name === name ? { ...item, approved: true, expanded: false } : item
+      )
+      const newApprovedCount = updated.filter(item => item.approved).length
+      if (newApprovedCount === updated.length && !hasAdvancedRef.current) {
+        hasAdvancedRef.current = true
+        setTimeout(() => onAllApproved(), 500)
+      }
+      return updated
+    })
+  }
+  
+  return (
+    <div className="aura-manual-review-interactive">
+      <div className="aura-manual-review-header">
+        <div className="aura-manual-review-title">
+          <IconFA name="circle-info" size={14} />
+          <span>Manual Review Required</span>
+        </div>
+        <span className="aura-manual-review-count">{approvedCount} / {items.length} approved</span>
+      </div>
+      <div className="aura-manual-review-list">
+        {items.map((item, i) => (
+          <div key={i} className={`aura-manual-review-item-interactive ${item.expanded ? 'expanded' : ''}`}>
+            <div className="aura-review-item-header" onClick={() => !item.approved && toggleExpand(item.name)}>
+              <IconFA name={item.expanded ? 'chevron-down' : 'chevron-right'} size={12} />
+              {item.approved ? (
+                <div className="aura-review-check">
+                  <IconFA name="check" size={10} />
+                </div>
+              ) : (
+                <div className="aura-review-pending">
+                  <IconFA name="clock" size={12} />
+                </div>
+              )}
+              <div className="aura-review-item-info">
+                <span className="aura-review-item-name">{item.name}</span>
+                <span className="aura-review-item-reason">{item.reason}</span>
+              </div>
+              <span className={`aura-review-item-status ${item.approved ? 'approved' : 'pending'}`}>
+                {item.approved ? 'Approved' : 'Pending'}
+              </span>
+            </div>
+            {item.expanded && !item.approved && (
+              <div className="aura-review-item-content">
+                <div className="aura-ddl-comparison">
+                  <div className="aura-ddl-panel">
+                    <div className="aura-ddl-header">Original PostgreSQL</div>
+                    <pre className="aura-ddl-code"><code>{item.originalDDL}</code></pre>
+                  </div>
+                  <div className="aura-ddl-panel generated">
+                    <div className="aura-ddl-header">Generated SingleStore</div>
+                    <pre className="aura-ddl-code"><code>{item.generatedDDL}</code></pre>
+                  </div>
+                </div>
+                <div className="aura-review-actions">
+                  <button className="aura-approve-btn" onClick={() => approveItem(item.name)}>
+                    <IconFA name="check" size={12} />
+                    Approve
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {allApproved && (
+        <div className="aura-manual-review-footer">
+          <IconFA name="check" size={14} />
+          <span>All tables reviewed and approved</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function InteractiveTableSelector({ tables: initialTables, totalTables, onConfirm }) {
+  const [tables, setTables] = useState(initialTables.map(t => ({ ...t })))
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredTables = tables.filter(table =>
+    table.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+  
+  const selectedCount = tables.filter(t => t.selected).length
+  const remainingCount = totalTables - initialTables.length + selectedCount
+  
+  const toggleTable = (tableName) => {
+    setTables(prev => prev.map(t => 
+      t.name === tableName ? { ...t, selected: !t.selected } : t
+    ))
+  }
+  
+  const handleConfirm = () => {
+    onConfirm(`Confirm Selection (${remainingCount} Tables)`)
+  }
+  
+  return (
+    <div className="aura-interactive-table-selector">
+      <div className="aura-table-search">
+        <SearchIcon />
+        <input 
+          type="text"
+          placeholder="Search tables..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+      <div className="aura-table-list-interactive">
+        {filteredTables.map((table, i) => (
+          <div 
+            key={i} 
+            className={`aura-table-item-interactive ${table.selected ? 'selected' : ''}`}
+            onClick={() => toggleTable(table.name)}
+          >
+            <div className={`aura-table-checkbox ${table.selected ? 'checked' : ''}`}>
+              {table.selected && <IconFA name="check" size={10} />}
+            </div>
+            <div className="aura-table-item-info">
+              <span className="aura-table-item-name">
+                {table.name}
+                {table.xlIngest && <span className="aura-xl-badge">XL Ingest</span>}
+              </span>
+              <span className="aura-table-item-size">{table.rows} rows • {table.size}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="aura-table-selector-footer">
+        <span className="aura-table-count">{remainingCount} of {totalTables} tables selected</span>
+        <button className="aura-confirm-btn" onClick={handleConfirm}>
+          Confirm Selection ({remainingCount} Tables)
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef }) {
   const [isResizing, setIsResizing] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState(AURA_AGENTS[1])
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
+  const [showConnections, setShowConnections] = useState(false)
   const panelRef = useRef(null)
   const dropdownRef = useRef(null)
+
+  const handleAction = (action) => {
+    if (action === 'Use existing connection') {
+      setShowConnections(true)
+    }
+    onAction(action)
+  }
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -1636,25 +1963,109 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
 
     return (
       <div className="aura-message-content">
-        {content.text && content.text.map((t, i) => (
-          <p key={i} className="aura-message-text">
+        {content.text && Array.isArray(content.text) && content.text.map((t, i) => (
+          <p key={i} className={`aura-message-text ${t.type === 'success' ? 'aura-text-success' : ''}`}>
             {t.type === 'bold' && <strong>{t.content}</strong>}
             {t.type === 'text' && t.content}
+            {t.type === 'success' && <><span className="success-check">✓</span> {t.content}</>}
             {t.type === 'mixed' && (
-              <>{t.content}<strong>{t.bold}</strong>{t.after}</>
+              <>{t.content}<strong>{t.bold}</strong>{t.after}{t.bold2 && <><strong>{t.bold2}</strong>{t.after2}</>}</>
             )}
           </p>
         ))}
 
+        {content.footerText && (
+          <p className="aura-message-text aura-footer-text"><strong>{content.footerText}</strong></p>
+        )}
+
+        {content.whyCard && (
+          <div className="aura-why-card">
+            <div className="aura-why-card-title">{content.whyCard.title}</div>
+            <ul className="aura-why-card-list">
+              {content.whyCard.items.map((item, i) => (
+                <li key={i}>{item.prefix}<strong>{item.bold}</strong>{item.suffix}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {content.flowInstanceSelector && (
+          <div className="aura-flow-instance-selector">
+            <div className="aura-flow-instance-label">{content.flowInstanceSelector.label}</div>
+            <div className="aura-flow-instance-options">
+              {content.flowInstanceSelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className={`aura-flow-instance-btn ${opt.recommended ? 'recommended' : ''}`}
+                  onClick={() => handleAction(opt.label)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.provisionedResourcesGreen && (
+          <div className="aura-provisioned-resources-green">
+            <div className="aura-provisioned-resources-green-title">{content.provisionedResourcesGreen.title}</div>
+            <div className="aura-provisioned-resources-green-stats">
+              {content.provisionedResourcesGreen.stats.map((stat, i) => (
+                <div key={i} className="aura-provisioned-stat-row">
+                  <span className="aura-provisioned-stat-label">{stat.label}</span>
+                  <span className="aura-provisioned-stat-value">{stat.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.cdcSelector && (
+          <>
+            <p className="aura-message-text aura-cdc-question"><strong>{content.cdcSelector.question}</strong></p>
+            <div className="aura-cdc-selector">
+              <div className="aura-cdc-selector-label">{content.cdcSelector.label}</div>
+              <div className="aura-cdc-selector-options">
+                {content.cdcSelector.options.map((opt) => (
+                  <button
+                    key={opt}
+                    className="aura-cdc-selector-btn"
+                    onClick={() => handleAction(opt)}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {content.steps && !content.progress && (
+          <div className="aura-steps-list">
+            {content.steps.map((step, i) => (
+              <div key={i} className="aura-step-item">{step}</div>
+            ))}
+          </div>
+        )}
+
         {content.progress && (
-          <div className="aura-progress-card">
+          <div className={`aura-progress-card ${content.completed ? 'completed' : ''}`}>
             <div className="aura-progress-content">
               <div className="aura-progress-icon">
-                <SpinnerIcon />
+                {content.completed ? (
+                  <span className="aura-progress-check">✓</span>
+                ) : (
+                  <SpinnerIcon />
+                )}
               </div>
-              <span className="aura-progress-text">{content.text}</span>
+              <span className="aura-progress-text">
+                {content.completed && content.completedState ? content.completedState.text : content.text}
+              </span>
             </div>
-            {content.url && <span className="aura-progress-url">{content.url}</span>}
+            {content.completed && content.completedState?.subtext && (
+              <span className="aura-progress-subtext">{content.completedState.subtext}</span>
+            )}
+            {!content.completed && content.url && <span className="aura-progress-url">{content.url}</span>}
             {content.steps && (
               <div className="aura-progress-steps">
                 {content.steps.map((step, i) => (
@@ -1665,10 +2076,14 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
-        {content.connections && (
+        {content.connections && showConnections && (
           <div className="aura-connections-list">
             {content.connections.map((conn, i) => (
-              <div key={i} className="aura-connection-card">
+              <div 
+                key={i} 
+                className="aura-connection-card aura-connection-card-clickable"
+                onClick={() => handleAction(`Connect to ${conn.name}`)}
+              >
                 <div className="aura-connection-icon">
                   <IconFA name="database" size={16} />
                 </div>
@@ -1682,8 +2097,23 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
+        {content.connectionSelect && (
+          <div className="aura-connection-select">
+            <div className="aura-connection-card selected">
+              <div className="aura-connection-icon">
+                <IconFA name="database" size={16} />
+              </div>
+              <div className="aura-connection-info">
+                <span className="aura-connection-name">{content.connectionSelect.name}</span>
+                <span className="aura-connection-db">{content.connectionSelect.db} · {content.connectionSelect.tables}</span>
+                <span className="aura-connection-url">{content.connectionSelect.url}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {content.dbProfile && (
-          <div className="aura-info-card">
+          <div className="aura-info-card aura-db-profile">
             <div className="aura-info-card-header">{content.dbProfile.title}</div>
             <div className="aura-info-card-stats">
               {content.dbProfile.stats.map((stat, i) => (
@@ -1696,17 +2126,107 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
+        {content.migrationConsiderations && (
+          <div className="aura-migration-considerations">
+            <p className="aura-message-text">{content.migrationConsiderations.intro}</p>
+            <div className="aura-considerations-list">
+              {content.migrationConsiderations.warnings.map((warning, i) => (
+                <div key={i} className="aura-consideration-item">
+                  <span className="aura-consideration-icon">⚠️</span>
+                  <div className="aura-consideration-content">
+                    <span className="aura-consideration-type">{warning.type}:</span>
+                    <span className="aura-consideration-text">{warning.text}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {content.transformationSummary && (
-          <div className="aura-info-card">
+          <div className="aura-info-card aura-transformation-summary">
             <div className="aura-info-card-header">{content.transformationSummary.title}</div>
             <div className="aura-info-card-stats">
               {content.transformationSummary.stats.map((stat, i) => (
                 <div key={i} className="aura-info-stat">
                   <span className="aura-info-stat-label">{stat.label}</span>
-                  <span className="aura-info-stat-value">{stat.value}</span>
+                  <span className={`aura-info-stat-value ${stat.highlight ? 'highlight' : ''}`}>{stat.value}</span>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {content.actionRequired && (
+          <div className="aura-action-required">
+            <span className="aura-action-required-icon">⚠️</span>
+            <div className="aura-action-required-content">
+              <span className="aura-action-required-label">Action Required:</span>
+              <span className="aura-action-required-text">{content.actionRequired.text}</span>
+            </div>
+          </div>
+        )}
+
+        {content.manualReview && (
+          <div className="aura-manual-review">
+            <div className="aura-manual-review-header">
+              <div className="aura-manual-review-title">
+                <IconFA name="circle-info" size={14} />
+                <span>Manual Review Required</span>
+              </div>
+              <span className="aura-manual-review-count">{content.manualReview.count}</span>
+            </div>
+            <div className="aura-manual-review-list">
+              {content.manualReview.items.map((item, i) => (
+                <div key={i} className="aura-manual-review-item">
+                  <IconFA name="chevron-right" size={12} />
+                  <div className="aura-review-check">
+                    <IconFA name="check" size={10} />
+                  </div>
+                  <div className="aura-review-item-info">
+                    <span className="aura-review-item-name">{item.name}</span>
+                    <span className="aura-review-item-reason">{item.reason}</span>
+                  </div>
+                  <span className="aura-review-item-status">{item.status}</span>
+                </div>
+              ))}
+            </div>
+            {content.manualReview.allApproved && (
+              <div className="aura-manual-review-footer">
+                <IconFA name="check" size={14} />
+                <span>All tables reviewed and approved</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {content.interactiveManualReview && (
+          <InteractiveManualReview
+            items={content.interactiveManualReview.items}
+            onAllApproved={onAdvanceSilently}
+          />
+        )}
+
+        {content.migrationPlan && (
+          <div className="aura-migration-plan">
+            <div className="aura-migration-plan-header">{content.migrationPlan.title}</div>
+            <div className="aura-migration-plan-items">
+              {content.migrationPlan.items.map((item, i) => (
+                <div key={i} className="aura-migration-plan-item">{item}</div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.codePreview && (
+          <div className="aura-code-preview">
+            <div className="aura-code-preview-header">
+              <span>{content.codePreview.title}</span>
+              <span className="aura-code-preview-lang">{content.codePreview.language}</span>
+            </div>
+            <pre className="aura-code-preview-code">
+              <code>{content.codePreview.code}</code>
+            </pre>
           </div>
         )}
 
@@ -1781,6 +2301,14 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           </div>
         )}
 
+        {content.interactiveTableSelection && (
+          <InteractiveTableSelector 
+            tables={content.interactiveTableSelection.tables}
+            totalTables={content.interactiveTableSelection.totalTables}
+            onConfirm={handleAction}
+          />
+        )}
+
         {content.infoBox && (
           <div className="aura-info-box">
             <div className="aura-info-box-title">{content.infoBox.title}</div>
@@ -1824,10 +2352,10 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
           <p className="aura-message-text aura-followup">{content.followUp}</p>
         )}
 
-        {content.actions && !content.progress && (
+        {content.actions && !content.progress && !(content.connections && showConnections) && (
           <div className="aura-action-buttons">
             {content.actions.map((action, i) => (
-              <button key={i} className="aura-action-btn" onClick={() => onAction(action)}>
+              <button key={i} className="aura-action-btn" onClick={() => handleAction(action)}>
                 {action}
               </button>
             ))}
