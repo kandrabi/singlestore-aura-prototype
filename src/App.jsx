@@ -671,6 +671,7 @@ function App() {
   const [auraPanelFullscreen, setAuraPanelFullscreen] = useState(false)
   const [auraPanelMessages, setAuraPanelMessages] = useState([])
   const [auraPanelInput, setAuraPanelInput] = useState('')
+  const [auraPanelAgentName, setAuraPanelAgentName] = useState('Aura Agent')
   const [migrationFlowIndex, setMigrationFlowIndex] = useState(0)
   const [isAuraTyping, setIsAuraTyping] = useState(false)
   const chatEndRef = useRef(null)
@@ -704,7 +705,34 @@ function App() {
   }, [auraPanelMessages])
 
   const handleOpenAuraPanel = () => {
+    // Set agent based on current view
+    if (view === 'load-data') {
+      setAuraPanelAgentName('Data Migration Agent')
+    } else if (auraPanelMessages.length === 0) {
+      setAuraPanelAgentName('Aura Agent')
+    }
     setAuraPanelOpen(true)
+  }
+
+  const handleNavigate = (newView) => {
+    // If navigating away from chat view to another page, transfer chat to side panel
+    const isTransferringChat = view === 'chat' && newView !== 'chat' && newView !== 'portal' && chatMessages.length > 0
+    
+    if (isTransferringChat) {
+      // Transfer chat messages to side panel with the same agent name
+      const currentAgentName = activeChatFlow === 'cpu-spike' ? 'Observability Agent' : 'Aura Agent'
+      setAuraPanelMessages(chatMessages)
+      setAuraPanelAgentName(currentAgentName)
+      setAuraPanelOpen(true)
+    } else if (!auraPanelOpen) {
+      // Only set default agent if not transferring and panel is not already open
+      if (newView === 'load-data') {
+        setAuraPanelAgentName('Data Migration Agent')
+      } else {
+        setAuraPanelAgentName('Aura Agent')
+      }
+    }
+    setView(newView)
   }
 
   const handleCloseAuraPanel = () => {
@@ -801,6 +829,7 @@ function App() {
         // Open as side panel on other pages
         setAuraPanelOpen(true)
         setAuraPanelMessages([])
+        setAuraPanelAgentName('Observability Agent')
         setMigrationFlowIndex(0)
         // Start the CPU spike flow in the side panel
         setTimeout(() => {
@@ -934,7 +963,7 @@ function App() {
       <Header onLogoClick={() => setView('portal')} onAskAura={handleOpenAuraPanel} onNotificationClick={handleNotificationClick} />
       <div className="app-container">
         <Sidebar 
-          onNavigate={setView} 
+          onNavigate={handleNavigate} 
           currentView={view}
           isExpanded={sidebarExpanded}
           onToggleExpand={() => setSidebarExpanded(!sidebarExpanded)}
@@ -960,6 +989,7 @@ function App() {
             onAdvanceSilently={advanceMigrationFlowSilently}
             isTyping={isAuraTyping}
             chatEndRef={auraChatEndRef}
+            agentName={auraPanelAgentName}
           />
         )}
       </div>
@@ -1381,6 +1411,22 @@ function Header({ onLogoClick, onAskAura, onNotificationClick }) {
 
 const WORKSPACES_DATA = [
   {
+    id: 0,
+    name: 'prod-analytics',
+    group: 'Group 1',
+    environment: 'Prod',
+    project: 'Acme',
+    edition: 'Standard',
+    cloudRegion: 'AWS • US East',
+    size: 'S-2',
+    sizeDetail: '2x 4x',
+    vCPU: 45.2,
+    memory: 88,
+    cache: 52.3,
+    attachedDBs: { rw: 4, ro: 2 },
+    status: 'active'
+  },
+  {
     id: 1,
     name: 'Workspace-2',
     group: 'Group 1',
@@ -1572,12 +1618,7 @@ function WorkspacesView() {
                   </div>
                 </td>
                 <td className="workspace-cloud-region">{workspace.cloudRegion}</td>
-                <td>
-                  <div className="workspace-size">
-                    <span>{workspace.size}</span>
-                    <span className="size-detail">{workspace.sizeDetail}</span>
-                  </div>
-                </td>
+                <td>{workspace.size}</td>
                 <td>
                   {workspace.status === 'suspended' ? (
                     <span className="workspace-suspended">Suspended</span>
@@ -1621,7 +1662,7 @@ function WorkspacesView() {
                   </div>
                 </td>
                 <td>
-                  <button className={`workspace-action-btn ${workspace.status === 'suspended' ? 'secondary' : 'tertiary'}`}>
+                  <button className="workspace-action-btn secondary">
                     {workspace.status === 'suspended' ? 'Resume' : 'Connect'}
                   </button>
                 </td>
@@ -2623,13 +2664,19 @@ function InteractiveTableSelector({ tables: initialTables, totalTables, onConfir
   )
 }
 
-function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef }) {
+function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent' }) {
   const [isResizing, setIsResizing] = useState(false)
-  const [selectedAgent, setSelectedAgent] = useState(AURA_AGENTS[1])
+  const [selectedAgent, setSelectedAgent] = useState(AURA_AGENTS[0])
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
   const [showConnections, setShowConnections] = useState(false)
   const panelRef = useRef(null)
   const dropdownRef = useRef(null)
+
+  // Sync selectedAgent with agentName prop
+  useEffect(() => {
+    const agent = AURA_AGENTS.find(a => a.name === agentName) || AURA_AGENTS[0]
+    setSelectedAgent(agent)
+  }, [agentName])
 
   const handleAction = (action) => {
     if (action === 'Use existing connection') {
@@ -3152,7 +3199,7 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
                 ) : (
                   <>
                     <div className="aura-message-header">
-                      <span className="aura-message-sender">Data Migration Agent</span>
+                      <span className="aura-message-sender">{agentName}</span>
                       <span className="dot" />
                       <span className="aura-message-time">{formatTime(message.timestamp)}</span>
                     </div>
@@ -3164,7 +3211,7 @@ function AuraSidePanel({ isOpen, isFullscreen, width, onClose, onToggleFullscree
             {isTyping && (
               <div className="aura-message">
                 <div className="aura-message-header">
-                  <span className="aura-message-sender">Data Migration Agent</span>
+                  <span className="aura-message-sender">{agentName}</span>
                   <span className="dot" />
                   <span className="aura-message-time">{formatTime(new Date())}</span>
                 </div>
