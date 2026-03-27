@@ -221,6 +221,20 @@ const MIGRATION_PROMPTS = [
   'Estimate migration time for my Oracle DB'
 ]
 
+const AURA_PROMPTS = [
+  'Show workspaces at risk',
+  'Check cluster health status',
+  'Analyze query performance',
+  'Review resource utilization'
+]
+
+const QUERY_TUNING_PROMPTS = [
+  'Optimize this slow query',
+  'Analyze query execution plan',
+  'Suggest index improvements',
+  'Review query performance metrics'
+]
+
 const MIGRATION_CHAT_FLOW = [
   // Scene 1: Initial greeting & frictionless input
   {
@@ -628,9 +642,13 @@ const CHAT_FLOW = [
     type: 'agent',
     status: 'In Progress',
     content: {
-      progress: true,
-      text: 'Resizing workspace…',
-      time: '~ 4mins'
+      resizeProgress: {
+        text: 'Resizing workspace…',
+        workspace: 'prod-analyst',
+        group: 'Group 1',
+        env: 'Prod',
+        duration: 5
+      }
     }
   },
   {
@@ -703,40 +721,59 @@ function App() {
     }
   }, [auraPanelMessages])
 
-  const handleOpenAuraPanel = () => {
-    // Set agent based on current view
-    if (view === 'load-data') {
-      setAuraPanelAgentName('Data Migration Agent')
-    } else if (auraPanelMessages.length === 0) {
-      setAuraPanelAgentName('Aura Agent')
+  // Get default agent based on page context (Priority 3)
+  const getDefaultAgentForPage = (pageView) => {
+    switch (pageView) {
+      case 'load-data':
+        return 'Data Migration Agent'
+      case 'editor':
+        return 'Query Tuning Agent'
+      default:
+        return 'Aura Agent'
     }
+  }
+
+  const handleOpenAuraPanel = () => {
+    // Priority 1: If there's an active conversation, keep the same agent
+    if (auraPanelMessages.length > 0) {
+      setAuraPanelOpen(true)
+      return
+    }
+    // Priority 3: No active conversation, use page context routing
+    setAuraPanelAgentName(getDefaultAgentForPage(view))
     setAuraPanelOpen(true)
   }
 
   const handleNavigate = (newView) => {
-    // If navigating away from chat view to another page, transfer chat to side panel
+    // Priority 1: If navigating away from chat view, transfer conversation to side panel
+    // The conversation continues with the SAME agent - do NOT change agent
     const isTransferringChat = view === 'chat' && newView !== 'chat' && newView !== 'portal' && chatMessages.length > 0
     
     if (isTransferringChat) {
-      // Transfer chat messages to side panel with the same agent name
-      const currentAgentName = activeChatFlow === 'cpu-spike' ? 'Observability Agent' : 'Aura Agent'
+      // Transfer chat messages to side panel - keep the same agent (Aura Agent for all home-initiated chats)
       setAuraPanelMessages(chatMessages)
-      setAuraPanelAgentName(currentAgentName)
+      setAuraPanelAgentName('Aura Agent')
       setAuraPanelOpen(true)
-    } else if (!auraPanelOpen) {
-      // Only set default agent if not transferring and panel is not already open
-      if (newView === 'load-data') {
-        setAuraPanelAgentName('Data Migration Agent')
-      } else {
-        setAuraPanelAgentName('Aura Agent')
-      }
     }
+    // Note: If side panel already has an active conversation, we don't change the agent (Priority 1)
+    // Default agent for new pages is only set when opening the panel via handleOpenAuraPanel
     setView(newView)
   }
 
   const handleCloseAuraPanel = () => {
     setAuraPanelOpen(false)
     setAuraPanelFullscreen(false)
+  }
+
+  // Handle manual agent switch - starts a NEW conversation (clears previous context)
+  const handleAgentChange = (newAgentName) => {
+    // Clear previous conversation when switching agents
+    setAuraPanelMessages([])
+    setAuraPanelInput('')
+    setMigrationFlowIndex(0)
+    setIsAuraTyping(false)
+    // Set the new agent
+    setAuraPanelAgentName(newAgentName)
   }
 
   const addNextMigrationMessage = (index) => {
@@ -788,18 +825,32 @@ function App() {
     if (!text.trim()) return
     setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text, timestamp: new Date() }])
     setAuraPanelInput('')
-    const nextIndex = auraPanelMessages.length === 0 ? 0 : migrationFlowIndex
-    setTimeout(() => addNextMigrationMessage(nextIndex), 500)
+    
+    // Route to correct flow based on active agent
+    if (auraPanelAgentName === 'Data Migration Agent') {
+      const nextIndex = auraPanelMessages.length === 0 ? 0 : migrationFlowIndex
+      setTimeout(() => addNextMigrationMessage(nextIndex), 500)
+    }
+    // For other agents, no automated flow - just acknowledge the message
+    // (In production, this would call an AI backend)
   }
 
   const handleAuraAction = (action) => {
     const actionText = typeof action === 'string' ? action : action.text
     setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text: actionText, timestamp: new Date() }])
-    setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
+    
+    // Route to correct flow based on active agent
+    if (auraPanelAgentName === 'Data Migration Agent') {
+      setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
+    }
+    // For other agents, no automated flow
   }
 
   const advanceMigrationFlowSilently = () => {
-    setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
+    // Only advance migration flow if Data Migration Agent is active
+    if (auraPanelAgentName === 'Data Migration Agent') {
+      setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
+    }
   }
 
   const handleAlertClick = (alert) => {
@@ -815,6 +866,7 @@ function App() {
 
   const handleNotificationClick = (notification) => {
     if (notification.id === 1) {
+      // CPU/infrastructure notifications → Aura Agent ONLY (Priority 2)
       // If on home/portal page, open full screen chat
       // Otherwise, open as side panel
       if (view === 'portal' || view === 'chat') {
@@ -825,10 +877,10 @@ function App() {
         setActiveChatFlow('cpu-spike')
         setTimeout(() => addNextCpuSpikeMessage(0), 500)
       } else {
-        // Open as side panel on other pages
+        // Open as side panel on other pages - still use Aura Agent
         setAuraPanelOpen(true)
         setAuraPanelMessages([])
-        setAuraPanelAgentName('Observability Agent')
+        setAuraPanelAgentName('Aura Agent')
         setMigrationFlowIndex(0)
         // Start the CPU spike flow in the side panel
         setTimeout(() => {
@@ -914,8 +966,21 @@ function App() {
       } else if (actionText === 'Confirm') {
         setChatMessages(prev => [...prev, { type: 'user', id: Date.now(), text: 'Confirm', timestamp: new Date() }])
         setUserMsgIndex(prev => prev + 1)
-        setTimeout(() => addNextMessage(4), 500)
-        setTimeout(() => addNextMessage(5), 5000)
+        // Add progress message (mark as typingComplete since there's no text to type)
+        const progressMessageId = Date.now() + 1
+        setTimeout(() => {
+          setIsTyping(false)
+          setChatMessages(prev => [...prev, { ...CHAT_FLOW[4], id: progressMessageId, timestamp: new Date(), typingComplete: true }])
+        }, 500)
+        // After 5 seconds, remove progress message and add success message
+        setTimeout(() => {
+          setChatMessages(prev => {
+            // Remove the progress message and add the success message
+            const filtered = prev.filter(m => m.id !== progressMessageId)
+            return [...filtered, { ...CHAT_FLOW[5], id: Date.now(), timestamp: new Date(), typingComplete: true }]
+          })
+          setCurrentFlowIndex(6)
+        }, 5500)
       }
     }
   }
@@ -990,6 +1055,7 @@ function App() {
             isTyping={isAuraTyping}
             chatEndRef={auraChatEndRef}
             agentName={auraPanelAgentName}
+            onAgentChange={handleAgentChange}
           />
         )}
       </div>
@@ -1753,7 +1819,8 @@ function PortalView({ activeTab, setActiveTab, inputValue, setInputValue, onAler
 }
 
 function ChatView({ messages, inputValue, setInputValue, isTyping, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, chatEndRef, activeChatFlow }) {
-  const agentName = activeChatFlow === 'cpu-spike' ? 'Observability Agent' : 'Aura Agent'
+  // All home page conversations use Aura Agent (CPU spike, workspace capacity, etc.)
+  const agentName = 'Aura Agent'
   
   return (
     <div className="chat-view">
@@ -1818,6 +1885,68 @@ function ChatView({ messages, inputValue, setInputValue, isTyping, onAction, exp
             <button className="send-btn" disabled={!inputValue.trim()}>
               <SendIcon />
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AnimatedResizeProgress({ resizeProgress }) {
+  const [progress, setProgress] = useState(0)
+  const [timeLeft, setTimeLeft] = useState(resizeProgress.duration)
+  const duration = resizeProgress.duration * 1000
+  
+  useEffect(() => {
+    const startTime = Date.now()
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const newProgress = Math.min((elapsed / duration) * 100, 100)
+      const newTimeLeft = Math.max(Math.ceil((duration - elapsed) / 1000), 0)
+      
+      setProgress(newProgress)
+      setTimeLeft(newTimeLeft)
+      
+      if (elapsed >= duration) {
+        clearInterval(interval)
+      }
+    }, 50)
+    
+    return () => clearInterval(interval)
+  }, [duration])
+  
+  return (
+    <div className="resize-progress-card fade-in">
+      <div className="resize-progress-header">
+            <div className="resize-progress-title">
+              <AiLogoMinimal size={18} />
+              <span>{resizeProgress.text}</span>
+            </div>
+        <button className="resize-progress-cancel">Cancel</button>
+      </div>
+      <div className="resize-progress-divider" />
+      <div className="resize-progress-content">
+        <div className="resize-workspace-icon">
+          <CloudIconCustom size={40} />
+          <div className="resize-spinner-overlay">
+            <PurpleSpinner size={16} />
+          </div>
+        </div>
+        <div className="resize-workspace-info">
+          <span className="resize-workspace-name">{resizeProgress.workspace}</span>
+          <div className="resize-workspace-meta">
+            <span className="resize-workspace-group">{resizeProgress.group}</span>
+            <span className="resize-workspace-env">{resizeProgress.env}</span>
+          </div>
+        </div>
+        <div className="resize-progress-bar-section">
+          <div className="resize-progress-bar">
+            <div className="resize-progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="resize-progress-stats">
+            <span className="resize-progress-percent">{Math.round(progress)}%</span>
+            <span className="resize-progress-dot" />
+            <span className="resize-progress-time">~ {timeLeft}s</span>
           </div>
         </div>
       </div>
@@ -2032,6 +2161,10 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
             </div>
             <span className="progress-link">View steps</span>
           </div>
+        )}
+
+        {content.resizeProgress && (!isTyping || paragraphsCompleted) && (
+          <AnimatedResizeProgress resizeProgress={content.resizeProgress} />
         )}
 
         {content.success && (!isTyping || paragraphsCompleted) && (
@@ -2479,6 +2612,231 @@ function SpinnerIcon() {
   return <IconFA name="spinner" size={18} weight="solid" />
 }
 
+function AiLogoMinimal({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" className="ai-logo-spin">
+      <path d="M0.262476 9.55256C0.226633 9.67599 0.19454 9.80025 0.16605 9.92519L0 9.96965L1.4061e-08 9.62316L0.262476 9.55256Z" fill="url(#paint0_linear_61_4090)"/>
+      <path d="M12.8388 8.72297C12.8058 8.82086 12.7715 8.91862 12.7339 9.01519L12.4691 8.88738L12.8388 8.72297Z" fill="url(#paint1_linear_61_4090)"/>
+      <path d="M13.0529 7.92606C13.0208 8.08495 12.9824 8.24273 12.9385 8.39937L12.3073 8.80926L11.9549 8.63896L13.0529 7.92606Z" fill="url(#paint2_linear_61_4090)"/>
+      <path d="M13.1768 6.93041C13.169 7.09321 13.1557 7.2558 13.1359 7.41778L11.8405 8.58405L11.515 8.42682L13.1768 6.93041Z" fill="url(#paint3_linear_61_4090)"/>
+      <path d="M0.879279 8.12185C0.811782 8.23904 0.748787 8.35819 0.689041 8.47847L5.75838e-08 8.55071L7.12336e-08 8.21436L0.879279 8.12185Z" fill="url(#paint4_linear_61_4090)"/>
+      <path d="M6.54621 0.0213755C6.66948 0.0205195 6.79276 0.0228802 6.9159 0.0288935L9.72338 6.33388L8.07694 0.189713C8.20174 0.218424 8.32596 0.250414 8.44925 0.286467L10.065 6.3159L9.47268 0.681652C9.5929 0.740021 9.71174 0.802186 9.82896 0.868294L10.4324 6.60943L10.7024 1.45829C10.8114 1.54544 10.9184 1.63648 11.023 1.73156L10.7445 7.05037L11.7183 2.46832C11.8119 2.5838 11.901 2.70157 11.9856 2.82167L11.0776 7.09385L12.4351 3.55712C12.5065 3.69359 12.5733 3.83179 12.6345 3.97192L11.1923 7.72896L12.9149 4.74529C12.9601 4.89881 12.9995 5.05362 13.0333 5.20945L11.4578 7.93881L13.1408 5.85992C13.1593 6.02142 13.1718 6.18339 13.1784 6.34564L11.4993 8.4193L10.2411 7.81198L9.01996 5.2843C8.96797 5.26375 8.91545 5.24464 8.86306 5.22546L6.54621 0.0213755Z" fill="url(#paint5_linear_61_4090)"/>
+      <path d="M1.79844 6.88759C1.6999 6.99185 1.60604 7.09903 1.51569 7.20793L1.153e-07 7.1285L1.28897e-07 6.79346L1.79844 6.88759Z" fill="url(#paint6_linear_61_4090)"/>
+      <path d="M2.95915 5.91222C2.83354 5.99531 2.71038 6.08339 2.58946 6.176L0.0722383 5.64059C0.0885773 5.53029 0.107506 5.42029 0.12944 5.31078L2.95915 5.91222Z" fill="url(#paint7_linear_61_4090)"/>
+      <path d="M4.2578 5.24834C4.10741 5.30513 3.95869 5.36747 3.81195 5.43564L0.473634 4.15431C0.515088 4.05093 0.559113 3.94832 0.606016 3.84673L4.2578 5.24834Z" fill="url(#paint8_linear_61_4090)"/>
+      <path d="M8.55679 5.12086C8.39706 5.07117 8.23573 5.02805 8.07335 4.99077L4.97626 0.221419C5.09175 0.192347 5.20776 0.166033 5.32438 0.143298L8.55679 5.12086Z" fill="url(#paint9_linear_61_4090)"/>
+      <path d="M5.51298 4.91102C5.34725 4.93833 5.1824 4.97202 5.01875 5.01202L1.20582 2.81055C1.2704 2.71928 1.3374 2.62917 1.40717 2.54056L5.51298 4.91102Z" fill="url(#paint10_linear_61_4090)"/>
+      <path d="M7.68437 4.91396C7.51523 4.88568 7.3453 4.86331 7.17478 4.84826L3.51319 0.781674C3.616 0.727365 3.72007 0.676213 3.82503 0.627718L7.68437 4.91396Z" fill="url(#paint11_linear_61_4090)"/>
+      <path d="M6.69755 4.82341C6.52545 4.82065 6.35329 4.82521 6.18143 4.83583L2.25017 1.65245C2.33612 1.57709 2.42348 1.50425 2.51232 1.4341L6.69755 4.82341Z" fill="url(#paint12_linear_61_4090)"/>
+      <path d="M8.68361 0.335695C8.4084 0.244429 8.1284 0.171695 7.84551 0.117673L7.81413 0L8.59372 6.5714e-08L8.68361 0.335695Z" fill="url(#paint13_linear_61_4090)"/>
+      <path d="M17.9732 6.31969C17.9846 6.59712 17.9787 6.87509 17.9553 7.1519L14.1783 8.83365L17.8595 7.84715C17.8049 8.13033 17.7311 8.41048 17.6392 8.6859L14.3051 9.57924L17.4208 9.25171C17.3 9.52614 17.1596 9.79401 16.9995 10.0532L14.0564 10.3627L16.6968 10.501C16.5112 10.7526 16.3053 10.9938 16.0794 11.2227L13.5929 11.0926L15.7342 11.5476C15.4805 11.7706 15.214 11.9707 14.9369 12.1481L13.4631 11.835L14.6836 12.3034C14.3806 12.4785 14.0662 12.6266 13.7445 12.7495L12.6779 12.3403L13.5249 12.829C13.1821 12.9462 12.8319 13.0349 12.4776 13.0941L12.2586 12.9679L12.4253 13.1026C11.274 13.2852 10.0837 13.1625 8.98498 12.7339L10.1882 10.2411L12.7159 9.01996C13.1119 8.01791 13.2524 6.93824 13.1385 5.88071L16.2055 2.09295C16.3824 2.28216 16.5461 2.47915 16.6965 2.68294L13.652 6.44292L17.1145 3.32524C17.2448 3.55343 17.3605 3.78765 17.4614 4.02671L13.8517 7.27677L17.7215 4.7638C17.7958 5.02217 17.854 5.28418 17.8961 5.54828L13.9508 8.11061L17.9732 6.31969Z" fill="url(#paint14_linear_61_4090)"/>
+      <path d="M10.1029 1.01558C9.84344 0.851974 9.57526 0.707952 9.30008 0.583789L9.23896 1.20104e-07L9.99631 1.83944e-07L10.1029 1.01558Z" fill="url(#paint15_linear_61_4090)"/>
+      <path d="M11.3116 1.99652C11.2901 1.97441 11.2691 1.95172 11.2472 1.92984C11.0385 1.72107 10.8192 1.52946 10.5912 1.35487L10.6621 2.4007e-07L11.328 2.96195e-07C11.3574 -0.000262099 11.3868 0.000852735 11.4162 0.000980912L11.3116 1.99652Z" fill="url(#paint16_linear_61_4090)"/>
+      <path d="M12.2478 3.21345C12.0745 2.92346 11.8769 2.64417 11.6552 2.37798L12.151 0.0447815C12.4003 0.0736603 12.6484 0.116298 12.8937 0.173568L12.2478 3.21345Z" fill="url(#paint17_linear_61_4090)"/>
+      <path d="M12.8587 4.5631C12.7477 4.21866 12.6078 3.88164 12.4387 3.55569L13.6504 0.399108C13.8854 0.484748 14.1164 0.584284 14.3424 0.69754L12.8587 4.5631Z" fill="url(#paint18_linear_61_4090)"/>
+      <path d="M13.1352 5.85129C13.0929 5.47426 13.0182 5.10032 12.911 4.73372L15.0164 1.08684C15.2254 1.22493 15.4281 1.37643 15.6237 1.54086L13.1352 5.85129Z" fill="url(#paint19_linear_61_4090)"/>
+      <path d="M17.7376 8.44749C17.7734 8.32406 17.8055 8.19979 17.834 8.07486L18.0001 8.03041V8.37689L17.7376 8.44749Z" fill="url(#paint20_linear_61_4090)"/>
+      <path d="M5.16129 9.27708C5.19425 9.17918 5.22854 9.08144 5.26622 8.98486L5.53066 9.11267L5.16129 9.27708Z" fill="url(#paint21_linear_61_4090)"/>
+      <path d="M4.94719 10.074C4.9793 9.91513 5.01738 9.75729 5.06127 9.60068L5.69278 9.19079L6.04515 9.36109L4.94719 10.074Z" fill="url(#paint22_linear_61_4090)"/>
+      <path d="M4.82331 11.0696C4.8311 10.9068 4.84438 10.7442 4.86417 10.5823L6.15955 9.416L6.48511 9.57323L4.82331 11.0696Z" fill="url(#paint23_linear_61_4090)"/>
+      <path d="M17.1208 9.8782C17.1883 9.76101 17.2513 9.64186 17.311 9.52158L18.0001 9.44934V9.78569L17.1208 9.8782Z" fill="url(#paint24_linear_61_4090)"/>
+      <path d="M11.4539 17.9787C11.3306 17.9795 11.2073 17.9772 11.0842 17.9712L8.27668 11.6662L9.92313 17.8103C9.79819 17.7816 9.6739 17.7494 9.55049 17.7133L7.93511 11.6841L8.52739 17.3181C8.40721 17.2597 8.28829 17.1978 8.17111 17.1318L7.56771 11.3906L7.29771 16.5418C7.18865 16.4546 7.08167 16.3636 6.97705 16.2685L7.25555 10.9497L6.2818 15.5317C6.18821 15.4163 6.09905 15.2985 6.01442 15.1784L6.92246 10.9062L5.56498 14.4429C5.49356 14.3065 5.42679 14.1683 5.36559 14.0281L6.80773 10.2711L5.08513 13.2548C5.03993 13.1012 5.00061 12.9464 4.96681 12.7906L6.54232 10.0612L4.85927 12.1398C4.84082 11.9784 4.82822 11.8165 4.82168 11.6544L6.5008 9.58074L7.75892 10.1881L8.98011 12.7157C9.0321 12.7363 9.08461 12.7554 9.137 12.7746L11.4539 17.9787Z" fill="url(#paint25_linear_61_4090)"/>
+      <path d="M16.2016 11.1125C16.3002 11.0082 16.394 10.901 16.4844 10.7921L18.0001 10.8716V11.2066L16.2016 11.1125Z" fill="url(#paint26_linear_61_4090)"/>
+      <path d="M15.0409 12.0878C15.1665 12.0047 15.2897 11.9167 15.4106 11.8241L17.9278 12.3595C17.9115 12.4698 17.8926 12.5798 17.8706 12.6893L15.0409 12.0878Z" fill="url(#paint27_linear_61_4090)"/>
+      <path d="M13.7423 12.7517C13.8927 12.6949 14.0414 12.6326 14.1881 12.5644L17.5264 13.8457C17.485 13.9492 17.4406 14.0517 17.3937 14.1533L13.7423 12.7517Z" fill="url(#paint28_linear_61_4090)"/>
+      <path d="M9.44328 12.8789C9.60301 12.9286 9.76433 12.9717 9.92672 13.009L13.0238 17.7786C12.9083 17.8077 12.7923 17.834 12.6757 17.8568L9.44328 12.8789Z" fill="url(#paint29_linear_61_4090)"/>
+      <path d="M12.4871 13.089C12.6528 13.0617 12.8177 13.028 12.9813 12.988L16.7942 15.1895C16.7297 15.2808 16.6627 15.3709 16.5929 15.4595L12.4871 13.089Z" fill="url(#paint30_linear_61_4090)"/>
+      <path d="M10.3157 13.0861C10.4848 13.1144 10.6548 13.1367 10.8253 13.1518L14.4869 17.2184C14.3841 17.2727 14.28 17.3238 14.175 17.3723L10.3157 13.0861Z" fill="url(#paint31_linear_61_4090)"/>
+      <path d="M11.3022 13.1763C11.4744 13.1791 11.6467 13.1748 11.8186 13.1642L15.7499 16.3476C15.6639 16.423 15.5766 16.4958 15.4878 16.5659L11.3022 13.1763Z" fill="url(#paint32_linear_61_4090)"/>
+      <path d="M9.31645 17.6643C9.59166 17.7556 9.87166 17.8283 10.1545 17.8823L10.1859 18H9.40634L9.31645 17.6643Z" fill="url(#paint33_linear_61_4090)"/>
+      <path d="M0.0268234 11.6803C0.0154176 11.4029 0.021365 11.1249 0.0448013 10.8481L3.82178 9.16635L0.140574 10.1528C0.19519 9.86967 0.268927 9.58951 0.360884 9.3141L3.69397 8.42109L0.579233 8.74861C0.700118 8.47404 0.840728 8.20612 1.00089 7.9468L3.9437 7.63726L1.30325 7.49899C1.48886 7.24741 1.69479 7.00621 1.92071 6.77727L4.4072 6.90736L2.26588 6.45236C2.51955 6.22942 2.78607 6.02927 3.06311 5.8519L4.53697 6.16504L3.31644 5.69664C3.61957 5.52142 3.93408 5.37343 4.25586 5.25046L5.32276 5.6597L4.47552 5.17103C4.81816 5.05389 5.16821 4.96505 5.52248 4.90594L5.74148 5.03211L5.57478 4.89744C6.72602 4.71481 7.91635 4.83747 9.01508 5.26615L7.81187 7.75885L5.28419 8.98004C4.88812 9.98209 4.74767 11.0618 4.86155 12.1193L1.79453 15.9071C1.61764 15.7178 1.45367 15.5209 1.30325 15.3171L4.34869 11.5564L0.885509 14.6748C0.755216 14.4466 0.639532 14.2123 0.5387 13.9733L4.14832 10.7232L0.278513 13.2362C0.204211 12.9778 0.146084 12.7158 0.103964 12.4517L4.04928 9.88939L0.0268234 11.6803Z" fill="url(#paint34_linear_61_4090)"/>
+      <path d="M7.89718 16.9844C8.15665 17.1481 8.42476 17.2924 8.69997 17.4165L8.7611 18H8.00374L7.89718 16.9844Z" fill="url(#paint35_linear_61_4090)"/>
+      <path d="M6.68842 16.0035C6.70993 16.0256 6.73093 16.0483 6.75281 16.0702C6.96163 16.279 7.18075 16.4708 7.40884 16.6455L7.33791 18H6.67208C6.64267 18.0003 6.61323 17.9995 6.58382 17.9993L6.68842 16.0035Z" fill="url(#paint36_linear_61_4090)"/>
+      <path d="M5.75227 14.7865C5.92551 15.0765 6.12314 15.3558 6.34488 15.622L5.84869 17.9555C5.59949 17.9267 5.3516 17.8837 5.10637 17.8264L5.75227 14.7865Z" fill="url(#paint37_linear_61_4090)"/>
+      <path d="M5.14135 13.4369C5.25233 13.7813 5.39227 14.1184 5.56138 14.4443L4.34967 17.6009C4.11466 17.5152 3.88363 17.4157 3.65769 17.3025L5.14135 13.4369Z" fill="url(#paint38_linear_61_4090)"/>
+      <path d="M4.86482 12.1487C4.90712 12.5257 4.98182 12.8997 5.08905 13.2663L2.98368 16.9132C2.77464 16.7751 2.57194 16.6236 2.37636 16.4591L4.86482 12.1487Z" fill="url(#paint39_linear_61_4090)"/>
+      <defs>
+        <linearGradient id="paint0_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint1_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint2_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint3_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint4_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint5_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint6_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint7_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint8_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint9_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint10_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint11_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint12_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint13_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint14_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint15_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint16_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint17_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint18_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint19_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint20_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint21_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint22_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint23_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint24_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint25_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint26_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint27_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint28_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint29_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint30_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint31_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint32_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint33_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint34_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint35_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint36_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint37_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint38_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+        <linearGradient id="paint39_linear_61_4090" x1="18.0746" y1="15.7093" x2="1.84094" y2="1.81866" gradientUnits="userSpaceOnUse">
+          <stop offset="0.168269" stopColor="#F6645F"/>
+          <stop offset="0.793269" stopColor="#B969FC"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  )
+}
+
+function CloudIconCustom({ size = 40 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M31.15 15.6763C30.95 12.6987 28.55 10.2857 25.6 10.2857C25.2 10.2857 24.8 10.3371 24.45 10.4397C22.85 8.38616 20.4 7 17.6 7C13.35 7 9.8 10.0804 8.95 14.1875C5.95 15.471 4 18.4487 4 21.7857C4 26.3549 7.55 30 12 30H28.8C32.75 30 36 26.7143 36 22.6071C36 19.4754 34 16.7031 31.15 15.6763ZM28.8 27.5357H12C8.9 27.5357 6.4 24.9688 6.4 21.7857C6.4 18.9107 8.45 16.4978 11.2 16.1384V16.0357C11.2 12.442 14.05 9.46429 17.6 9.46429C20.25 9.46429 22.55 11.1585 23.5 13.5714C24.05 13.058 24.8 12.75 25.6 12.75C27.35 12.75 28.8 14.2388 28.8 16.0357C28.8 16.6518 28.6 17.2165 28.35 17.7299C28.5 17.7299 28.65 17.6786 28.8 17.6786C31.45 17.6786 33.6 19.8862 33.6 22.6071C33.6 25.3281 31.45 27.5357 28.8 27.5357Z" fill="#4C4A57"/>
+    </svg>
+  )
+}
+
+function PurpleSpinner({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="purple-spinner">
+      <path d="M8.65625 2.75V4.5C8.65625 4.67405 8.58711 4.84097 8.46404 4.96404C8.34097 5.08711 8.17405 5.15625 8 5.15625C7.82595 5.15625 7.65903 5.08711 7.53596 4.96404C7.41289 4.84097 7.34375 4.67405 7.34375 4.5V2.75C7.34375 2.57595 7.41289 2.40903 7.53596 2.28596C7.65903 2.16289 7.82595 2.09375 8 2.09375C8.17405 2.09375 8.34097 2.16289 8.46404 2.28596C8.58711 2.40903 8.65625 2.57595 8.65625 2.75ZM10.4746 6.18164C10.5609 6.18164 10.6463 6.16463 10.7259 6.13158C10.8056 6.09854 10.878 6.05024 10.9389 5.98914L12.1765 4.75164C12.2998 4.62833 12.369 4.46112 12.369 4.28674C12.369 4.11236 12.2998 3.94515 12.1765 3.82185C12.0532 3.69854 11.886 3.62931 11.7116 3.62931C11.5373 3.62931 11.3701 3.69854 11.2468 3.82185L10.0109 5.06109C9.91903 5.15278 9.85636 5.26977 9.83106 5.39709C9.80575 5.52441 9.81863 5.65641 9.86827 5.77634C9.9179 5.89628 10.002 5.99881 10.11 6.07095C10.2179 6.14309 10.3448 6.18164 10.4746 6.18164ZM13.25 7.34375H11.5C11.326 7.34375 11.159 7.41289 11.036 7.53596C10.9129 7.65903 10.8438 7.82595 10.8438 8C10.8438 8.17405 10.9129 8.34097 11.036 8.46404C11.159 8.58711 11.326 8.65625 11.5 8.65625H13.25C13.424 8.65625 13.591 8.58711 13.714 8.46404C13.8371 8.34097 13.9062 8.17405 13.9062 8C13.9062 7.82595 13.8371 7.65903 13.714 7.53596C13.591 7.41289 13.424 7.34375 13.25 7.34375ZM10.9389 10.0109C10.8779 9.94981 10.8054 9.9014 10.7256 9.86836C10.6459 9.83532 10.5604 9.81831 10.4741 9.81831C10.3877 9.81831 10.3022 9.83532 10.2225 9.86836C10.1427 9.9014 10.0703 9.94981 10.0092 10.0109C9.94815 10.0719 9.89975 10.1444 9.86671 10.2241C9.83367 10.3039 9.81665 10.3894 9.81665 10.4757C9.81665 10.562 9.83367 10.6475 9.86671 10.7273C9.89975 10.807 9.94815 10.8795 10.0092 10.9405L11.2468 12.1781C11.3701 12.3014 11.5373 12.3707 11.7116 12.3707C11.886 12.3707 12.0532 12.3014 12.1765 12.1781C12.2998 12.0548 12.369 11.8876 12.369 11.7133C12.369 11.5389 12.2998 11.3717 12.1765 11.2484L10.9389 10.0109ZM8 10.8438C7.82595 10.8438 7.65903 10.9129 7.53596 11.036C7.41289 11.159 7.34375 11.326 7.34375 11.5V13.25C7.34375 13.424 7.41289 13.591 7.53596 13.714C7.65903 13.8371 7.82595 13.9062 8 13.9062C8.17405 13.9062 8.34097 13.8371 8.46404 13.714C8.58711 13.591 8.65625 13.424 8.65625 13.25V11.5C8.65625 11.326 8.58711 11.159 8.46404 11.036C8.34097 10.9129 8.17405 10.8438 8 10.8438ZM5.06109 10.0109L3.82359 11.2484C3.70028 11.3717 3.63105 11.5389 3.63105 11.7133C3.63105 11.8876 3.70028 12.0548 3.82359 12.1781C3.9469 12.3014 4.1141 12.3707 4.28848 12.3707C4.46286 12.3707 4.63007 12.3014 4.75337 12.1781L5.99087 10.9405C6.11418 10.8173 6.18341 10.6501 6.18341 10.4757C6.18341 10.3014 6.11418 10.1341 5.99087 10.0109C5.86757 9.88756 5.70036 9.81833 5.52598 9.81833C5.3516 9.81833 5.1844 9.88756 5.06109 10.0109ZM5.15625 8C5.15625 7.82595 5.08711 7.65903 4.96404 7.53596C4.84097 7.41289 4.67405 7.34375 4.5 7.34375H2.75C2.57595 7.34375 2.40903 7.41289 2.28596 7.53596C2.16289 7.65903 2.09375 7.82595 2.09375 8C2.09375 8.17405 2.16289 8.34097 2.28596 8.46404C2.40903 8.58711 2.57595 8.65625 2.75 8.65625H4.5C4.67405 8.65625 4.84097 8.58711 4.96404 8.46404C5.08711 8.34097 5.15625 8.17405 5.15625 8ZM4.75163 3.82359C4.69056 3.76249 4.61805 3.71404 4.53828 3.68099C4.45851 3.64795 4.37301 3.63094 4.28669 3.63094C4.20037 3.63094 4.11487 3.64795 4.0351 3.68099C3.95533 3.71404 3.88283 3.76249 3.82175 3.82359C3.76066 3.88467 3.71221 3.95717 3.67917 4.03694C3.64612 4.11671 3.62911 4.20221 3.62911 4.28853C3.62911 4.37485 3.64612 4.46035 3.67917 4.54012C3.71221 4.61989 3.76066 4.6924 3.82175 4.75347L5.06109 5.98914C5.1844 6.11244 5.3516 6.18167 5.52598 6.18167C5.70036 6.18167 5.86757 6.11244 5.99087 5.98914C6.11418 5.86583 6.18341 5.69862 6.18341 5.52424C6.18341 5.34987 6.11418 5.18266 5.99087 5.05935L4.75163 3.82359Z" fill="#820DDF"/>
+    </svg>
+  )
+}
+
 function CheckIcon() {
   return <IconFA name="check" size={14} weight="solid" />
 }
@@ -2732,7 +3090,7 @@ function AgentMessageContent({ message, isTyped, renderMigrationMessage, onTypin
   return renderMigrationMessage(message, isTyped, typingState)
 }
 
-function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Data Migration Agent' }) {
+function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange }) {
   const [isResizing, setIsResizing] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState(AURA_AGENTS[0])
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
@@ -2803,6 +3161,10 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
   }
 
   const handleAgentSelect = (agent) => {
+    // If selecting a different agent, start a new conversation
+    if (agent.name !== selectedAgent.name && onAgentChange) {
+      onAgentChange(agent.name)
+    }
     setSelectedAgent(agent)
     setAgentDropdownOpen(false)
   }
@@ -3268,6 +3630,118 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
             ))}
           </div>
         )}
+
+        {/* CPU Spike / Aura Agent flow elements */}
+        {allDone && content.stats && (
+          <div className="stats-grid aura-fade-in">
+            {content.stats.map((stat, i) => (
+              <div key={i} className="stat-card">
+                <div className="stat-card-content">
+                  <span className="stat-label">{stat.label}</span>
+                  <div className="stat-value-row">
+                    <span className="stat-value">{stat.value}</span>
+                    {stat.change && (
+                      <div className="stat-change">
+                        <ArrowUpIcon />
+                        <span>{stat.change}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {allDone && content.recommendation && (
+          <div className="recommendation-card aura-fade-in">
+            <div className="recommendation-card-content">
+              <span className="recommendation-label">{content.recommendation.label}</span>
+              <span className="recommendation-title">{content.recommendation.title}</span>
+              <span className="size-badge">{content.recommendation.badge}</span>
+              <div className="impact-section">
+                <h4>Expected impact:</h4>
+                <ul>
+                  {content.recommendation.impact.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="impact-section">
+                <h4>Estimated cost change:</h4>
+                <ul>
+                  <li>{content.recommendation.cost}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {allDone && content.why && (
+          <div className="why-section aura-fade-in">
+            <h4>Why S4?</h4>
+            <ul>
+              {content.why.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {allDone && content.queries && (
+          <div className="aura-fade-in">
+            <div className="expandable-header">
+              <ChevronDownIcon />
+              <span>Top 5 queries</span>
+            </div>
+            <div className="query-list">
+              {content.queries.map((query, i) => (
+                <div key={i} className="query-item">
+                  <div className="query-item-content">
+                    <div className="query-title-row">
+                      <span className="query-name">{query.name}</span>
+                      <span className={`badge ${query.cpuType}`}>{query.cpu}</span>
+                      <span className="badge warning">{query.time}</span>
+                      <span className="badge neutral">{query.frequency}</span>
+                    </div>
+                    <div className="query-description">
+                      <span>{query.desc1}</span>
+                      <span className="dot" />
+                      <span>{query.desc2}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.options && (
+          <div className="aura-fade-in">
+            <div className="expandable-header">
+              <ChevronDownIcon />
+              <span>Ways to reduce load without resizing</span>
+            </div>
+            <div className="options-grid">
+              {content.options.map((option, i) => (
+                <div key={i} className="option-card">
+                  <div className="option-card-content">
+                    <div className="option-icon">
+                      <IconFA name={option.icon} />
+                    </div>
+                    <span className="option-title">{option.title}</span>
+                    <p className="option-description">{option.description}</p>
+                    <span className={`badge ${option.impactType}`}>{option.impact}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.footer && (
+          <p className="aura-message-text aura-fade-in">{content.footer}</p>
+        )}
       </div>
     )
   }
@@ -3301,12 +3775,18 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
         {messages.length === 0 && !isTyping ? (
           <div className="aura-panel-empty">
             <div className="aura-empty-icon">
-              <IconFA name="sparkles" size={32} />
+              <IconFA name={selectedAgent.icon} size={32} />
             </div>
-            <h3>AI-Powered Migration Assistant</h3>
-            <p>I can help you migrate data from PostgreSQL, MySQL, Oracle, MongoDB, and more to SingleStore.</p>
+            <h3>{agentName === 'Data Migration Agent' ? 'AI-Powered Migration Assistant' : 
+                 agentName === 'Query Tuning Agent' ? 'Query Optimization Assistant' : 
+                 'Aura AI Assistant'}</h3>
+            <p>{agentName === 'Data Migration Agent' ? 'I can help you migrate data from PostgreSQL, MySQL, Oracle, MongoDB, and more to SingleStore.' :
+                agentName === 'Query Tuning Agent' ? 'I can help you optimize queries, analyze execution plans, and improve database performance.' :
+                'I can help you monitor workspaces, analyze performance, and manage your SingleStore environment.'}</p>
             <div className="aura-suggested-prompts">
-              {MIGRATION_PROMPTS.map((prompt, i) => (
+              {(agentName === 'Data Migration Agent' ? MIGRATION_PROMPTS : 
+                agentName === 'Query Tuning Agent' ? QUERY_TUNING_PROMPTS : 
+                AURA_PROMPTS).map((prompt, i) => (
                 <button 
                   key={i} 
                   className="aura-prompt-chip"
@@ -3372,7 +3852,9 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
       <div className="aura-panel-input">
         <div className="aura-input-container">
           <textarea
-            placeholder="Ask about data migration..."
+            placeholder={agentName === 'Data Migration Agent' ? 'Ask about data migration...' :
+                         agentName === 'Query Tuning Agent' ? 'Ask about query optimization...' :
+                         'Ask Aura anything...'}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
