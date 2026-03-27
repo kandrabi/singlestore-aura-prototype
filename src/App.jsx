@@ -803,6 +803,12 @@ function App() {
       
       // Auto-advance progress messages after a delay
       if (message.content?.progress) {
+        // Calculate delay based on whether there are steps
+        const hasSteps = message.content?.steps?.length > 0
+        const stepsCount = message.content?.steps?.length || 0
+        // For steps: 800ms initial + 700ms per step + 400ms completion + buffer
+        const stepsDelay = hasSteps ? (800 + (stepsCount * 700) + 400 + 500) : 2500
+        
         setTimeout(() => {
           // If this message has a completedState, update it in place first
           if (message.content?.completedState) {
@@ -818,7 +824,7 @@ function App() {
           } else {
             addNextMigrationMessage(index + 1)
           }
-        }, 2500)
+        }, stepsDelay)
       }
       
       // Auto-advance autoAdvance messages (but not if progress already handles it)
@@ -2834,6 +2840,7 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'chevron-down': '\uf078',
     'chevron-right': '\uf054',
     'check': '\uf00c',
+    'check-double': '\uf560',
     'spinner': '\uf110',
     'circle-info': '\uf05a',
     'user-plus': '\uf234',
@@ -2981,8 +2988,8 @@ function ArrowUpIcon() {
   return <IconFA name="arrow-up" size={9} />
 }
 
-function SpinnerIcon() {
-  return <IconFA name="spinner" size={18} weight="solid" />
+function SpinnerIcon({ size = 18 }) {
+  return <IconFA name="spinner" size={size} weight="solid" />
 }
 
 function AiLogoMinimal({ size = 18 }) {
@@ -3238,7 +3245,7 @@ function InteractiveManualReview({ items: initialItems, onAllApproved }) {
   
   const approveItem = (name) => {
     setItems(prev => {
-      const updated = prev.map(item => 
+      const updated = prev.map(item =>
         item.name === name ? { ...item, approved: true, expanded: false } : item
       )
       const newApprovedCount = updated.filter(item => item.approved).length
@@ -3248,6 +3255,14 @@ function InteractiveManualReview({ items: initialItems, onAllApproved }) {
       }
       return updated
     })
+  }
+
+  const approveAll = () => {
+    setItems(prev => prev.map(item => ({ ...item, approved: true, expanded: false })))
+    if (!hasAdvancedRef.current) {
+      hasAdvancedRef.current = true
+      setTimeout(() => onAllApproved(), 500)
+    }
   }
   
   return (
@@ -3304,6 +3319,14 @@ function InteractiveManualReview({ items: initialItems, onAllApproved }) {
           </div>
         ))}
       </div>
+      {!allApproved && (
+        <div className="aura-manual-review-actions">
+          <button className="aura-approve-all-btn" onClick={approveAll}>
+            <IconFA name="check-double" size={12} />
+            Approve All
+          </button>
+        </div>
+      )}
       {allApproved && (
         <div className="aura-manual-review-footer">
           <IconFA name="check" size={14} />
@@ -3459,8 +3482,108 @@ function AgentMessageContent({ message, isTyped, renderMigrationMessage, onTypin
   const textLines = message.content?.text || []
   const totalLines = textLines.length
   const typingState = useSequentialTyping(totalLines, isTyped, onTypingComplete)
-  
+
   return renderMigrationMessage(message, isTyped, typingState)
+}
+
+function AnimatedProgressCard({ content, isTyped }) {
+  const [isCompleted, setIsCompleted] = useState(isTyped || content.completed)
+  const [currentStepIndex, setCurrentStepIndex] = useState(isTyped ? (content.steps?.length || 0) : -1)
+  const steps = content.steps || []
+  const hasSteps = steps.length > 0
+  
+  useEffect(() => {
+    if (isTyped || content.completed) {
+      setIsCompleted(true)
+      setCurrentStepIndex(steps.length)
+      return
+    }
+    
+    if (hasSteps) {
+      // Start showing steps after a short delay
+      const initialDelay = setTimeout(() => {
+        setCurrentStepIndex(0)
+      }, 800)
+      
+      return () => clearTimeout(initialDelay)
+    } else {
+      // No steps - just complete after delay (for simple progress like MCP connection)
+      const timer = setTimeout(() => {
+        setIsCompleted(true)
+      }, 2500)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [isTyped, content.completed, hasSteps, steps.length])
+  
+  // Progress through steps
+  useEffect(() => {
+    if (isTyped || content.completed || !hasSteps || currentStepIndex < 0) return
+    
+    if (currentStepIndex < steps.length) {
+      const stepTimer = setTimeout(() => {
+        setCurrentStepIndex(prev => prev + 1)
+      }, 700) // 700ms per step
+      
+      return () => clearTimeout(stepTimer)
+    } else if (currentStepIndex >= steps.length) {
+      // All steps done, mark as completed
+      const completeTimer = setTimeout(() => {
+        setIsCompleted(true)
+      }, 400)
+      
+      return () => clearTimeout(completeTimer)
+    }
+  }, [currentStepIndex, steps.length, hasSteps, isTyped, content.completed])
+  
+  const allStepsDone = currentStepIndex >= steps.length
+  
+  return (
+    <div className={`aura-progress-card aura-fade-in ${isCompleted ? 'completed' : ''}`}>
+      <div className="aura-progress-content">
+        <div className="aura-progress-icon">
+          {isCompleted ? (
+            <span className="aura-progress-check">✓</span>
+          ) : (
+            <SpinnerIcon />
+          )}
+        </div>
+        <span className={`aura-progress-text ${isCompleted ? 'success' : ''}`}>
+          {isCompleted && content.completedState ? content.completedState.text : content.text}
+        </span>
+      </div>
+      {isCompleted && content.completedState?.subtext && (
+        <span className="aura-progress-subtext">{content.completedState.subtext}</span>
+      )}
+      {!isCompleted && content.url && <span className="aura-progress-url">{content.url}</span>}
+      {hasSteps && (
+        <div className="aura-progress-steps">
+          {steps.map((step, i) => {
+            const isStepVisible = i <= currentStepIndex
+            const isStepComplete = i < currentStepIndex || allStepsDone
+            const isStepActive = i === currentStepIndex && !allStepsDone
+            
+            if (!isStepVisible) return null
+            
+            // Remove the checkmark from the step text if present, we'll add our own indicator
+            const stepText = step.replace(/^✓\s*/, '')
+            
+            return (
+              <div 
+                key={i} 
+                className={`aura-progress-step-animated ${isStepComplete ? 'completed' : ''} ${isStepActive ? 'active' : ''}`}
+              >
+                <span className="aura-step-indicator">
+                  {isStepComplete ? '✓' : <SpinnerIcon size={12} />}
+                </span>
+                <span className="aura-step-text">{stepText}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange }) {
@@ -3686,32 +3809,8 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
           </div>
         )}
 
-        {allDone && content.progress && (
-          <div className={`aura-progress-card aura-fade-in ${content.completed ? 'completed' : ''}`}>
-            <div className="aura-progress-content">
-              <div className="aura-progress-icon">
-                {content.completed ? (
-                  <span className="aura-progress-check">✓</span>
-                ) : (
-                  <SpinnerIcon />
-                )}
-              </div>
-              <span className="aura-progress-text">
-                {content.completed && content.completedState ? content.completedState.text : content.text}
-              </span>
-            </div>
-            {content.completed && content.completedState?.subtext && (
-              <span className="aura-progress-subtext">{content.completedState.subtext}</span>
-            )}
-            {!content.completed && content.url && <span className="aura-progress-url">{content.url}</span>}
-            {content.steps && (
-              <div className="aura-progress-steps">
-                {content.steps.map((step, i) => (
-                  <div key={i} className="aura-progress-step">{step}</div>
-                ))}
-              </div>
-            )}
-          </div>
+        {content.progress && (
+          <AnimatedProgressCard content={content} isTyped={isTyped} />
         )}
 
         {allDone && content.connections && showConnections && (
