@@ -3160,11 +3160,13 @@ body {
 .aura-panel-messages .aura-flow-instance-options,
 .aura-panel-messages .aura-cdc-selector-options {
   flex-wrap: wrap;
+  gap: 6px;
 }
 
 .aura-panel-messages .aura-flow-instance-btn,
 .aura-panel-messages .aura-cdc-selector-btn {
   font-size: 12px;
+  height: auto;
   padding: 6px 12px;
 }
 
@@ -3423,33 +3425,35 @@ body {
 
 .aura-flow-instance-options {
   display: flex;
-  gap: 8px;
+  gap: 14px;
 }
 
 .aura-flow-instance-btn {
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  padding: 6px 13px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #0a0a0a;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-neutral-6);
+  background: var(--color-neutral-1);
   cursor: pointer;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  color: var(--color-neutral-11);
   transition: all 0.2s;
 }
 
 .aura-flow-instance-btn:hover {
-  background: #f3f4f6;
+  background: var(--color-neutral-3);
 }
 
 .aura-flow-instance-btn.recommended {
-  background: #9810fa;
+  background: var(--color-brand-9);
   color: white;
-  border-color: #9810fa;
+  border-color: var(--color-brand-9);
 }
 
 .aura-flow-instance-btn.recommended:hover {
-  background: #7a0dc7;
+  background: var(--color-brand-10);
 }
 
 .aura-provisioned-resources-green {
@@ -3510,23 +3514,25 @@ body {
 
 .aura-cdc-selector-options {
   display: flex;
-  gap: 8px;
+  gap: 14px;
 }
 
 .aura-cdc-selector-btn {
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  padding: 6px 13px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #0a0a0a;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-neutral-6);
+  background: var(--color-neutral-1);
   cursor: pointer;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  color: var(--color-neutral-11);
   transition: all 0.2s;
 }
 
 .aura-cdc-selector-btn:hover {
-  background: #f3f4f6;
+  background: var(--color-neutral-3);
 }
 
 .aura-steps-list {
@@ -4658,10 +4664,10 @@ body {
 }
 
 .aura-migration-stats {
-  background: var(--color-bg-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
-  padding: 14px 16px;
+  background: #f0fdf4;
+  border: 1px solid #b9f8cf;
+  border-radius: 10px;
+  padding: 17px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -4680,7 +4686,17 @@ body {
 
 .aura-migration-stat-value {
   color: var(--color-text-primary);
-  font-weight: 500;
+  font-weight: 600;
+}
+
+.aura-migration-stat-value.success {
+  color: #008236;
+}
+
+.aura-migration-stat.divider {
+  border-top: 1px solid #7bf1a8;
+  padding-top: 9px;
+  margin-top: 1px;
 }
 
 .aura-followup {

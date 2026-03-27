@@ -431,8 +431,7 @@ const MIGRATION_CHAT_FLOW = [
     content: {
       text: [
         { type: 'text', content: 'Great. Since I already have your source connection context via the MCP server, I am automatically selecting the tables for ingestion based on your migration plan.' },
-        { type: 'mixed', content: 'I will configure ', bold: 'standard Flow Ingest', after: ' for the small tables, and ' },
-        { type: 'mixed', content: '', bold: 'XL Ingest', after: ' for the 3 large tables.' },
+        { type: 'mixed', content: 'I will configure ', bold: 'standard Flow Ingest', after: ' for the small tables, and ', bold2: 'XL Ingest', after2: ' for the 3 large tables.' },
         { type: 'text', content: 'Please review the selected tables below. You can deselect any tables you do not wish to include in the pipeline.' }
       ],
       interactiveTableSelection: {
@@ -557,16 +556,16 @@ const MIGRATION_CHAT_FLOW = [
     type: 'agent',
     content: {
       success: true,
-      title: 'Migration complete!',
-      text: 'I have verified that the source and destination row counts match.',
+      title: 'Migration complete! 🎉',
+      text: 'I verified that the source and destination row counts match.',
       migrationStats: {
         stats: [
           { label: 'Tables migrated:', value: '50 / 50' },
           { label: 'Total rows:', value: '142,845,721' },
           { label: 'Source count:', value: '142,845,721' },
-          { label: 'Destination count:', value: '142,845,721 ✓' },
-          { label: 'Data volume:', value: '~500 GB' },
-          { label: 'Duration:', value: '18m 42s' }
+          { label: 'Destination count:', value: '142,845,721 ✓', success: true },
+          { label: 'Data volume:', value: '~140 GB' },
+          { label: 'Duration:', value: '14m 28s', divider: true }
         ]
       },
       followUp: 'I notice that some of your complex analytical queries might run slower than expected on the new schema. Would you like me to hand this off to the Query Tuning Agent to analyze your post-migration query performance?',
@@ -2021,10 +2020,12 @@ function AnimatedResizeProgress({ resizeProgress }) {
 }
 
 function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete, agentName = 'Aura Agent', compact = false, onAdvanceSilently }) {
+  // Only treat text as items if it's an array (not a string)
+  const textItems = message.type === 'agent' && Array.isArray(message.content?.text) ? message.content.text : []
+  // Initialize paragraphsCompleted to true if there are no text items (e.g., progress-only messages, or text is a string)
   const [currentParagraph, setCurrentParagraph] = useState(0)
-  const [paragraphsCompleted, setParagraphsCompleted] = useState(false)
+  const [paragraphsCompleted, setParagraphsCompleted] = useState(textItems.length === 0)
   const [showConnections, setShowConnections] = useState(false)
-  const textItems = message.type === 'agent' && message.content?.text ? message.content.text : []
 
   useEffect(() => {
     if (!isTyping || textItems.length === 0) {
@@ -2033,14 +2034,18 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
     }
   }, [isTyping, textItems.length])
 
-  // For progress-only messages (no text items), call onTypingComplete after a brief delay
+  // For messages without text array, call onTypingComplete after appropriate delay
   useEffect(() => {
-    if (isTyping && textItems.length === 0 && message.content?.progress) {
-      // Calculate delay based on steps
-      const steps = message.content?.steps || []
-      const delay = steps.length > 0 
-        ? 800 + (steps.length * 700) + 400 + 500  // initial + steps + completion + buffer
-        : 2500 + 500  // default delay + buffer
+    if (isTyping && textItems.length === 0) {
+      let delay = 500 // default short delay for non-progress messages
+      
+      if (message.content?.progress) {
+        // Calculate delay based on steps for progress messages
+        const steps = message.content?.steps || []
+        delay = steps.length > 0 
+          ? 800 + (steps.length * 700) + 400 + 500  // initial + steps + completion + buffer
+          : 2500 + 500  // default delay + buffer
+      }
       
       const timer = setTimeout(() => {
         onTypingComplete?.()
@@ -2233,8 +2238,8 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
 
         {content.footer && (!isTyping || paragraphsCompleted) && <p className="message-text fade-in">{content.footer}</p>}
 
-        {content.progress && (!isTyping || paragraphsCompleted) && (
-          <AnimatedProgressCard content={content} isTyped={!isTyping} />
+        {content.progress && (
+          <AnimatedProgressCard content={content} />
         )}
 
         {content.resizeProgress && (!isTyping || paragraphsCompleted) && (
@@ -2247,7 +2252,10 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
               <CheckIcon />
               <span>{content.title}</span>
             </div>
-            {content.details.map((d, i) => (
+            {content.text && typeof content.text === 'string' && (
+              <p className="message-text">{content.text}</p>
+            )}
+            {content.details && content.details.map((d, i) => (
               <p key={i} className="message-text">
                 {d.type === 'text' && d.content}
                 {d.type === 'mixed' && (
@@ -2703,9 +2711,9 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         {content.migrationStats && (!isTyping || paragraphsCompleted) && (
           <div className="aura-migration-stats fade-in">
             {content.migrationStats.stats.map((stat, i) => (
-              <div key={i} className="aura-migration-stat">
+              <div key={i} className={`aura-migration-stat ${stat.divider ? 'divider' : ''}`}>
                 <span className="aura-migration-stat-label">{stat.label}</span>
-                <span className="aura-migration-stat-value">{stat.value}</span>
+                <span className={`aura-migration-stat-value ${stat.success ? 'success' : ''}`}>{stat.value}</span>
               </div>
             ))}
           </div>
@@ -3478,18 +3486,26 @@ function AgentMessageContent({ message, isTyped, renderMigrationMessage, onTypin
   return renderMigrationMessage(message, isTyped, typingState)
 }
 
-function AnimatedProgressCard({ content, isTyped }) {
-  const [isCompleted, setIsCompleted] = useState(isTyped || content.completed)
-  const [currentStepIndex, setCurrentStepIndex] = useState(isTyped ? (content.steps?.length || 0) : -1)
+function AnimatedProgressCard({ content }) {
+  // Only skip animation if content.completed is already true in the data
+  const [isCompleted, setIsCompleted] = useState(content.completed === true)
+  const [currentStepIndex, setCurrentStepIndex] = useState(content.completed ? (content.steps?.length || 0) : -1)
+  const [hasAnimated, setHasAnimated] = useState(false)
   const steps = content.steps || []
   const hasSteps = steps.length > 0
   
+  // Sync with external completed state changes
   useEffect(() => {
-    if (isTyped || content.completed) {
+    if (content.completed && !isCompleted) {
       setIsCompleted(true)
       setCurrentStepIndex(steps.length)
-      return
     }
+  }, [content.completed, isCompleted, steps.length])
+  
+  // Run animation on mount (only once)
+  useEffect(() => {
+    if (hasAnimated || content.completed) return
+    setHasAnimated(true)
     
     if (hasSteps) {
       // Start showing steps after a short delay
@@ -3506,11 +3522,11 @@ function AnimatedProgressCard({ content, isTyped }) {
       
       return () => clearTimeout(timer)
     }
-  }, [isTyped, content.completed, hasSteps, steps.length])
+  }, [hasAnimated, content.completed, hasSteps])
   
   // Progress through steps
   useEffect(() => {
-    if (isTyped || content.completed || !hasSteps || currentStepIndex < 0) return
+    if (content.completed || !hasSteps || currentStepIndex < 0) return
     
     if (currentStepIndex < steps.length) {
       const stepTimer = setTimeout(() => {
@@ -3526,7 +3542,7 @@ function AnimatedProgressCard({ content, isTyped }) {
       
       return () => clearTimeout(completeTimer)
     }
-  }, [currentStepIndex, steps.length, hasSteps, isTyped, content.completed])
+  }, [currentStepIndex, steps.length, hasSteps, content.completed])
   
   const allStepsDone = currentStepIndex >= steps.length
   
@@ -3802,7 +3818,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
         )}
 
         {content.progress && (
-          <AnimatedProgressCard content={content} isTyped={isTyped} />
+          <AnimatedProgressCard content={content} />
         )}
 
         {allDone && content.connections && showConnections && (
@@ -4073,9 +4089,9 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
         {allDone && content.migrationStats && (
           <div className="aura-migration-stats aura-fade-in">
             {content.migrationStats.stats.map((stat, i) => (
-              <div key={i} className="aura-migration-stat">
+              <div key={i} className={`aura-migration-stat ${stat.divider ? 'divider' : ''}`}>
                 <span className="aura-migration-stat-label">{stat.label}</span>
-                <span className="aura-migration-stat-value">{stat.value}</span>
+                <span className={`aura-migration-stat-value ${stat.success ? 'success' : ''}`}>{stat.value}</span>
               </div>
             ))}
           </div>
