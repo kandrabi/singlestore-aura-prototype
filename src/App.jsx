@@ -692,8 +692,21 @@ function App() {
   const [auraPanelFlowIndex, setAuraPanelFlowIndex] = useState(0)
   const [migrationFlowIndex, setMigrationFlowIndex] = useState(0)
   const [isAuraTyping, setIsAuraTyping] = useState(false)
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS)
   const chatEndRef = useRef(null)
   const auraChatEndRef = useRef(null)
+
+  // Mark a single notification as read
+  const markNotificationAsRead = (notificationId) => {
+    setNotifications(prev => prev.map(n => 
+      n.id === notificationId ? { ...n, unread: false } : n
+    ))
+  }
+
+  // Mark all notifications as read
+  const markAllNotificationsAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, unread: false })))
+  }
 
   // Auto-collapse sidebar on smaller screens
   useEffect(() => {
@@ -1089,7 +1102,14 @@ function App() {
 
   return (
     <>
-      <Header onLogoClick={() => setView('portal')} onAskAura={handleOpenAuraPanel} onNotificationClick={handleNotificationClick} />
+      <Header 
+        onLogoClick={() => setView('portal')} 
+        onAskAura={handleOpenAuraPanel} 
+        onNotificationClick={handleNotificationClick}
+        notifications={notifications}
+        onMarkAsRead={markNotificationAsRead}
+        onMarkAllAsRead={markAllNotificationsAsRead}
+      />
       <div className="app-container">
         <Sidebar 
           onNavigate={handleNavigate} 
@@ -1378,7 +1398,7 @@ function DataSourceLogo({ name }) {
   }
 }
 
-const NOTIFICATIONS = [
+const INITIAL_NOTIFICATIONS = [
   {
     id: 1,
     type: 'alert',
@@ -1421,15 +1441,25 @@ const NOTIFICATIONS = [
   }
 ]
 
-function Header({ onLogoClick, onAskAura, onNotificationClick }) {
+function Header({ onLogoClick, onAskAura, onNotificationClick, notifications = [], onMarkAsRead, onMarkAllAsRead }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const notificationsRef = useRef(null)
-  const unreadCount = NOTIFICATIONS.filter(n => n.unread).length
+  const unreadCount = notifications.filter(n => n.unread).length
 
   const handleNotificationClick = (notification) => {
+    // Mark as read when clicked
+    if (notification.unread && onMarkAsRead) {
+      onMarkAsRead(notification.id)
+    }
     setNotificationsOpen(false)
     if (onNotificationClick) {
       onNotificationClick(notification)
+    }
+  }
+
+  const handleMarkAllAsRead = () => {
+    if (onMarkAllAsRead) {
+      onMarkAllAsRead()
     }
   }
 
@@ -1474,10 +1504,10 @@ function Header({ onLogoClick, onAskAura, onNotificationClick }) {
             <div className="notifications-dropdown">
               <div className="notifications-header">
                 <span className="notifications-title">Notifications</span>
-                <button className="notifications-mark-read">Mark all as read</button>
+                <button className="notifications-mark-read" onClick={handleMarkAllAsRead}>Mark all as read</button>
               </div>
               <div className="notifications-list">
-                {NOTIFICATIONS.map(notification => (
+                {notifications.map(notification => (
                   <div 
                     key={notification.id} 
                     className={`notification-item ${notification.unread ? 'unread' : ''} ${notification.type}`}
