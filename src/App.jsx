@@ -4807,9 +4807,11 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
 // This component supports the Query Tuning Agent flow.
 // Key integration points marked with [AI_HOOK] comments.
 
-const SAMPLE_QUERY = `SELECT * FROM orders
+const SAMPLE_QUERY = `SELECT *
+FROM orders
 WHERE customer_id IN (
-    SELECT id FROM customers
+    SELECT id
+    FROM customers
     WHERE email LIKE '%gmail.com'
     AND status = 'active'
 )
@@ -4833,8 +4835,9 @@ function EditorView({ onOpenAura }) {
   
   // Diff view state
   const [showDiff, setShowDiff] = useState(false)
-  const [originalQuery, setOriginalQuery] = useState('')
-  const [optimizedQuery, setOptimizedQuery] = useState('')
+  const [originalQuery, setOriginalQuery] = useState('')  // Selected text for diff preview
+  const [optimizedQuery, setOptimizedQuery] = useState('') // Optimized text for diff preview
+  const [fullUpdatedQuery, setFullUpdatedQuery] = useState('') // Full query with replacement applied
   
   const monacoRef = useRef(null)
   const editorInstanceRef = useRef(null)
@@ -4912,43 +4915,48 @@ function EditorView({ onOpenAura }) {
   // Opens the global Aura panel with Query Tuning Agent context
   // Show diff view when user clicks "Apply to editor" in the Aura panel
   const applyOptimizedQuery = (newQuery) => {
-    const fullQuery = query
-    let updatedQuery = newQuery
+    const editor = editorInstanceRef.current
+    const selection = lockedSelectionRef.current
     
-    // If there's a locked selection range, only replace the selected portion
-    if (lockedSelectionRef.current) {
-      const selection = lockedSelectionRef.current
-      const lines = fullQuery.split('\n')
-      
-      // Monaco line numbers are 1-based
-      const startLine = selection.startLineNumber - 1
-      const endLine = selection.endLineNumber - 1
-      const startColumn = selection.startColumn - 1
-      const endColumn = selection.endColumn - 1
-      
-      // Build the updated query with partial replacement
-      const beforeLines = lines.slice(0, startLine)
-      const afterLines = lines.slice(endLine + 1)
-      
-      // Handle partial line selection
-      const startLineText = lines[startLine] || ''
-      const endLineText = lines[endLine] || ''
-      
-      // Get the parts before and after the selection on the same lines
-      const prefixText = startLineText.substring(0, startColumn)
-      const suffixText = endLineText.substring(endColumn)
-      
-      // Combine: prefix + optimized query + suffix
-      const replacementText = prefixText + newQuery + suffixText
-      const replacementLines = replacementText.split('\n')
-      
-      // Build the final query
-      updatedQuery = [...beforeLines, ...replacementLines, ...afterLines].join('\n')
+    // CRITICAL: We need both the editor AND a locked selection to do partial replacement
+    if (!editor || !selection) {
+      console.warn('[Query Tuning] Missing editor or selection, cannot apply partial replacement')
+      // Fallback: show diff of full query replacement (entire query vs entire new query)
+      setOriginalQuery(query)
+      setOptimizedQuery(newQuery)
+      setFullUpdatedQuery(newQuery)
+      setShowDiff(true)
+      setSelectedQuery('')
+      setSelectionPosition(null)
+      return
     }
     
-    // Store original and updated queries for diff view
-    setOriginalQuery(fullQuery)
-    setOptimizedQuery(updatedQuery)
+    // Get the FULL original query for diff preview (shows full context)
+    const fullOriginalQuery = editor.getValue()
+    
+    // Pre-compute the full updated query by replacing ONLY the selection
+    // This is done NOW while the main editor is still mounted
+    const model = editor.getModel()
+    const startOffset = model.getOffsetAt({
+      lineNumber: selection.startLineNumber,
+      column: selection.startColumn
+    })
+    const endOffset = model.getOffsetAt({
+      lineNumber: selection.endLineNumber,
+      column: selection.endColumn
+    })
+    
+    // Build full query: before selection + optimized text + after selection
+    const computedFullQuery = fullOriginalQuery.substring(0, startOffset) + newQuery + fullOriginalQuery.substring(endOffset)
+    
+    // Store for diff preview - show FULL queries so user sees changes in context
+    setOriginalQuery(fullOriginalQuery)
+    setOptimizedQuery(computedFullQuery)
+    
+    // Store the pre-computed full query for when user accepts
+    setFullUpdatedQuery(computedFullQuery)
+    
+    // Show diff view
     setShowDiff(true)
     
     // Clear floating button
@@ -4958,13 +4966,20 @@ function EditorView({ onOpenAura }) {
   
   // Handle accepting the optimized query from diff view
   const handleAcceptOptimization = (andRun = false) => {
-    // Apply the optimized query
-    setQuery(optimizedQuery)
+    if (!fullUpdatedQuery) {
+      console.warn('[Query Tuning] No full updated query available')
+      return
+    }
     
-    // Close diff view and clear selection refs
+    // Apply the pre-computed full query (with only the selection replaced)
+    // This was computed in applyOptimizedQuery while the main editor was still mounted
+    setQuery(fullUpdatedQuery)
+    
+    // Close diff view and clear all state
     setShowDiff(false)
     setOriginalQuery('')
     setOptimizedQuery('')
+    setFullUpdatedQuery('')
     selectionRangeRef.current = null
     lockedSelectionRef.current = null
     
@@ -4976,10 +4991,11 @@ function EditorView({ onOpenAura }) {
   
   // Handle rejecting the optimization
   const handleRejectOptimization = () => {
-    // Close diff view without changes, clear locked selection
+    // Close diff view without changes, clear all state
     setShowDiff(false)
     setOriginalQuery('')
     setOptimizedQuery('')
+    setFullUpdatedQuery('')
     lockedSelectionRef.current = null
   }
   
@@ -5014,11 +5030,21 @@ function EditorView({ onOpenAura }) {
 
   const handleOptimizeWithAI = () => {
     const queryToOptimize = selectedQuery || query
-    console.log('[AI_HOOK] Optimize query:', queryToOptimize)
     
     // Lock the current selection range for the optimization session
     // This prevents it from being cleared when editor loses focus
-    lockedSelectionRef.current = selectionRangeRef.current
+    if (selectionRangeRef.current) {
+      lockedSelectionRef.current = {
+        startLineNumber: selectionRangeRef.current.startLineNumber,
+        startColumn: selectionRangeRef.current.startColumn,
+        endLineNumber: selectionRangeRef.current.endLineNumber,
+        endColumn: selectionRangeRef.current.endColumn
+      }
+      console.log('[AI_HOOK] Locked selection:', lockedSelectionRef.current)
+    } else {
+      console.log('[AI_HOOK] No selection to lock, will replace entire query')
+      lockedSelectionRef.current = null
+    }
     
     // Open the global Aura side panel with query context
     // Pass the apply callback so the panel can update the editor
