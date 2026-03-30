@@ -5739,6 +5739,79 @@ body {
   background: #ffffff;
 }
 
+/* Diff Mode Toolbar */
+.editor-toolbar-secondary.diff-mode {
+  background: #F0FDF4;
+  border-bottom: 1px solid #BBF7D0;
+  padding: 10px 16px;
+}
+
+.diff-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.diff-header-title .fa-icon {
+  color: #16A34A;
+}
+
+.diff-reject-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4C4A57;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.diff-reject-btn:hover {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.diff-reject-btn .fa-icon {
+  font-size: 10px;
+}
+
+.diff-accept-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #820DDF;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.diff-accept-btn:hover {
+  background: #6B0AB8;
+}
+
+.diff-accept-btn .fa-icon {
+  font-size: 10px;
+}
+
+.diff-accept-btn svg {
+  width: 10px;
+  height: 10px;
+  margin-left: 2px;
+}
+
 .editor-toolbar-left {
   display: flex;
   align-items: center;
@@ -5961,6 +6034,60 @@ body {
 }
 
 .monaco-editor-container .monaco-editor .current-line ~ .line-numbers {
+  color: #777582 !important;
+}
+
+/* Monaco Diff Editor Styles - Inline Mode */
+.monaco-editor-container .monaco-diff-editor {
+  background: #FAFAFA !important;
+}
+
+.monaco-editor-container .monaco-diff-editor .editor.modified {
+  background: #FAFAFA !important;
+}
+
+/* Removed lines - red background with strikethrough */
+.monaco-editor-container .monaco-diff-editor .line-delete {
+  background: rgba(254, 226, 226, 0.5) !important;
+}
+
+.monaco-editor-container .monaco-diff-editor .char-delete {
+  background: rgba(254, 202, 202, 0.6) !important;
+}
+
+/* Added lines - green background */
+.monaco-editor-container .monaco-diff-editor .line-insert {
+  background: rgba(209, 250, 229, 0.5) !important;
+}
+
+.monaco-editor-container .monaco-diff-editor .char-insert {
+  background: rgba(167, 243, 208, 0.6) !important;
+}
+
+/* Diff gutter decorations */
+.monaco-editor-container .monaco-diff-editor .diagonal-fill {
+  display: none !important;
+}
+
+/* Left gutter indicator for removed lines */
+.monaco-editor-container .monaco-diff-editor .delete-sign {
+  background: #EF4444 !important;
+  width: 3px !important;
+}
+
+/* Left gutter indicator for added lines */
+.monaco-editor-container .monaco-diff-editor .insert-sign {
+  background: #22C55E !important;
+  width: 3px !important;
+}
+
+/* Override margin background in diff editor */
+.monaco-editor-container .monaco-diff-editor .margin {
+  background: #FAFAFA !important;
+}
+
+/* Ensure line numbers are visible */
+.monaco-editor-container .monaco-diff-editor .line-numbers {
   color: #777582 !important;
 }
 
@@ -6214,4 +6341,425 @@ body {
   margin-top: 8px !important;
   font-size: 12px !important;
   color: #777582;
+}
+
+/* ============================================
+   QUERY TUNING AGENT STYLES
+   ============================================ */
+
+.query-tuning-content {
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Analyzing State */
+.query-tuning-analyzing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.analyzing-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #F5EAFD 0%, #E8D5FA 100%);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.analyzing-icon .fa-icon {
+  color: #820DDF;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+.query-tuning-analyzing h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.query-tuning-analyzing p {
+  margin: 0 0 24px 0;
+  font-size: 14px;
+  color: #6B6B6B;
+}
+
+.analyzing-progress {
+  width: 200px;
+  height: 4px;
+  background: #E6E6E6;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.analyzing-bar {
+  height: 100%;
+  width: 30%;
+  background: linear-gradient(90deg, #820DDF, #A855F7);
+  border-radius: 2px;
+  animation: analyzing 1.5s ease-in-out infinite;
+}
+
+@keyframes analyzing {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+/* Query Tuning Result */
+.query-tuning-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Title */
+.qt-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #777582;
+  text-align: right;
+  margin-bottom: 4px;
+}
+
+/* Success Card */
+.qt-success-card {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 8px;
+}
+
+.qt-success-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #16A34A;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.qt-success-icon .fa-icon {
+  color: #FFFFFF;
+}
+
+.qt-success-content h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.qt-success-content p {
+  margin: 0;
+  font-size: 13px;
+  color: #166534;
+  line-height: 1.5;
+}
+
+/* Suggestions */
+.qt-suggestions {
+  padding: 12px 16px;
+  background: #FAFAFA;
+  border-radius: 8px;
+}
+
+.qt-suggestions h4 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4C4A57;
+}
+
+.qt-suggestions ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.qt-suggestions li {
+  font-size: 13px;
+  color: #4C4A57;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+/* Issue Card */
+.qt-issue-card {
+  background: #FEF2F2;
+  border-left: 3px solid #EF4444;
+  border-radius: 4px;
+  padding: 12px 14px;
+}
+
+.qt-issue-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.qt-issue-icon {
+  font-size: 12px;
+}
+
+.qt-issue-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #DC2626;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.qt-issue-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1A1A1A;
+  line-height: 1.4;
+}
+
+/* Why it matters */
+.qt-why-section {
+  border-radius: 4px;
+}
+
+.qt-why-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #D97706;
+  cursor: pointer;
+  list-style: none;
+}
+
+.qt-why-header::-webkit-details-marker {
+  display: none;
+}
+
+.qt-why-icon {
+  font-size: 10px;
+  transition: transform 0.2s ease;
+}
+
+.qt-why-section[open] .qt-why-icon {
+  transform: rotate(0deg);
+}
+
+.qt-why-section:not([open]) .qt-why-icon {
+  transform: rotate(-90deg);
+}
+
+.qt-why-text {
+  margin: 0;
+  padding: 0 0 8px 18px;
+  font-size: 12px;
+  color: #777582;
+  line-height: 1.5;
+}
+
+/* Recommended Fix */
+.qt-fix-section {
+  margin-top: 4px;
+}
+
+.qt-fix-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.qt-fix-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #16A34A;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 50%;
+}
+
+.qt-fix-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #16A34A;
+}
+
+.qt-code-block {
+  background: #FAFAFA;
+  border: 1px solid #E6E5EA;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.qt-code-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 10px;
+  background: #FAFAFA;
+  border-bottom: 1px solid #E6E5EA;
+}
+
+.qt-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  color: #777582;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.qt-copy-btn:hover {
+  background: #E6E5EA;
+  color: #4C4A57;
+}
+
+.qt-code {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: 'Inconsolata', 'JetBrains Mono', monospace;
+  line-height: 20px;
+  color: #4C4A57;
+  background: #FFFFFF;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* Learn more link */
+.qt-learn-more {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: #820DDF;
+  text-decoration: none;
+  margin-top: 4px;
+}
+
+.qt-learn-more:hover {
+  text-decoration: underline;
+}
+
+/* Warning banner */
+.qt-warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #FEF9C3;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #854D0E;
+}
+
+.qt-warning-icon {
+  font-size: 14px;
+}
+
+/* Actions */
+.qt-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.qt-reject-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4C4A57;
+  background: #FFFFFF;
+  border: 1px solid #E6E5EA;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.qt-reject-btn:hover {
+  background: #FAFAFA;
+  border-color: #D4D4D4;
+}
+
+.qt-apply-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #820DDF;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.qt-apply-btn:hover {
+  background: #6B0AB8;
+}
+
+/* Feedback */
+.qt-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #E6E5EA;
+  margin-top: 8px;
+}
+
+.qt-feedback span {
+  font-size: 12px;
+  color: #777582;
+}
+
+.qt-feedback-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.qt-feedback-btn:hover {
+  opacity: 1;
 }

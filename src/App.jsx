@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import Editor from '@monaco-editor/react'
+import Editor, { DiffEditor } from '@monaco-editor/react'
 import './index.css'
 
 // Logo assets from Figma
@@ -22,6 +22,134 @@ const DATA_SOURCES = [
   { id: 'sqlserver', name: 'SQL Server', description: 'Load your SQL Server data into SingleStore using Flow', icon: 'sqlserver' },
   { id: 'snowflake', name: 'Snowflake', description: 'Load your Snowflake data into SingleStore using Flow', icon: 'snowflake' },
 ]
+
+// ============================================
+// QUERY TUNING AGENT - Mock Intelligence
+// ============================================
+// Analyzes SQL queries and provides optimization suggestions
+
+function createQueryTuningAgent(input) {
+  const { query, executionTime = null } = input
+  const queryUpper = query.toUpperCase()
+  
+  // Pattern detection for common issues
+  const issues = []
+  
+  // Issue 1: SELECT * usage
+  if (queryUpper.includes('SELECT *')) {
+    issues.push({
+      type: 'select-star',
+      issue: 'Using SELECT * retrieves all columns',
+      whyItMatters: 'Fetching unnecessary columns increases I/O, memory usage, and network transfer. This is especially impactful for tables with many columns or large data types.',
+      recommendedFix: {
+        explanation: 'Specify only the columns you need. This reduces data transfer and allows the optimizer to use covering indexes.',
+        transform: (q) => {
+          // Simple mock: replace SELECT * with specific columns
+          return q.replace(/SELECT \*/gi, 'SELECT id, customer_id, created_at, status')
+        }
+      },
+      impact: 'Can reduce query execution time by 30-50% and memory usage significantly'
+    })
+  }
+  
+  // Issue 2: Subquery in WHERE clause (can often be rewritten as JOIN)
+  if (queryUpper.includes('WHERE') && queryUpper.includes('IN (') && queryUpper.includes('SELECT')) {
+    issues.push({
+      type: 'subquery-to-join',
+      issue: 'Subquery in WHERE clause can be inefficient',
+      whyItMatters: 'Subqueries in WHERE clauses are executed for each row, leading to poor performance on large datasets. JOINs allow the optimizer to choose more efficient execution plans.',
+      recommendedFix: {
+        explanation: 'Rewrite the subquery as a JOIN. This allows the database to use hash joins or merge joins, which are typically faster.',
+        transform: (q) => {
+          // Mock transformation for the sample query
+          if (q.includes('customer_id IN')) {
+            return `SELECT o.id, o.customer_id, o.created_at, o.status
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.id
+WHERE c.email LIKE '%gmail.com'
+  AND c.status = 'active'
+  AND o.created_at > '2024-01-01'
+ORDER BY o.created_at DESC;`
+          }
+          return q
+        }
+      },
+      impact: 'JOINs can be 2-10x faster than correlated subqueries on large tables'
+    })
+  }
+  
+  // Issue 3: Missing LIMIT clause
+  if (!queryUpper.includes('LIMIT') && queryUpper.includes('SELECT')) {
+    issues.push({
+      type: 'missing-limit',
+      issue: 'Query has no LIMIT clause',
+      whyItMatters: 'Without a LIMIT, the query may return millions of rows, causing memory issues and slow response times.',
+      recommendedFix: {
+        explanation: 'Add a LIMIT clause to restrict the result set, especially for exploratory queries or paginated results.',
+        transform: (q) => {
+          const trimmed = q.trim()
+          if (trimmed.endsWith(';')) {
+            return trimmed.slice(0, -1) + '\nLIMIT 100;'
+          }
+          return trimmed + '\nLIMIT 100'
+        }
+      },
+      impact: 'Prevents unbounded result sets and improves response time'
+    })
+  }
+  
+  // Issue 4: LIKE with leading wildcard
+  if (queryUpper.includes("LIKE '%") || queryUpper.includes("LIKE \"%")) {
+    issues.push({
+      type: 'leading-wildcard',
+      issue: 'LIKE pattern starts with wildcard (%)',
+      whyItMatters: 'Leading wildcards prevent index usage, forcing a full table scan. This significantly degrades performance on large tables.',
+      recommendedFix: {
+        explanation: 'If possible, restructure the query to avoid leading wildcards. Consider using full-text search or storing reversed strings for suffix searches.',
+        transform: (q) => q // Can't automatically fix this one
+      },
+      impact: 'Index usage can improve query speed by 100x or more'
+    })
+  }
+  
+  // If no issues found, return a positive result
+  if (issues.length === 0) {
+    return {
+      status: 'optimized',
+      message: 'This query looks well-optimized! No obvious performance issues detected.',
+      suggestions: [
+        'Consider adding appropriate indexes if not already present',
+        'Review execution plan for any unexpected full table scans',
+        'Monitor query performance in production'
+      ]
+    }
+  }
+  
+  // Pick the most impactful issue (subquery > select-star > others)
+  const priorityOrder = ['subquery-to-join', 'select-star', 'leading-wildcard', 'missing-limit']
+  const sortedIssues = issues.sort((a, b) => 
+    priorityOrder.indexOf(a.type) - priorityOrder.indexOf(b.type)
+  )
+  
+  const primaryIssue = sortedIssues[0]
+  const suggestedQuery = primaryIssue.recommendedFix.transform(query)
+  
+  return {
+    status: 'issues-found',
+    issue: primaryIssue.issue,
+    whyItMatters: primaryIssue.whyItMatters,
+    recommendedFix: {
+      explanation: primaryIssue.recommendedFix.explanation,
+      suggestedQuery: suggestedQuery
+    },
+    impact: primaryIssue.impact,
+    additionalIssues: sortedIssues.slice(1).map(i => ({
+      issue: i.issue,
+      impact: i.impact
+    })),
+    executionTime: executionTime
+  }
+}
 
 const SIDEBAR_NAV_ITEMS = [
   { id: 'home', icon: 'home', label: 'Home' },
@@ -694,6 +822,10 @@ function App() {
   const [migrationFlowIndex, setMigrationFlowIndex] = useState(0)
   const [isAuraTyping, setIsAuraTyping] = useState(false)
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS)
+  // Query Tuning Agent state
+  const [queryTuningResult, setQueryTuningResult] = useState(null)
+  const [queryTuningContext, setQueryTuningContext] = useState(null)
+  const applyQueryRef = useRef(null) // Callback to apply query to editor
   const chatEndRef = useRef(null)
   const auraChatEndRef = useRef(null)
 
@@ -748,7 +880,40 @@ function App() {
     }
   }
 
-  const handleOpenAuraPanel = () => {
+  const handleOpenAuraPanel = (options = {}) => {
+    const { agent, context, onApplyQuery } = options
+    
+    // If Query Tuning Agent is requested with context, analyze the query
+    if (agent === 'Query Tuning Agent' && context?.query) {
+      // Store the apply callback
+      applyQueryRef.current = onApplyQuery
+      
+      // Set agent and context
+      setAuraPanelAgentName('Query Tuning Agent')
+      setQueryTuningContext(context)
+      
+      // Clear previous conversation for fresh analysis
+      setAuraPanelMessages([])
+      setAuraPanelFlow('query-tuning')
+      
+      // Simulate "thinking" state
+      setIsAuraTyping(true)
+      setQueryTuningResult(null)
+      setAuraPanelOpen(true)
+      
+      // Run the Query Tuning Agent after a brief delay (simulating LLM call)
+      setTimeout(() => {
+        const result = createQueryTuningAgent({
+          query: context.query,
+          executionTime: context.executionMetadata?.duration || null
+        })
+        setQueryTuningResult(result)
+        setIsAuraTyping(false)
+      }, 1500)
+      
+      return
+    }
+    
     // Priority 1: If there's an active conversation, keep the same agent
     if (auraPanelMessages.length > 0) {
       setAuraPanelOpen(true)
@@ -757,6 +922,16 @@ function App() {
     // Priority 3: No active conversation, use page context routing
     setAuraPanelAgentName(getDefaultAgentForPage(view))
     setAuraPanelOpen(true)
+  }
+  
+  // Handle applying optimized query to editor
+  const handleApplyQueryToEditor = (newQuery) => {
+    if (applyQueryRef.current) {
+      applyQueryRef.current(newQuery)
+    }
+    // Clear the query tuning result after applying
+    setQueryTuningResult(null)
+    setQueryTuningContext(null)
   }
 
   const handleNavigate = (newView) => {
@@ -1234,6 +1409,9 @@ function App() {
             agentName={auraPanelAgentName}
             onAgentChange={handleAgentChange}
             onNewChat={handleNewChat}
+            queryTuningResult={queryTuningResult}
+            queryTuningContext={queryTuningContext}
+            onApplyQuery={handleApplyQueryToEditor}
           />
         )}
       </div>
@@ -3731,7 +3909,7 @@ function AnimatedProgressCard({ content }) {
   )
 }
 
-function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange, onNewChat }) {
+function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange, onNewChat, queryTuningResult, queryTuningContext, onApplyQuery }) {
   const [isResizing, setIsResizing] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState(AURA_AGENTS[0])
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
@@ -4392,7 +4570,119 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
       </div>
 
       <div className="aura-panel-content">
-        {messages.length === 0 && !isTyping ? (
+        {/* Query Tuning Agent Results */}
+        {agentName === 'Query Tuning Agent' && (queryTuningResult || isTyping) ? (
+          <div className="query-tuning-content">
+            {isTyping && !queryTuningResult ? (
+              <div className="query-tuning-analyzing">
+                <div className="analyzing-icon">
+                  <IconFA name="sparkles" size={24} />
+                </div>
+                <h3>Analyzing your query...</h3>
+                <p>Looking for optimization opportunities</p>
+                <div className="analyzing-progress">
+                  <div className="analyzing-bar" />
+                </div>
+              </div>
+            ) : queryTuningResult?.status === 'optimized' ? (
+              <div className="query-tuning-result">
+                <div className="qt-title">Optimize query</div>
+                <div className="qt-success-card">
+                  <div className="qt-success-icon">
+                    <IconFA name="check" size={16} />
+                  </div>
+                  <div className="qt-success-content">
+                    <h4>Query looks good!</h4>
+                    <p>{queryTuningResult.message}</p>
+                  </div>
+                </div>
+                <div className="qt-suggestions">
+                  <h4>Recommendations</h4>
+                  <ul>
+                    {queryTuningResult.suggestions.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ) : queryTuningResult?.status === 'issues-found' ? (
+              <div className="query-tuning-result">
+                <div className="qt-title">Optimize query</div>
+                
+                {/* Issue Block */}
+                <div className="qt-issue-card">
+                  <div className="qt-issue-header">
+                    <span className="qt-issue-icon">⚠️</span>
+                    <span className="qt-issue-label">Issue</span>
+                  </div>
+                  <p className="qt-issue-text">{queryTuningResult.issue}</p>
+                </div>
+                
+                {/* Why it matters - Collapsible */}
+                <details className="qt-why-section">
+                  <summary className="qt-why-header">
+                    <span className="qt-why-icon">▾</span>
+                    <span>Why it matters</span>
+                  </summary>
+                  <p className="qt-why-text">{queryTuningResult.whyItMatters}</p>
+                </details>
+                
+                {/* Recommended Fix */}
+                <div className="qt-fix-section">
+                  <div className="qt-fix-header">
+                    <span className="qt-fix-icon">✓</span>
+                    <span className="qt-fix-label">Recommended Fix</span>
+                  </div>
+                  <div className="qt-code-block">
+                    <div className="qt-code-header">
+                      <button 
+                        className="qt-copy-btn"
+                        onClick={() => navigator.clipboard.writeText(queryTuningResult.recommendedFix.suggestedQuery)}
+                        title="Copy to clipboard"
+                      >
+                        <IconFA name="copy" size={12} />
+                      </button>
+                    </div>
+                    <pre className="qt-code">{queryTuningResult.recommendedFix.suggestedQuery}</pre>
+                  </div>
+                </div>
+                
+                {/* Learn more link */}
+                <a href="#" className="qt-learn-more">
+                  Learn more: JOIN optimization docs →
+                </a>
+                
+                {/* Warning banner */}
+                <div className="qt-warning-banner">
+                  <span className="qt-warning-icon">⚠️</span>
+                  <span>Validate in staging before production</span>
+                </div>
+                
+                {/* Actions */}
+                <div className="qt-actions">
+                  <button className="qt-reject-btn" onClick={onNewChat}>
+                    <IconFA name="xmark" size={12} />
+                    <span>Reject</span>
+                  </button>
+                  <button 
+                    className="qt-apply-btn"
+                    onClick={() => onApplyQuery && onApplyQuery(queryTuningResult.recommendedFix.suggestedQuery)}
+                  >
+                    <IconFA name="play" size={12} />
+                    <span>Apply to editor</span>
+                  </button>
+                </div>
+                
+                {/* Feedback */}
+                <div className="qt-feedback">
+                  <span>Was this helpful?</span>
+                  <button className="qt-feedback-btn" title="Yes">👍</button>
+                  <button className="qt-feedback-btn" title="No">👎</button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : messages.length === 0 && !isTyping ? (
           <div className="aura-panel-empty">
             <div className="aura-empty-icon">
               <IconFA name={selectedAgent.icon} size={32} />
@@ -4541,8 +4831,16 @@ function EditorView({ onOpenAura }) {
   const [isRunning, setIsRunning] = useState(false)
   const [activeTab, setActiveTab] = useState('logs')
   
+  // Diff view state
+  const [showDiff, setShowDiff] = useState(false)
+  const [originalQuery, setOriginalQuery] = useState('')
+  const [optimizedQuery, setOptimizedQuery] = useState('')
+  
   const monacoRef = useRef(null)
   const editorInstanceRef = useRef(null)
+  const selectionRangeRef = useRef(null)
+  const lockedSelectionRef = useRef(null) // Preserved selection for optimization session
+  const diffEditorRef = useRef(null)
 
   // [AI_HOOK] Get the currently selected query text
   const getSelectedQuery = () => selectedQuery
@@ -4591,6 +4889,8 @@ function EditorView({ onOpenAura }) {
       
       if (selectedText && selectedText.trim()) {
         setSelectedQuery(selectedText)
+        // Store the selection range for later use when applying optimizations
+        selectionRangeRef.current = selection
         
         // Get position for floating button
         const position = editor.getScrolledVisiblePosition(selection.getStartPosition())
@@ -4603,25 +4903,133 @@ function EditorView({ onOpenAura }) {
       } else {
         setSelectedQuery('')
         setSelectionPosition(null)
+        selectionRangeRef.current = null
       }
     })
   }
 
   // [AI_HOOK] Handle "Optimize with AI" button click
   // Opens the global Aura panel with Query Tuning Agent context
+  // Show diff view when user clicks "Apply to editor" in the Aura panel
+  const applyOptimizedQuery = (newQuery) => {
+    const fullQuery = query
+    let updatedQuery = newQuery
+    
+    // If there's a locked selection range, only replace the selected portion
+    if (lockedSelectionRef.current) {
+      const selection = lockedSelectionRef.current
+      const lines = fullQuery.split('\n')
+      
+      // Monaco line numbers are 1-based
+      const startLine = selection.startLineNumber - 1
+      const endLine = selection.endLineNumber - 1
+      const startColumn = selection.startColumn - 1
+      const endColumn = selection.endColumn - 1
+      
+      // Build the updated query with partial replacement
+      const beforeLines = lines.slice(0, startLine)
+      const afterLines = lines.slice(endLine + 1)
+      
+      // Handle partial line selection
+      const startLineText = lines[startLine] || ''
+      const endLineText = lines[endLine] || ''
+      
+      // Get the parts before and after the selection on the same lines
+      const prefixText = startLineText.substring(0, startColumn)
+      const suffixText = endLineText.substring(endColumn)
+      
+      // Combine: prefix + optimized query + suffix
+      const replacementText = prefixText + newQuery + suffixText
+      const replacementLines = replacementText.split('\n')
+      
+      // Build the final query
+      updatedQuery = [...beforeLines, ...replacementLines, ...afterLines].join('\n')
+    }
+    
+    // Store original and updated queries for diff view
+    setOriginalQuery(fullQuery)
+    setOptimizedQuery(updatedQuery)
+    setShowDiff(true)
+    
+    // Clear floating button
+    setSelectedQuery('')
+    setSelectionPosition(null)
+  }
+  
+  // Handle accepting the optimized query from diff view
+  const handleAcceptOptimization = (andRun = false) => {
+    // Apply the optimized query
+    setQuery(optimizedQuery)
+    
+    // Close diff view and clear selection refs
+    setShowDiff(false)
+    setOriginalQuery('')
+    setOptimizedQuery('')
+    selectionRangeRef.current = null
+    lockedSelectionRef.current = null
+    
+    // Run the query if requested
+    if (andRun) {
+      setTimeout(() => handleRunQuery(), 100)
+    }
+  }
+  
+  // Handle rejecting the optimization
+  const handleRejectOptimization = () => {
+    // Close diff view without changes, clear locked selection
+    setShowDiff(false)
+    setOriginalQuery('')
+    setOptimizedQuery('')
+    lockedSelectionRef.current = null
+  }
+  
+  // Handle diff editor mount
+  const handleDiffEditorDidMount = (editor, monaco) => {
+    diffEditorRef.current = editor
+    
+    // Apply custom theme to diff editor
+    monaco.editor.defineTheme('singlestore-diff', {
+      base: 'vs',
+      inherit: true,
+      rules: [
+        { token: 'keyword.sql', foreground: '820DDF' },
+        { token: 'keyword', foreground: '820DDF' },
+        { token: 'string.sql', foreground: '191919' },
+        { token: 'string', foreground: '191919' },
+        { token: 'number', foreground: '191919' },
+        { token: 'comment', foreground: '777582', fontStyle: 'italic' },
+      ],
+      colors: {
+        'editor.background': '#FAFAFA',
+        'editor.foreground': '#191919',
+        'editorLineNumber.foreground': '#777582',
+        'diffEditor.insertedTextBackground': '#D1FAE533',
+        'diffEditor.removedTextBackground': '#FEE2E233',
+        'diffEditor.insertedLineBackground': '#D1FAE540',
+        'diffEditor.removedLineBackground': '#FEE2E240',
+      }
+    })
+    monaco.editor.setTheme('singlestore-diff')
+  }
+
   const handleOptimizeWithAI = () => {
     const queryToOptimize = selectedQuery || query
     console.log('[AI_HOOK] Optimize query:', queryToOptimize)
     
+    // Lock the current selection range for the optimization session
+    // This prevents it from being cleared when editor loses focus
+    lockedSelectionRef.current = selectionRangeRef.current
+    
     // Open the global Aura side panel with query context
-    // The Query Tuning Agent will be activated based on the Editor page context
+    // Pass the apply callback so the panel can update the editor
     if (onOpenAura) {
       onOpenAura({
         agent: 'Query Tuning Agent',
         context: {
           query: queryToOptimize,
           executionMetadata: queryHistory[0] || null
-        }
+        },
+        onApplyQuery: applyOptimizedQuery
       })
     }
   }
@@ -4666,94 +5074,156 @@ function EditorView({ onOpenAura }) {
           </div>
         </div>
         
-        {/* Secondary Toolbar - Actions */}
-        <div className="editor-toolbar-secondary">
-          <div className="editor-toolbar-left">
-            <button className="editor-selector">
-              <IconFA name="folder" size={14} />
-              <span>All</span>
-              <ChevronDownIcon />
-            </button>
-            <button className="editor-selector with-badge">
-              <div className="editor-ready-badge">
-                <span className="ready-dot" />
-                <span>READY</span>
+        {/* Secondary Toolbar - Actions (or Diff Header when in diff mode) */}
+        {showDiff ? (
+          <div className="editor-toolbar-secondary diff-mode">
+            <div className="editor-toolbar-left">
+              <div className="diff-header-title">
+                <IconFA name="check" size={14} />
+                <span>Optimized Query</span>
               </div>
-              <span className="db-label">Dev • db_Jess</span>
-              <ChevronDownIcon />
-            </button>
+            </div>
+            <div className="editor-toolbar-right">
+              <button className="diff-reject-btn" onClick={handleRejectOptimization}>
+                <IconFA name="xmark" size={12} />
+                <span>Reject</span>
+              </button>
+              <button className="diff-accept-btn" onClick={() => handleAcceptOptimization(true)}>
+                <IconFA name="check" size={12} />
+                <span>Accept & Run</span>
+                <ChevronDownIcon />
+              </button>
+            </div>
           </div>
-          <div className="editor-toolbar-right">
-            <button className="editor-sparkles-btn">
-              <IconFA name="sparkles" size={14} />
-            </button>
-            <button className="editor-action-btn">
-              <IconFA name="play" size={14} />
-              <span>Visual Explain</span>
-              <ChevronDownIcon />
-            </button>
-            <button 
-              className={`editor-run-btn ${isRunning ? 'running' : ''}`}
-              onClick={handleRunQuery}
-              disabled={isRunning}
-            >
-              <IconFA name="play" size={14} />
-              <span>{isRunning ? 'Running...' : 'Run'}</span>
-            </button>
-            <button className="editor-icon-btn">
-              <IconFA name="database" size={14} />
-            </button>
-            <button className="editor-icon-btn">
-              <IconFA name="ellipsis-vertical" size={14} />
-            </button>
+        ) : (
+          <div className="editor-toolbar-secondary">
+            <div className="editor-toolbar-left">
+              <button className="editor-selector">
+                <IconFA name="folder" size={14} />
+                <span>All</span>
+                <ChevronDownIcon />
+              </button>
+              <button className="editor-selector with-badge">
+                <div className="editor-ready-badge">
+                  <span className="ready-dot" />
+                  <span>READY</span>
+                </div>
+                <span className="db-label">Dev • db_Jess</span>
+                <ChevronDownIcon />
+              </button>
+            </div>
+            <div className="editor-toolbar-right">
+              <button className="editor-sparkles-btn">
+                <IconFA name="sparkles" size={14} />
+              </button>
+              <button className="editor-action-btn">
+                <IconFA name="play" size={14} />
+                <span>Visual Explain</span>
+                <ChevronDownIcon />
+              </button>
+              <button 
+                className={`editor-run-btn ${isRunning ? 'running' : ''}`}
+                onClick={handleRunQuery}
+                disabled={isRunning}
+              >
+                <IconFA name="play" size={14} />
+                <span>{isRunning ? 'Running...' : 'Run'}</span>
+              </button>
+              <button className="editor-icon-btn">
+                <IconFA name="database" size={14} />
+              </button>
+              <button className="editor-icon-btn">
+                <IconFA name="ellipsis-vertical" size={14} />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Editor Content Area */}
         <div className="editor-content">
-          {/* Monaco Code Editor - Light Theme */}
+          {/* Monaco Diff Editor or Regular Editor */}
           <div className="monaco-editor-container">
-            <Editor
-              height="100%"
-              defaultLanguage="sql"
-              value={query}
-              onChange={(value) => setQuery(value || '')}
-              onMount={handleEditorDidMount}
-              theme="vs"
-              options={{
-                fontSize: 14,
-                fontFamily: "'Inconsolata', 'JetBrains Mono', 'SF Mono', 'Monaco', 'Menlo', monospace",
-                lineHeight: 20,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                renderLineHighlight: 'none',
-                lineNumbers: 'on',
-                glyphMargin: false,
-                folding: false,
-                lineDecorationsWidth: 16,
-                lineNumbersMinChars: 2,
-                padding: { top: 16, bottom: 16 },
-                automaticLayout: true,
-                wordWrap: 'off',
-                tabSize: 4,
-                insertSpaces: true,
-                cursorBlinking: 'smooth',
-                cursorSmoothCaretAnimation: 'on',
-                smoothScrolling: true,
-                overviewRulerBorder: false,
-                hideCursorInOverviewRuler: true,
-                overviewRulerLanes: 0,
-                scrollbar: {
-                  vertical: 'auto',
-                  horizontal: 'auto',
-                  verticalScrollbarSize: 8,
-                  horizontalScrollbarSize: 8,
-                },
-              }}
-            />
+            {showDiff ? (
+              <DiffEditor
+                height="100%"
+                language="sql"
+                original={originalQuery}
+                modified={optimizedQuery}
+                onMount={handleDiffEditorDidMount}
+                theme="vs"
+                options={{
+                  fontSize: 14,
+                  fontFamily: "'Inconsolata', 'JetBrains Mono', 'SF Mono', 'Monaco', 'Menlo', monospace",
+                  lineHeight: 20,
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  renderLineHighlight: 'none',
+                  lineNumbers: 'on',
+                  glyphMargin: false,
+                  folding: false,
+                  lineDecorationsWidth: 16,
+                  lineNumbersMinChars: 2,
+                  padding: { top: 16, bottom: 16 },
+                  automaticLayout: true,
+                  readOnly: true,
+                  renderSideBySide: false,
+                  renderIndicators: true,
+                  renderMarginRevertIcon: false,
+                  ignoreTrimWhitespace: false,
+                  diffWordWrap: 'off',
+                  overviewRulerBorder: false,
+                  overviewRulerLanes: 0,
+                  scrollbar: {
+                    vertical: 'auto',
+                    horizontal: 'auto',
+                    verticalScrollbarSize: 8,
+                    horizontalScrollbarSize: 8,
+                  },
+                }}
+              />
+            ) : (
+              <Editor
+                height="100%"
+                defaultLanguage="sql"
+                value={query}
+                onChange={(value) => setQuery(value || '')}
+                onMount={handleEditorDidMount}
+                theme="vs"
+                options={{
+                  fontSize: 14,
+                  fontFamily: "'Inconsolata', 'JetBrains Mono', 'SF Mono', 'Monaco', 'Menlo', monospace",
+                  lineHeight: 20,
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  renderLineHighlight: 'none',
+                  lineNumbers: 'on',
+                  glyphMargin: false,
+                  folding: false,
+                  lineDecorationsWidth: 16,
+                  lineNumbersMinChars: 2,
+                  padding: { top: 16, bottom: 16 },
+                  automaticLayout: true,
+                  wordWrap: 'off',
+                  tabSize: 4,
+                  insertSpaces: true,
+                  cursorBlinking: 'smooth',
+                  cursorSmoothCaretAnimation: 'on',
+                  smoothScrolling: true,
+                  overviewRulerBorder: false,
+                  hideCursorInOverviewRuler: true,
+                  overviewRulerLanes: 0,
+                  scrollbar: {
+                    vertical: 'auto',
+                    horizontal: 'auto',
+                    verticalScrollbarSize: 8,
+                    horizontalScrollbarSize: 8,
+                  },
+                }}
+              />
+            )}
             
-            {/* [AI_HOOK] Floating "Optimize with AI" button */}
-            {selectedQuery && selectionPosition && (
+            {/* [AI_HOOK] Floating "Optimize with AI" button - hidden during diff mode */}
+            {selectedQuery && selectionPosition && !showDiff && (
               <button 
                 className="optimize-ai-btn"
                 style={{ 
