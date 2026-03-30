@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import Editor from '@monaco-editor/react'
 import './index.css'
 
 // Logo assets from Figma
@@ -1184,6 +1185,8 @@ function App() {
         )
       case 'workspaces':
         return <WorkspacesView />
+      case 'editor':
+        return <EditorView onOpenAura={handleOpenAuraPanel} />
       default:
         return null
     }
@@ -1251,6 +1254,7 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
     if (item.id === 'home' && (currentView === 'portal' || currentView === 'chat')) return true
     if (item.id === 'workspaces' && currentView === 'workspaces') return true
     if (item.id === 'load-data' && currentView === 'load-data') return true
+    if (item.id === 'editor' && currentView === 'editor') return true
     return false
   }
 
@@ -1263,6 +1267,8 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
       onNavigate('workspaces')
     } else if (item.id === 'ingestion' || item.id === 'load-data') {
       onNavigate('load-data')
+    } else if (item.id === 'editor') {
+      onNavigate('editor')
     }
   }
 
@@ -2978,6 +2984,9 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'expand': '\uf065',
     'compress': '\uf066',
     'bolt': '\uf0e7',
+    'play': '\uf04b',
+    'table': '\uf0ce',
+    'check-circle': '\uf058',
   }
   
   const weightClass = weight === 'solid' ? 'fa-solid' : weight === 'light' ? 'fa-light' : 'fa-regular'
@@ -4499,6 +4508,361 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
         </div>
       </div>
     </div>
+  )
+}
+
+// ============================================
+// EDITOR VIEW - SQL Development Experience
+// ============================================
+// This component supports the Query Tuning Agent flow.
+// Key integration points marked with [AI_HOOK] comments.
+
+const SAMPLE_QUERY = `SELECT * FROM orders
+WHERE customer_id IN (
+    SELECT id FROM customers
+    WHERE email LIKE '%gmail.com'
+    AND status = 'active'
+)
+AND created_at > '2024-01-01'
+ORDER BY created_at DESC;`
+
+const SAMPLE_QUERY_HISTORY = [
+  { id: 1, query: "SELECT * FROM orders WHERE customer_id IN (...)", duration: 640, status: 'success', time: '0 min ago' },
+  { id: 2, query: "SHOW TABLES", duration: 300, status: 'success', time: '1 min ago' },
+  { id: 3, query: "SELECT 1", duration: 120, status: 'success', time: '2 min ago' },
+]
+
+function EditorView({ onOpenAura }) {
+  // Editor state
+  const [query, setQuery] = useState(SAMPLE_QUERY)
+  const [selectedQuery, setSelectedQuery] = useState('')
+  const [selectionPosition, setSelectionPosition] = useState(null)
+  const [queryHistory, setQueryHistory] = useState(SAMPLE_QUERY_HISTORY)
+  const [isRunning, setIsRunning] = useState(false)
+  const [activeTab, setActiveTab] = useState('logs')
+  
+  const monacoRef = useRef(null)
+  const editorInstanceRef = useRef(null)
+
+  // [AI_HOOK] Get the currently selected query text
+  const getSelectedQuery = () => selectedQuery
+  
+  // [AI_HOOK] Get the full query text
+  const getFullQuery = () => query
+
+  // Handle Monaco Editor mount
+  const handleEditorDidMount = (editor, monaco) => {
+    editorInstanceRef.current = editor
+    monacoRef.current = monaco
+    
+    // Define custom light theme with purple SQL keywords
+    monaco.editor.defineTheme('singlestore-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [
+        { token: 'keyword.sql', foreground: '820DDF', fontStyle: '' },
+        { token: 'keyword', foreground: '820DDF' },
+        { token: 'string.sql', foreground: '191919' },
+        { token: 'string', foreground: '191919' },
+        { token: 'number', foreground: '191919' },
+        { token: 'identifier', foreground: '191919' },
+        { token: 'comment', foreground: '777582', fontStyle: 'italic' },
+        { token: 'operator', foreground: '191919' },
+      ],
+      colors: {
+        'editor.background': '#FAFAFA',
+        'editor.foreground': '#191919',
+        'editor.lineHighlightBackground': '#FAFAFA',
+        'editorLineNumber.foreground': '#777582',
+        'editorLineNumber.activeForeground': '#777582',
+        'editor.selectionBackground': '#E6E6FF',
+        'editorCursor.foreground': '#191919',
+        'editorWhitespace.foreground': '#E6E6E6',
+      }
+    })
+    
+    // Apply the custom theme
+    monaco.editor.setTheme('singlestore-light')
+    
+    // Listen for selection changes
+    editor.onDidChangeCursorSelection((e) => {
+      const selection = editor.getSelection()
+      const selectedText = editor.getModel().getValueInRange(selection)
+      
+      if (selectedText && selectedText.trim()) {
+        setSelectedQuery(selectedText)
+        
+        // Get position for floating button
+        const position = editor.getScrolledVisiblePosition(selection.getStartPosition())
+        if (position) {
+          setSelectionPosition({
+            top: position.top + 30,
+            left: position.left + 60
+          })
+        }
+      } else {
+        setSelectedQuery('')
+        setSelectionPosition(null)
+      }
+    })
+  }
+
+  // [AI_HOOK] Handle "Optimize with AI" button click
+  // Opens the global Aura panel with Query Tuning Agent context
+  const handleOptimizeWithAI = () => {
+    const queryToOptimize = selectedQuery || query
+    console.log('[AI_HOOK] Optimize query:', queryToOptimize)
+    
+    // Open the global Aura side panel with query context
+    // The Query Tuning Agent will be activated based on the Editor page context
+    if (onOpenAura) {
+      onOpenAura({
+        agent: 'Query Tuning Agent',
+        context: {
+          query: queryToOptimize,
+          executionMetadata: queryHistory[0] || null
+        }
+      })
+    }
+  }
+
+  // Run query
+  const handleRunQuery = () => {
+    setIsRunning(true)
+    
+    // Simulate query execution
+    setTimeout(() => {
+      const newEntry = {
+        id: Date.now(),
+        query: query.length > 50 ? query.substring(0, 50) + '...' : query,
+        duration: Math.floor(Math.random() * 500) + 100,
+        status: 'success',
+        time: '0 min ago'
+      }
+      setQueryHistory(prev => [newEntry, ...prev])
+      setIsRunning(false)
+    }, 1000)
+  }
+
+  return (
+    <div className="editor-view">
+      {/* Editor Main Area */}
+      <div className="editor-main">
+        {/* Toolbar - File Tabs */}
+        <div className="editor-toolbar">
+          <div className="editor-toolbar-left">
+            <div className="editor-tabs">
+              <button className="editor-tab">
+                <IconFA name="folder" size={14} />
+                <span>My files</span>
+              </button>
+              <button className="editor-tab active">
+                <IconFA name="database" size={14} />
+                <span>untitled query-1.sql</span>
+                <span className="editor-tab-close">×</span>
+              </button>
+              <button className="editor-tab-add">+</button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Secondary Toolbar - Actions */}
+        <div className="editor-toolbar-secondary">
+          <div className="editor-toolbar-left">
+            <button className="editor-selector">
+              <IconFA name="folder" size={14} />
+              <span>All</span>
+              <ChevronDownIcon />
+            </button>
+            <button className="editor-selector with-badge">
+              <div className="editor-ready-badge">
+                <span className="ready-dot" />
+                <span>READY</span>
+              </div>
+              <span className="db-label">Dev • db_Jess</span>
+              <ChevronDownIcon />
+            </button>
+          </div>
+          <div className="editor-toolbar-right">
+            <button className="editor-sparkles-btn">
+              <IconFA name="sparkles" size={14} />
+            </button>
+            <button className="editor-action-btn">
+              <IconFA name="play" size={14} />
+              <span>Visual Explain</span>
+              <ChevronDownIcon />
+            </button>
+            <button 
+              className={`editor-run-btn ${isRunning ? 'running' : ''}`}
+              onClick={handleRunQuery}
+              disabled={isRunning}
+            >
+              <IconFA name="play" size={14} />
+              <span>{isRunning ? 'Running...' : 'Run'}</span>
+            </button>
+            <button className="editor-icon-btn">
+              <IconFA name="database" size={14} />
+            </button>
+            <button className="editor-icon-btn">
+              <IconFA name="ellipsis-vertical" size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Editor Content Area */}
+        <div className="editor-content">
+          {/* Monaco Code Editor - Light Theme */}
+          <div className="monaco-editor-container">
+            <Editor
+              height="100%"
+              defaultLanguage="sql"
+              value={query}
+              onChange={(value) => setQuery(value || '')}
+              onMount={handleEditorDidMount}
+              theme="vs"
+              options={{
+                fontSize: 14,
+                fontFamily: "'Inconsolata', 'JetBrains Mono', 'SF Mono', 'Monaco', 'Menlo', monospace",
+                lineHeight: 20,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                renderLineHighlight: 'none',
+                lineNumbers: 'on',
+                glyphMargin: false,
+                folding: false,
+                lineDecorationsWidth: 16,
+                lineNumbersMinChars: 2,
+                padding: { top: 16, bottom: 16 },
+                automaticLayout: true,
+                wordWrap: 'off',
+                tabSize: 4,
+                insertSpaces: true,
+                cursorBlinking: 'smooth',
+                cursorSmoothCaretAnimation: 'on',
+                smoothScrolling: true,
+                overviewRulerBorder: false,
+                hideCursorInOverviewRuler: true,
+                overviewRulerLanes: 0,
+                scrollbar: {
+                  vertical: 'auto',
+                  horizontal: 'auto',
+                  verticalScrollbarSize: 8,
+                  horizontalScrollbarSize: 8,
+                },
+              }}
+            />
+            
+            {/* [AI_HOOK] Floating "Optimize with AI" button */}
+            {selectedQuery && selectionPosition && (
+              <button 
+                className="optimize-ai-btn"
+                style={{ 
+                  top: selectionPosition.top,
+                  left: selectionPosition.left
+                }}
+                onClick={handleOptimizeWithAI}
+              >
+                <IconFA name="sparkles" size={12} />
+                <span>Optimize with AI</span>
+              </button>
+            )}
+          </div>
+
+          {/* Results Panel */}
+          <div className="results-panel">
+            <div className="results-tabs">
+              <button 
+                className={`results-tab ${activeTab === 'logs' ? 'active' : ''}`}
+                onClick={() => setActiveTab('logs')}
+              >
+                <span>Message Logs</span>
+              </button>
+              {queryHistory.slice(0, 3).map((item, index) => (
+                <button 
+                  key={item.id}
+                  className={`results-tab ${activeTab === `result-${index}` ? 'active' : ''}`}
+                  onClick={() => setActiveTab(`result-${index}`)}
+                >
+                  <IconFA name="table" size={12} />
+                  <span>{item.query.substring(0, 12)}...</span>
+                  <span className="tab-close">×</span>
+                </button>
+              ))}
+              <button className="results-tab-more">
+                <IconFA name="ellipsis-vertical" size={12} />
+              </button>
+            </div>
+
+            <div className="results-content">
+              {activeTab === 'logs' ? (
+                queryHistory.length > 0 ? (
+                  <table className="results-table">
+                    <thead>
+                      <tr>
+                        <th>Start Time</th>
+                        <th>Query</th>
+                        <th>Duration</th>
+                        <th>Message</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {queryHistory.map((item, index) => (
+                        <tr key={item.id} className={index % 2 === 1 ? 'alt-row' : ''}>
+                          <td className="time-cell">{item.time}</td>
+                          <td className="query-cell">
+                            <IconFA name="check-circle" size={12} />
+                            <span>{item.query}</span>
+                          </td>
+                          <td className="duration-cell">
+                            <div className="duration-info">
+                              <span className="duration-value">{item.duration} ms</span>
+                              <div className="duration-bar">
+                                <div 
+                                  className={`duration-bar-fill ${item.duration > 500 ? 'warning' : 'info'}`}
+                                  style={{ width: `${Math.min((item.duration / 700) * 100, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="message-cell">-</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="results-empty">
+                    <div className="results-empty-icon">
+                      <TableIcon />
+                    </div>
+                    <p>Select one or more queries and hit ⌘ + Return to run them.</p>
+                    <p className="results-empty-note">Results are limited to 300 rows.</p>
+                  </div>
+                )
+              ) : (
+                <div className="results-empty">
+                  <div className="results-empty-icon">
+                    <TableIcon />
+                  </div>
+                  <p>Query results will appear here.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Table icon for empty state
+function TableIcon() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="12" width="32" height="24" rx="2" stroke="#D6D6D6" strokeWidth="2" fill="none"/>
+      <line x1="8" y1="20" x2="40" y2="20" stroke="#D6D6D6" strokeWidth="2"/>
+      <line x1="20" y1="12" x2="20" y2="36" stroke="#D6D6D6" strokeWidth="2"/>
+      <line x1="8" y1="28" x2="40" y2="28" stroke="#D6D6D6" strokeWidth="2"/>
+    </svg>
   )
 }
 
