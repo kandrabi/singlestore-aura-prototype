@@ -795,6 +795,16 @@ function App() {
     setAuraPanelAgentName(newAgentName)
   }
 
+  // Start a new chat - reset conversation but keep current agent
+  const handleNewChat = () => {
+    setAuraPanelMessages([])
+    setAuraPanelInput('')
+    setMigrationFlowIndex(0)
+    setAuraPanelFlow('none')
+    setAuraPanelFlowIndex(0)
+    setIsAuraTyping(false)
+  }
+
   const addNextMigrationMessage = (index) => {
     if (index >= MIGRATION_CHAT_FLOW.length) return
     setIsAuraTyping(true)
@@ -855,9 +865,26 @@ function App() {
     if (auraPanelAgentName === 'Data Migration Agent') {
       const nextIndex = auraPanelMessages.length === 0 ? 0 : migrationFlowIndex
       setTimeout(() => addNextMigrationMessage(nextIndex), 500)
+    } else {
+      // Generic AI response for other agents when no active flow
+      setIsAuraTyping(true)
+      setTimeout(() => {
+        setIsAuraTyping(false)
+        const response = {
+          type: 'agent',
+          id: Date.now(),
+          timestamp: new Date(),
+          content: {
+            text: [
+              { type: 'text', content: "I understand you're asking about: \"" + text.substring(0, 50) + (text.length > 50 ? '...' : '') + "\"" },
+              { type: 'text', content: "I can help you with any of these tasks:" }
+            ],
+            actions: ['Analyze workspace capacity', 'Load data from PostgreSQL', 'Diagnose high CPU usage']
+          }
+        }
+        setAuraPanelMessages(prev => [...prev, response])
+      }, 1000)
     }
-    // For other agents, no automated flow - just acknowledge the message
-    // (In production, this would call an AI backend)
   }
 
   // Add next message for default (workspace capacity) flow in side panel
@@ -897,6 +924,9 @@ function App() {
         setTimeout(() => addNextPanelCpuSpikeMessage(auraPanelFlowIndex), 500)
       } else if (actionText === 'Get more details on Select_act_samples_new') {
         setTimeout(() => addNextPanelCpuSpikeMessage(auraPanelFlowIndex), 500)
+      } else {
+        // Fallback for unhandled actions
+        handleTriggerAction(actionText)
       }
     } else if (auraPanelFlow === 'default') {
       // Handle workspace capacity flow actions
@@ -919,9 +949,68 @@ function App() {
           })
           setAuraPanelFlowIndex(6)
         }, 5500)
+      } else {
+        // Fallback for unhandled actions
+        handleTriggerAction(actionText)
       }
+    } else {
+      // No active flow - check for trigger actions or provide generic response
+      handleTriggerAction(actionText)
     }
-    // For other cases, no automated flow
+  }
+
+  // Handle specific trigger actions that start new flows
+  const handleTriggerAction = (actionText) => {
+    if (actionText === 'Analyze workspace capacity') {
+      // Start workspace capacity flow (Use Case 1)
+      setAuraPanelFlow('default')
+      setAuraPanelFlowIndex(1)
+      setAuraPanelAgentName('Aura Agent')
+      setIsAuraTyping(true)
+      setTimeout(() => {
+        setIsAuraTyping(false)
+        setAuraPanelMessages(prev => [...prev, { ...CHAT_FLOW[0], id: Date.now(), timestamp: new Date() }])
+      }, 500)
+    } else if (actionText === 'Load data from PostgreSQL') {
+      // Start data migration flow (Use Case 3)
+      setAuraPanelFlow('migration')
+      setMigrationFlowIndex(1)
+      setAuraPanelAgentName('Data Migration Agent')
+      setIsAuraTyping(true)
+      setTimeout(() => {
+        setIsAuraTyping(false)
+        setAuraPanelMessages(prev => [...prev, { ...MIGRATION_CHAT_FLOW[0], id: Date.now(), timestamp: new Date() }])
+      }, 500)
+    } else if (actionText === 'Diagnose high CPU usage') {
+      // Start CPU spike flow (Use Case 2)
+      setAuraPanelFlow('cpu-spike')
+      setAuraPanelFlowIndex(1)
+      setAuraPanelAgentName('Aura Agent')
+      setIsAuraTyping(true)
+      setTimeout(() => {
+        setIsAuraTyping(false)
+        setAuraPanelMessages(prev => [...prev, { ...CPU_SPIKE_CHAT_FLOW[0], id: Date.now(), timestamp: new Date() }])
+      }, 500)
+    } else {
+      // Generic fallback response
+      setIsAuraTyping(true)
+      setTimeout(() => {
+        setIsAuraTyping(false)
+        const response = {
+          type: 'agent',
+          id: Date.now(),
+          timestamp: new Date(),
+          content: {
+            text: [
+              { type: 'text', content: `I'd be happy to help you with "${actionText}".` },
+              { type: 'text', content: 'Select one of the options below to get started:' }
+            ],
+            actions: ['Analyze workspace capacity', 'Load data from PostgreSQL', 'Diagnose high CPU usage']
+          }
+        }
+        setAuraPanelMessages(prev => [...prev, response])
+      }, 800)
+    }
   }
 
   const advanceMigrationFlowSilently = () => {
@@ -1141,6 +1230,7 @@ function App() {
             chatEndRef={auraChatEndRef}
             agentName={auraPanelAgentName}
             onAgentChange={handleAgentChange}
+            onNewChat={handleNewChat}
           />
         )}
       </div>
@@ -3014,6 +3104,14 @@ function SendIcon() {
   return <IconFA name="paper-plane" size={14} />
 }
 
+function NewChatIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9.02344 3.77344L5.16797 7.62891L5.00391 8.99609L6.37109 8.83203L10.2266 4.97656L9.02344 3.77344ZM11.6211 5.44141L11.1562 5.90625L7 10.0625L4.83984 10.3359L3.5 10.5L3.66406 9.16016L3.9375 7L8.09375 2.84375L8.55859 2.37891L9.02344 1.91406L10.0078 0.929688L10.9375 0L11.8398 0.929688L13.0703 2.16016L14 3.0625L13.0703 3.99219L12.0859 4.97656L11.6211 5.44141ZM11.1562 4.07422L12.1406 3.0625L10.9375 1.85938L9.92578 2.84375L11.1562 4.07422ZM0.65625 1.75H5.46875H6.125V3.0625H5.46875H1.3125V12.6875H10.9375V8.53125V7.875H12.25V8.53125V13.3438V14H11.5938H0.65625H0V13.3438V2.40625V1.75H0.65625Z" fill="currentColor"/>
+    </svg>
+  )
+}
+
 function ArrowUpIcon() {
   return <IconFA name="arrow-up" size={9} />
 }
@@ -3624,7 +3722,7 @@ function AnimatedProgressCard({ content }) {
   )
 }
 
-function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange }) {
+function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange, onNewChat }) {
   const [isResizing, setIsResizing] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState(AURA_AGENTS[0])
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
@@ -4272,6 +4370,9 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
           <span>Ask Aura</span>
         </div>
         <div className="aura-panel-actions">
+          <button className="aura-panel-btn" onClick={onNewChat} title="New chat">
+            <NewChatIcon size={14} />
+          </button>
           <button className="aura-panel-btn" onClick={onToggleFullscreen} title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
             <IconFA name={isFullscreen ? 'compress' : 'expand'} size={14} />
           </button>
