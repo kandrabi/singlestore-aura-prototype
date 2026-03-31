@@ -207,6 +207,56 @@ function TypedText({ children, speed = 12, onComplete }) {
   return <>{displayedText}<span className="typing-cursor" /></>
 }
 
+function AnimatedList({ items, isTyping, onComplete }) {
+  const [visibleCount, setVisibleCount] = useState(isTyping ? 0 : items.length)
+  const onCompleteRef = useRef(onComplete)
+  
+  useEffect(() => {
+    onCompleteRef.current = onComplete
+  }, [onComplete])
+  
+  useEffect(() => {
+    if (!isTyping) {
+      setVisibleCount(items.length)
+      return
+    }
+    
+    // Stagger the appearance of each item
+    let count = 0
+    const showNextItem = () => {
+      count++
+      setVisibleCount(count)
+      
+      if (count < items.length) {
+        setTimeout(showNextItem, 300) // 300ms delay between items
+      } else {
+        // All items shown, trigger completion after a short delay
+        setTimeout(() => {
+          onCompleteRef.current?.()
+        }, 200)
+      }
+    }
+    
+    // Start showing items after a brief initial delay
+    const timer = setTimeout(showNextItem, 100)
+    return () => clearTimeout(timer)
+  }, [isTyping, items.length])
+  
+  return (
+    <ul className="message-list">
+      {items.map((item, i) => (
+        <li 
+          key={i} 
+          className={i < visibleCount ? 'fade-in' : 'hidden'}
+          style={{ animationDelay: `${i * 0.1}s` }}
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function formatTime(date) {
   const hours = date.getHours().toString().padStart(2, '0')
   const minutes = date.getMinutes().toString().padStart(2, '0')
@@ -2809,29 +2859,15 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
       return ''
     }
 
-    // Handle list type separately
+    // Handle list type separately - show all items with staggered fade-in
     if (t.type === 'list' && t.items) {
-      if (isCurrentlyTyping) {
-        // For typing animation, type the first item then show the rest
-        return (
-          <ul key={index} className="message-list">
-            <li>
-              <TypedText onComplete={handleParagraphComplete}>
-                {t.items[0]}
-              </TypedText>
-            </li>
-            {t.items.slice(1).map((item, i) => (
-              <li key={i + 1}>{item}</li>
-            ))}
-          </ul>
-        )
-      }
       return (
-        <ul key={index} className="message-list fade-in">
-          {t.items.map((item, i) => (
-            <li key={i}>{item}</li>
-          ))}
-        </ul>
+        <AnimatedList 
+          key={index} 
+          items={t.items} 
+          isTyping={isCurrentlyTyping}
+          onComplete={handleParagraphComplete}
+        />
       )
     }
 
