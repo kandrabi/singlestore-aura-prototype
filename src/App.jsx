@@ -3258,13 +3258,17 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
               </div>
             )}
             {content.ui.type === 'memory-chart' && (
-              <div className="placeholder-chart">
+              <div className="placeholder-chart cpu-chart-image">
                 <div className="placeholder-header">
                   <IconFA name="memory" size={14} />
                   <span>Memory & Resource Usage</span>
                 </div>
-                <div className="placeholder-body">
-                  <div className="placeholder-skeleton chart-skeleton" />
+                <div className="chart-image-container">
+                  <img 
+                    src="/charts/memory-spike.png" 
+                    alt="Memory usage during spike window"
+                    className="chart-image"
+                  />
                 </div>
               </div>
             )}
