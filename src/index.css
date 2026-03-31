@@ -7152,6 +7152,30 @@ body {
   width: 100%;
 }
 
+/* Optimization Recommendations */
+.optimization-recommendations {
+  background: var(--color-white);
+  border-radius: 8px;
+}
+
+.optimization-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4C4A57;
+}
+
+.optimization-header .fa-icon {
+  color: #F59E0B;
+}
+
+.optimization-recommendations .query-list {
+  padding-left: 0;
+}
+
 /* Chart image styles for actual chart display */
 .chart-image-container {
   padding: 16px;

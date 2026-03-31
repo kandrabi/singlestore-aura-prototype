@@ -522,7 +522,93 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
         { type: 'text', content: 'These queries account for the majority of CPU usage.' },
         { type: 'text', content: 'Optimizing even a few of them would significantly reduce load on your cluster.' }
       ],
-      ui: { type: 'optimization-recommendations', state: 'placeholder' }
+      ui: { type: 'optimization-recommendations', state: 'placeholder' },
+      optimizationQueries: [
+        { 
+          name: 'analytics.user_funnel_daily', 
+          cpu: '38% CPU share', 
+          cpuType: 'critical', 
+          time: 'avg 4.2s', 
+          frequency: '96 runs/day', 
+          desc1: 'Full table scan across 90-day window, no partition pruning',
+          sql: `SELECT user_id, event_type, COUNT(*) as event_count
+FROM analytics.events
+WHERE event_date >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+GROUP BY user_id, event_type
+ORDER BY event_count DESC;`,
+          recommendations: [
+            'Add partition pruning on event_date column',
+            'Create composite index on (user_id, event_type, event_date)',
+            'Consider pre-aggregating data into a summary table'
+          ]
+        },
+        { 
+          name: 'analytics.user_funnel_weekly', 
+          cpu: '21% CPU share', 
+          cpuType: 'critical', 
+          time: 'avg 3.8s', 
+          frequency: '12 runs/week', 
+          desc1: 'Missing index on transaction_date column',
+          sql: `SELECT DATE(transaction_date) as day, SUM(amount) as total
+FROM analytics.transactions
+WHERE transaction_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+GROUP BY DATE(transaction_date);`,
+          recommendations: [
+            'Add index on transaction_date column',
+            'Use columnstore index for aggregation queries',
+            'Move to off-peak hours (2-4 AM)'
+          ]
+        },
+        { 
+          name: 'analytics.user_funnel_monthly', 
+          cpu: '12% CPU share', 
+          cpuType: 'warning', 
+          time: 'avg 3.5s', 
+          frequency: '240 runs/month', 
+          desc1: 'Cross-join causing cartesian product',
+          sql: `SELECT a.user_id, b.product_id, COUNT(*)
+FROM analytics.users a, analytics.products b
+WHERE a.region = b.region
+GROUP BY a.user_id, b.product_id;`,
+          recommendations: [
+            'Rewrite implicit join as explicit INNER JOIN',
+            'Add WHERE clause to filter early',
+            'Consider using EXISTS instead of JOIN'
+          ]
+        },
+        { 
+          name: 'analytics.user_funnel_quarterly', 
+          cpu: '4% CPU share', 
+          cpuType: 'warning', 
+          time: 'avg 3.0s', 
+          frequency: '16 runs/quarter', 
+          desc1: 'Summary statistics with partitioning',
+          sql: `SELECT quarter, region, AVG(revenue) as avg_revenue
+FROM analytics.quarterly_stats
+GROUP BY quarter, region;`,
+          recommendations: [
+            'Query is already well-optimized',
+            'Consider caching results for dashboard use',
+            'No immediate action required'
+          ]
+        },
+        { 
+          name: 'analytics.user_funnel_yearly', 
+          cpu: '3% CPU share', 
+          cpuType: 'warning', 
+          time: 'avg 2.5s', 
+          frequency: '~11k runs/year', 
+          desc1: 'Snapshot analysis with historical data',
+          sql: `SELECT YEAR(created_at) as year, COUNT(*) as total_users
+FROM analytics.users
+GROUP BY YEAR(created_at);`,
+          recommendations: [
+            'Query performance is acceptable',
+            'Consider adding result caching',
+            'No optimization needed at this time'
+          ]
+        }
+      ]
     }
   }
 ]
@@ -2894,6 +2980,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
   const [paragraphsCompleted, setParagraphsCompleted] = useState(textItems.length === 0)
   const [showConnections, setShowConnections] = useState(false)
   const [expandedQueryIndex, setExpandedQueryIndex] = useState(null)
+  const [expandedOptQueryIndex, setExpandedOptQueryIndex] = useState(null)
 
   useEffect(() => {
     if (!isTyping || textItems.length === 0) {
@@ -3391,15 +3478,65 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
               </div>
             )}
             {content.ui.type === 'optimization-recommendations' && (
-              <div className="placeholder-recommendations">
-                <div className="placeholder-header">
+              <div className="optimization-recommendations">
+                <div className="optimization-header">
                   <IconFA name="lightbulb" size={14} />
                   <span>Optimization Recommendations</span>
                 </div>
-                <div className="placeholder-body">
-                  <div className="placeholder-skeleton recommendation-skeleton" />
-                  <div className="placeholder-skeleton recommendation-skeleton" />
-                </div>
+                {content.optimizationQueries && (
+                  <div className="query-list">
+                    {content.optimizationQueries.map((query, i) => {
+                      const isExpanded = expandedOptQueryIndex === i
+                      return (
+                        <div 
+                          key={i} 
+                          className={`query-card ${isExpanded ? 'expanded' : ''}`}
+                          onClick={() => setExpandedOptQueryIndex(isExpanded ? null : i)}
+                        >
+                          <div className="query-card-header">
+                            <div className="query-card-left">
+                              <span className="query-name">{query.name}</span>
+                              <div className="query-badges">
+                                <span className={`badge ${query.cpuType}`}>{query.cpu}</span>
+                                <span className="badge warning">{query.time}</span>
+                                <span className="badge neutral">{query.frequency}</span>
+                              </div>
+                              <div className="query-description">
+                                <span>{query.desc1}</span>
+                              </div>
+                            </div>
+                            <div className="query-card-chevron">
+                              <IconFA name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} />
+                            </div>
+                          </div>
+                          <div className={`query-card-details ${isExpanded ? 'show' : ''}`}>
+                            <div className="query-card-details-inner">
+                              {query.sql && (
+                                <div className="query-sql-block">
+                                  <pre><code>{query.sql}</code></pre>
+                                </div>
+                              )}
+                              {query.recommendations && (
+                                <div className="query-recommendations">
+                                  <span className="recommendations-label">Optimization recommendations:</span>
+                                  <ul>
+                                    {query.recommendations.map((rec, j) => (
+                                      <li key={j}>{rec}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              <button className="query-apply-btn" onClick={(e) => { e.stopPropagation(); }}>
+                                <IconFA name="bolt" size={12} />
+                                <span>Apply optimization</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
