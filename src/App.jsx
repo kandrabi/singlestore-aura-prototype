@@ -880,10 +880,22 @@ function App() {
     }
   }
 
+  // Check if there's an active conversation (user has sent at least one message)
+  // Seeded agent messages (from notifications, intro content) don't count as active
+  const hasActiveConversation = () => {
+    return auraPanelMessages.some(msg => msg.type === 'user')
+  }
+
   const handleOpenAuraPanel = (options = {}) => {
     const { agent, context, onApplyQuery } = options
     
-    // If Query Tuning Agent is requested with context, analyze the query
+    // DEBUG LOGS - Remove after fixing
+    console.log('[OPEN_PANEL] called with options:', options)
+    console.log('[OPEN_PANEL] hasActiveConversation():', hasActiveConversation())
+    console.log('[OPEN_PANEL] currentAgent:', auraPanelAgentName)
+    console.log('[OPEN_PANEL] currentView:', view)
+    
+    // Priority 1: If specific agent is requested with context (e.g., Query Tuning)
     if (agent === 'Query Tuning Agent' && context?.query) {
       // Store the apply callback
       applyQueryRef.current = onApplyQuery
@@ -914,13 +926,17 @@ function App() {
       return
     }
     
-    // Priority 1: If there's an active conversation, keep the same agent
-    if (auraPanelMessages.length > 0) {
+    // Priority 2: If there's an active conversation (user has sent a message), keep current agent
+    if (hasActiveConversation()) {
+      console.log('[OPEN_PANEL] Active conversation exists, keeping current agent')
       setAuraPanelOpen(true)
       return
     }
+    
     // Priority 3: No active conversation, use page context routing
-    setAuraPanelAgentName(getDefaultAgentForPage(view))
+    const nextAgent = getDefaultAgentForPage(view)
+    console.log('[OPEN_PANEL] No active conversation, setting agent to:', nextAgent)
+    setAuraPanelAgentName(nextAgent)
     setAuraPanelOpen(true)
   }
   
@@ -935,6 +951,15 @@ function App() {
   }
 
   const handleNavigate = (newView) => {
+    // DEBUG LOGS - Remove after fixing
+    console.log('[NAVIGATE] newView:', newView)
+    console.log('[NAVIGATE] currentView:', view)
+    console.log('[NAVIGATE] auraPanelOpen:', auraPanelOpen)
+    console.log('[NAVIGATE] hasActiveConversation():', hasActiveConversation())
+    console.log('[NAVIGATE] auraPanelMessages.length:', auraPanelMessages.length)
+    console.log('[NAVIGATE] currentAgent:', auraPanelAgentName)
+    console.log('[NAVIGATE] nextDefaultAgent:', getDefaultAgentForPage(newView))
+    
     // Priority 1: If navigating away from chat view, transfer conversation to side panel
     // The conversation continues with the SAME agent - do NOT change agent
     const isTransferringChat = view === 'chat' && newView !== 'chat' && newView !== 'portal' && chatMessages.length > 0
@@ -948,8 +973,17 @@ function App() {
       setAuraPanelFlowIndex(currentFlowIndex)
       setAuraPanelOpen(true)
     }
-    // Note: If side panel already has an active conversation, we don't change the agent (Priority 1)
-    // Default agent for new pages is only set when opening the panel via handleOpenAuraPanel
+    
+    // Context-aware agent switching: If panel is open but no active conversation, update agent for new page
+    const shouldSwitchAgent = auraPanelOpen && !hasActiveConversation()
+    console.log('[NAVIGATE] shouldSwitchAgent:', shouldSwitchAgent)
+    
+    if (shouldSwitchAgent) {
+      const nextAgent = getDefaultAgentForPage(newView)
+      console.log('[NAVIGATE] Switching agent to:', nextAgent)
+      setAuraPanelAgentName(nextAgent)
+    }
+    
     setView(newView)
   }
 
@@ -3926,7 +3960,9 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
 
   // Sync selectedAgent with agentName prop
   useEffect(() => {
+    console.log('[AURA_PANEL] agentName prop changed to:', agentName)
     const agent = AURA_AGENTS.find(a => a.name === agentName) || AURA_AGENTS[0]
+    console.log('[AURA_PANEL] Setting selectedAgent to:', agent.name)
     setSelectedAgent(agent)
   }, [agentName])
 
