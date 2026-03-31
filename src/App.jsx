@@ -175,10 +175,16 @@ const SIDEBAR_NAV_ITEMS = [
 function TypedText({ children, speed = 12, onComplete }) {
   const [displayedText, setDisplayedText] = useState('')
   const text = typeof children === 'string' ? children : ''
+  const onCompleteRef = useRef(onComplete)
+  
+  // Keep the ref updated with latest callback
+  useEffect(() => {
+    onCompleteRef.current = onComplete
+  }, [onComplete])
   
   useEffect(() => {
     if (!text) {
-      onComplete?.()
+      onCompleteRef.current?.()
       return
     }
     
@@ -191,7 +197,7 @@ function TypedText({ children, speed = 12, onComplete }) {
         index++
       } else {
         clearInterval(timer)
-        onComplete?.()
+        onCompleteRef.current?.()
       }
     }, speed)
     
@@ -339,6 +345,92 @@ const CPU_SPIKE_CHAT_FLOW = [
         insight: 'The uneven load (node-149 using ~2.3× more CPU than node-150) suggests partition skew, likely due to a larger or more complex data slice in part-5.'
       },
       actions: ['Show optimization recommendations', 'Set up alert for similar spikes']
+    }
+  }
+]
+
+// NEW FLOW: CPU Spike Investigation V2 (independent from existing cpu-spike flow)
+const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
+  // Step 1: Initial message
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'bold', content: 'CPU spike detected' },
+        { type: 'text', content: " — I've started analyzing what happened." },
+        { type: 'text', content: 'Between 3:45–5:00 AM PST, CPU usage increased significantly and impacted workload performance.' },
+        { type: 'text', content: 'I can help you:' },
+        { type: 'list', items: [
+          'Identify the queries responsible',
+          'Understand system behavior during the spike',
+          'Fix the root cause'
+        ]},
+        { type: 'text', content: 'What would you like to do first?' }
+      ],
+      actions: ['View affected queries', 'Investigate spike']
+    }
+  },
+  // Step 2: Investigate spike - Part 1 (chart placeholder)
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Analyzing cluster activity during the spike window...' }
+      ],
+      ui: { type: 'cpu-chart', state: 'placeholder' }
+    }
+  },
+  // Step 2: Investigate spike - Part 2 (analysis + table placeholder)
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Multiple nodes experienced elevated CPU simultaneously, indicating workload-driven pressure.' },
+        { type: 'text', content: 'Top queries contributed to most of the load.' }
+      ],
+      ui: { type: 'query-table', state: 'placeholder' }
+    }
+  },
+  // Step 2: Investigate spike - Part 3 (next actions)
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'What would you like to do next?' }
+      ],
+      actions: ['Investigate other events', 'Optimize queries']
+    }
+  },
+  // Step 3: Investigate other events - Part 1 (memory chart placeholder)
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Looking at other system signals during the same window...' }
+      ],
+      ui: { type: 'memory-chart', state: 'placeholder' }
+    }
+  },
+  // Step 3: Investigate other events - Part 2 (analysis + action)
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Memory, CPU, and disk were all under pressure at the same time — creating a resource contention scenario.' },
+        { type: 'text', content: 'The fastest way to resolve this is by optimizing the queries driving the load.' }
+      ],
+      actions: ['Optimize queries']
+    }
+  },
+  // Step 4: Optimize queries
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'These queries account for the majority of CPU usage.' },
+        { type: 'text', content: 'Optimizing even a few of them would significantly reduce load on your cluster.' }
+      ],
+      ui: { type: 'optimization-recommendations', state: 'placeholder' }
     }
   }
 ]
@@ -817,9 +909,10 @@ function App() {
   const [auraPanelMessages, setAuraPanelMessages] = useState([])
   const [auraPanelInput, setAuraPanelInput] = useState('')
   const [auraPanelAgentName, setAuraPanelAgentName] = useState('Aura Agent')
-  const [auraPanelFlow, setAuraPanelFlow] = useState('none') // 'none', 'default', 'cpu-spike', 'migration'
+  const [auraPanelFlow, setAuraPanelFlow] = useState('none') // 'none', 'default', 'cpu-spike', 'migration', 'cpu-spike-v2'
   const [auraPanelFlowIndex, setAuraPanelFlowIndex] = useState(0)
   const [migrationFlowIndex, setMigrationFlowIndex] = useState(0)
+  const [cpuSpikeV2FlowIndex, setCpuSpikeV2FlowIndex] = useState(0)
   const [isAuraTyping, setIsAuraTyping] = useState(false)
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS)
   // Query Tuning Agent state
@@ -867,6 +960,12 @@ function App() {
       auraChatEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [auraPanelMessages])
+
+  // Expose startCpuSpikeV2Flow for manual testing (call window.startCpuSpikeV2Flow() in browser console)
+  useEffect(() => {
+    window.startCpuSpikeV2Flow = startCpuSpikeV2Flow
+    return () => { delete window.startCpuSpikeV2Flow }
+  }, [])
 
   // Get default agent based on page context (Priority 3)
   const getDefaultAgentForPage = (pageView) => {
@@ -960,6 +1059,25 @@ function App() {
     console.log('[NAVIGATE] currentAgent:', auraPanelAgentName)
     console.log('[NAVIGATE] nextDefaultAgent:', getDefaultAgentForPage(newView))
     
+    // CPU Spike V2 flow: Move conversation between main area and side panel
+    const hasCpuSpikeV2Conversation = auraPanelFlow === 'cpu-spike-v2' && auraPanelMessages.length > 0
+    
+    if (hasCpuSpikeV2Conversation) {
+      if (view === 'portal' && newView === 'portal') {
+        // Clicking Home/Logo while already on portal → reset conversation and show default home
+        setAuraPanelFlow('none')
+        setAuraPanelMessages([])
+        setCpuSpikeV2FlowIndex(0)
+        setAuraPanelOpen(false)
+      } else if (view === 'portal' && newView !== 'portal') {
+        // Navigating AWAY from Home → move conversation to side panel
+        setAuraPanelOpen(true)
+      } else if (view !== 'portal' && newView === 'portal') {
+        // Navigating BACK to Home → move conversation to main area (close side panel)
+        setAuraPanelOpen(false)
+      }
+    }
+    
     // Priority 1: If navigating away from chat view, transfer conversation to side panel
     // The conversation continues with the SAME agent - do NOT change agent
     const isTransferringChat = view === 'chat' && newView !== 'chat' && newView !== 'portal' && chatMessages.length > 0
@@ -975,7 +1093,8 @@ function App() {
     }
     
     // Context-aware agent switching: If panel is open but no active conversation, update agent for new page
-    const shouldSwitchAgent = auraPanelOpen && !hasActiveConversation()
+    // Skip if cpu-spike-v2 flow is active (it uses Aura Agent)
+    const shouldSwitchAgent = auraPanelOpen && !hasActiveConversation() && auraPanelFlow !== 'cpu-spike-v2'
     console.log('[NAVIGATE] shouldSwitchAgent:', shouldSwitchAgent)
     
     if (shouldSwitchAgent) {
@@ -998,6 +1117,7 @@ function App() {
     setAuraPanelMessages([])
     setAuraPanelInput('')
     setMigrationFlowIndex(0)
+    setCpuSpikeV2FlowIndex(0)
     setAuraPanelFlow('none')
     setAuraPanelFlowIndex(0)
     setIsAuraTyping(false)
@@ -1010,6 +1130,7 @@ function App() {
     setAuraPanelMessages([])
     setAuraPanelInput('')
     setMigrationFlowIndex(0)
+    setCpuSpikeV2FlowIndex(0)
     setAuraPanelFlow('none')
     setAuraPanelFlowIndex(0)
     setIsAuraTyping(false)
@@ -1121,6 +1242,42 @@ function App() {
     }, 500)
   }
 
+  // Add next message for CPU spike investigation V2 flow in side panel
+  const addNextCpuSpikeV2Message = (index) => {
+    if (index >= CPU_SPIKE_INVESTIGATION_V2_FLOW.length) return
+    const message = CPU_SPIKE_INVESTIGATION_V2_FLOW[index]
+    setIsAuraTyping(true)
+    setTimeout(() => {
+      setAuraPanelMessages(prev => [...prev, { ...message, id: Date.now(), timestamp: new Date() }])
+      setCpuSpikeV2FlowIndex(index + 1)
+      setIsAuraTyping(false)
+    }, 500)
+  }
+
+  // Start CPU Spike Investigation V2 flow
+  // This flow renders in the MAIN conversation area on Home page (not side panel)
+  const startCpuSpikeV2Flow = () => {
+    // Navigate to Home page
+    setView('portal')
+    
+    // Close side panel - conversation renders in main area on Home
+    setAuraPanelOpen(false)
+    
+    // Clear previous conversation and set up flow
+    setAuraPanelMessages([])
+    setAuraPanelFlow('cpu-spike-v2')
+    setCpuSpikeV2FlowIndex(1)
+    setAuraPanelAgentName('Aura Agent')
+    
+    // Add first message
+    setIsAuraTyping(true)
+    setTimeout(() => {
+      setIsAuraTyping(false)
+      const message = CPU_SPIKE_INVESTIGATION_V2_FLOW[0]
+      setAuraPanelMessages([{ ...message, id: Date.now(), timestamp: new Date() }])
+    }, 500)
+  }
+
   const handleAuraAction = (action) => {
     const actionText = typeof action === 'string' ? action : action.text
     setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text: actionText, timestamp: new Date() }])
@@ -1134,6 +1291,63 @@ function App() {
         setTimeout(() => addNextPanelCpuSpikeMessage(auraPanelFlowIndex), 500)
       } else if (actionText === 'Get more details on Select_act_samples_new') {
         setTimeout(() => addNextPanelCpuSpikeMessage(auraPanelFlowIndex), 500)
+      } else {
+        // Fallback for unhandled actions
+        handleTriggerAction(actionText)
+      }
+    } else if (auraPanelFlow === 'cpu-spike-v2') {
+      // Handle CPU spike investigation V2 flow actions
+      if (actionText === 'View affected queries' || actionText === 'Investigate spike') {
+        // Step 1 → Step 2: Show chart (index 1), then analysis (index 2), then next actions (index 3)
+        setIsAuraTyping(true)
+        setTimeout(() => {
+          const msg1 = CPU_SPIKE_INVESTIGATION_V2_FLOW[1]
+          setAuraPanelMessages(prev => [...prev, { ...msg1, id: Date.now(), timestamp: new Date() }])
+          setIsAuraTyping(false)
+        }, 500)
+        setTimeout(() => {
+          setIsAuraTyping(true)
+          setTimeout(() => {
+            const msg2 = CPU_SPIKE_INVESTIGATION_V2_FLOW[2]
+            setAuraPanelMessages(prev => [...prev, { ...msg2, id: Date.now(), timestamp: new Date() }])
+            setIsAuraTyping(false)
+          }, 500)
+        }, 1500)
+        setTimeout(() => {
+          setIsAuraTyping(true)
+          setTimeout(() => {
+            const msg3 = CPU_SPIKE_INVESTIGATION_V2_FLOW[3]
+            setAuraPanelMessages(prev => [...prev, { ...msg3, id: Date.now(), timestamp: new Date() }])
+            setCpuSpikeV2FlowIndex(4)
+            setIsAuraTyping(false)
+          }, 500)
+        }, 3000)
+      } else if (actionText === 'Investigate other events') {
+        // Step 3 → Step 4: Show memory chart (index 4), then analysis (index 5)
+        setIsAuraTyping(true)
+        setTimeout(() => {
+          const msg4 = CPU_SPIKE_INVESTIGATION_V2_FLOW[4]
+          setAuraPanelMessages(prev => [...prev, { ...msg4, id: Date.now(), timestamp: new Date() }])
+          setIsAuraTyping(false)
+        }, 500)
+        setTimeout(() => {
+          setIsAuraTyping(true)
+          setTimeout(() => {
+            const msg5 = CPU_SPIKE_INVESTIGATION_V2_FLOW[5]
+            setAuraPanelMessages(prev => [...prev, { ...msg5, id: Date.now(), timestamp: new Date() }])
+            setCpuSpikeV2FlowIndex(6)
+            setIsAuraTyping(false)
+          }, 500)
+        }, 1500)
+      } else if (actionText === 'Optimize queries') {
+        // Go to final step: Show optimization recommendations (index 6)
+        setIsAuraTyping(true)
+        setTimeout(() => {
+          const msg6 = CPU_SPIKE_INVESTIGATION_V2_FLOW[6]
+          setAuraPanelMessages(prev => [...prev, { ...msg6, id: Date.now(), timestamp: new Date() }])
+          setCpuSpikeV2FlowIndex(7)
+          setIsAuraTyping(false)
+        }, 500)
       } else {
         // Fallback for unhandled actions
         handleTriggerAction(actionText)
@@ -1242,6 +1456,12 @@ function App() {
   }
 
   const handleNotificationClick = (notification) => {
+    // AI-driven investigation notification → Start CPU Spike V2 flow
+    if (notification.id === 5 || notification.type === 'ai-investigation') {
+      startCpuSpikeV2Flow()
+      return
+    }
+    
     if (notification.id === 1) {
       // CPU/infrastructure notifications → Aura Agent ONLY (Priority 2)
       // If on home/portal page, open full screen chat
@@ -1374,6 +1594,18 @@ function App() {
             inputValue={inputValue}
             setInputValue={setInputValue}
             onAlertClick={handleAlertClick}
+            // CPU Spike V2 flow props
+            auraPanelFlow={auraPanelFlow}
+            auraPanelMessages={auraPanelMessages}
+            isAuraTyping={isAuraTyping}
+            onAction={handleAuraAction}
+            chatEndRef={auraChatEndRef}
+            // Input props for conversation mode
+            auraPanelInput={auraPanelInput}
+            setAuraPanelInput={setAuraPanelInput}
+            onSend={handleAuraPanelSend}
+            agentName={auraPanelAgentName}
+            onAgentChange={handleAgentChange}
           />
         )
       case 'chat':
@@ -1404,7 +1636,7 @@ function App() {
   return (
     <>
       <Header 
-        onLogoClick={() => setView('portal')} 
+        onLogoClick={() => handleNavigate('portal')} 
         onAskAura={handleOpenAuraPanel} 
         onNotificationClick={handleNotificationClick}
         notifications={notifications}
@@ -1707,6 +1939,16 @@ function DataSourceLogo({ name }) {
 }
 
 const INITIAL_NOTIFICATIONS = [
+  {
+    id: 5,
+    type: 'ai-investigation',
+    icon: 'sparkles',
+    title: 'CPU anomaly detected',
+    message: 'Unusual workload patterns identified on this cluster. Aura has analyzed potential causes and can guide you through the investigation.',
+    time: 'Today at 03:45 AM',
+    action: 'Investigate Spike',
+    unread: true
+  },
   {
     id: 1,
     type: 'alert',
@@ -2125,7 +2367,141 @@ function WorkspacesView() {
   )
 }
 
-function PortalView({ activeTab, setActiveTab, inputValue, setInputValue, onAlertClick }) {
+function PortalView({ 
+  activeTab, 
+  setActiveTab, 
+  inputValue, 
+  setInputValue, 
+  onAlertClick,
+  // CPU Spike V2 flow props (renders conversation in main area)
+  auraPanelFlow,
+  auraPanelMessages,
+  isAuraTyping,
+  onAction,
+  chatEndRef,
+  // Input props for conversation mode
+  auraPanelInput,
+  setAuraPanelInput,
+  onSend,
+  agentName,
+  onAgentChange
+}) {
+  const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
+  const selectedAgent = AURA_AGENTS.find(a => a.name === agentName) || AURA_AGENTS[0]
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setAgentDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (onSend && auraPanelInput?.trim()) {
+        onSend(auraPanelInput)
+      }
+    }
+  }
+
+  const handleAgentSelect = (agent) => {
+    if (agent.name !== selectedAgent.name && onAgentChange) {
+      onAgentChange(agent.name)
+    }
+    setAgentDropdownOpen(false)
+  }
+
+  // Check if we should show the CPU spike V2 conversation in main area
+  const showCpuSpikeV2Conversation = auraPanelFlow === 'cpu-spike-v2' && auraPanelMessages && auraPanelMessages.length > 0
+
+  // If CPU spike V2 flow is active, render conversation in main area
+  if (showCpuSpikeV2Conversation) {
+    return (
+      <div className="portal-view portal-view-conversation">
+        <div className="portal-conversation-area">
+          <div className="portal-chat-messages">
+            {auraPanelMessages.map((message, index) => (
+              <Message
+                key={message.id}
+                message={message}
+                onAction={onAction}
+                expandedQueries={true}
+                setExpandedQueries={() => {}}
+                expandedOptions={true}
+                setExpandedOptions={() => {}}
+                isTyping={index === auraPanelMessages.length - 1 && message.type === 'agent' && !message.typingComplete}
+                onTypingComplete={() => {
+                  message.typingComplete = true
+                }}
+                agentName="Aura Agent"
+                compact={true}
+              />
+            ))}
+            {isAuraTyping && (
+              <div className="message">
+                <div className="message-header">
+                  <span className="message-sender">Aura Agent</span>
+                  <span className="dot" />
+                  <span className="message-time">{formatTime(new Date())}</span>
+                </div>
+                <div className="typing-indicator">
+                  <div className="typing-dot" />
+                  <div className="typing-dot" />
+                  <div className="typing-dot" />
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+        </div>
+
+        {/* Input area - same as ChatView */}
+        <div className="chat-input-bottom">
+          <div className="chat-input-bottom-container">
+            <div className="chat-input-text">
+              <input
+                type="text"
+                placeholder="Ask Aura anything..."
+                value={auraPanelInput || ''}
+                onChange={(e) => setAuraPanelInput && setAuraPanelInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+            </div>
+            <div className="chat-input-controls">
+              <div className="chat-input-actions">
+                <button className="icon-btn">
+                  <PlusIcon />
+                </button>
+                <button className="icon-btn">
+                  <MicIcon />
+                </button>
+                <button className="agent-selector">
+                  <AgentIcon />
+                  <span>{selectedAgent.name}</span>
+                  <ChevronDownIcon className="chevron" />
+                </button>
+              </div>
+              <button 
+                className="send-btn" 
+                disabled={!auraPanelInput?.trim()} 
+                onClick={() => onSend && onSend(auraPanelInput)}
+              >
+                <SendIcon />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Default portal view
   return (
     <div className="portal-view">
       <div className="portal-header">
@@ -2427,7 +2803,36 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
       if (textItem.type === 'mixed') {
         return `${textItem.content}${textItem.bold}${textItem.after || ''}${textItem.bold2 || ''}${textItem.after2 || ''}${textItem.bold3 || ''}`
       }
+      if (textItem.type === 'list' && textItem.items) {
+        return textItem.items[0] || ''
+      }
       return ''
+    }
+
+    // Handle list type separately
+    if (t.type === 'list' && t.items) {
+      if (isCurrentlyTyping) {
+        // For typing animation, type the first item then show the rest
+        return (
+          <ul key={index} className="message-list">
+            <li>
+              <TypedText onComplete={handleParagraphComplete}>
+                {t.items[0]}
+              </TypedText>
+            </li>
+            {t.items.slice(1).map((item, i) => (
+              <li key={i + 1}>{item}</li>
+            ))}
+          </ul>
+        )
+      }
+      return (
+        <ul key={index} className="message-list fade-in">
+          {t.items.map((item, i) => (
+            <li key={i}>{item}</li>
+          ))}
+        </ul>
+      )
     }
 
     if (isCurrentlyTyping) {
@@ -2736,6 +3141,59 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* UI Placeholder blocks for V2 flows */}
+        {content.ui && content.ui.state === 'placeholder' && (
+          <div className="ui-placeholder fade-in">
+            {content.ui.type === 'cpu-chart' && (
+              <div className="placeholder-chart">
+                <div className="placeholder-header">
+                  <IconFA name="chart-line" size={14} />
+                  <span>CPU Usage — Cluster Activity</span>
+                </div>
+                <div className="placeholder-body">
+                  <div className="placeholder-skeleton chart-skeleton" />
+                </div>
+              </div>
+            )}
+            {content.ui.type === 'query-table' && (
+              <div className="placeholder-table">
+                <div className="placeholder-header">
+                  <IconFA name="table" size={14} />
+                  <span>Top Queries by CPU Usage</span>
+                </div>
+                <div className="placeholder-body">
+                  <div className="placeholder-skeleton table-skeleton" />
+                  <div className="placeholder-skeleton table-skeleton" />
+                  <div className="placeholder-skeleton table-skeleton" />
+                </div>
+              </div>
+            )}
+            {content.ui.type === 'memory-chart' && (
+              <div className="placeholder-chart">
+                <div className="placeholder-header">
+                  <IconFA name="memory" size={14} />
+                  <span>Memory & Resource Usage</span>
+                </div>
+                <div className="placeholder-body">
+                  <div className="placeholder-skeleton chart-skeleton" />
+                </div>
+              </div>
+            )}
+            {content.ui.type === 'optimization-recommendations' && (
+              <div className="placeholder-recommendations">
+                <div className="placeholder-header">
+                  <IconFA name="lightbulb" size={14} />
+                  <span>Optimization Recommendations</span>
+                </div>
+                <div className="placeholder-body">
+                  <div className="placeholder-skeleton recommendation-skeleton" />
+                  <div className="placeholder-skeleton recommendation-skeleton" />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
