@@ -399,6 +399,65 @@ const CPU_SPIKE_CHAT_FLOW = [
   }
 ]
 
+// Top queries data for CPU spike investigation
+const CPU_SPIKE_TOP_QUERIES = [
+  {
+    database: "billing",
+    activity: "InsertSelect_aws_cost_usage__et_al_6185574400be7b72",
+    totalCPU: "430.7 min",
+    elapsed: "15.3 min",
+    memory: "9447.8 GB",
+    diskIO: "471.3 GB",
+    network: "694.0 GB",
+    execs: 1,
+    avgCPU: "25840.1 s"
+  },
+  {
+    database: "billing",
+    activity: "Delete_aws_cost_usage__et_al_273f12cef502917f",
+    totalCPU: "308.9 min",
+    elapsed: "8.4 min",
+    memory: "65.0 GB",
+    diskIO: "0.0 GB",
+    network: "0.0 GB",
+    execs: 1,
+    avgCPU: "18536.6 s"
+  },
+  {
+    database: "growth",
+    activity: "Select_AwsCURMetadata__et_al_cdfc007b405dc72d",
+    totalCPU: "143.6 min",
+    elapsed: "9.8 min",
+    memory: "50.9 GB",
+    diskIO: "0.0 GB",
+    network: "0.0 GB",
+    execs: 1,
+    avgCPU: "8615.4 s"
+  },
+  {
+    database: "information_schema",
+    activity: "Select_MV_NODES__et_al_37f96c1f7458da72",
+    totalCPU: "124.6 min",
+    elapsed: "28.5 min",
+    memory: "4.7 GB",
+    diskIO: "0.0 GB",
+    network: "0.0 GB",
+    execs: 18,
+    avgCPU: "415.5 s"
+  },
+  {
+    database: "sif",
+    activity: "Select_sharedtierdatabases__et_al_3f4a3c1b4097bc79",
+    totalCPU: "92.0 min",
+    elapsed: "35.9 min",
+    memory: "5584.9 GB",
+    diskIO: "970.0 GB",
+    network: "42.0 GB",
+    execs: 1,
+    avgCPU: "5517.0 s"
+  }
+]
+
 // NEW FLOW: CPU Spike Investigation V2 (independent from existing cpu-spike flow)
 // Each step is a SINGLE message containing all content blocks
 const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
@@ -3159,15 +3218,42 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
               </div>
             )}
             {content.ui.type === 'query-table' && (
-              <div className="placeholder-table">
+              <div className="query-table-container">
                 <div className="placeholder-header">
                   <IconFA name="table" size={14} />
                   <span>Top Queries by CPU Usage</span>
                 </div>
-                <div className="placeholder-body">
-                  <div className="placeholder-skeleton table-skeleton" />
-                  <div className="placeholder-skeleton table-skeleton" />
-                  <div className="placeholder-skeleton table-skeleton" />
+                <div className="query-table-wrapper">
+                  <table className="query-table">
+                    <thead>
+                      <tr>
+                        <th>Database</th>
+                        <th>Activity</th>
+                        <th>Total CPU</th>
+                        <th>Elapsed</th>
+                        <th>Memory</th>
+                        <th>Disk I/O</th>
+                        <th>Network</th>
+                        <th>Execs</th>
+                        <th>Avg CPU/Exec</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {CPU_SPIKE_TOP_QUERIES.map((query, i) => (
+                        <tr key={i}>
+                          <td>{query.database}</td>
+                          <td className="activity-cell" title={query.activity}>{query.activity}</td>
+                          <td>{query.totalCPU}</td>
+                          <td>{query.elapsed}</td>
+                          <td>{query.memory}</td>
+                          <td>{query.diskIO}</td>
+                          <td>{query.network}</td>
+                          <td>{query.execs}</td>
+                          <td>{query.avgCPU}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
@@ -3209,18 +3295,45 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
-        {/* Query table placeholder for combined messages (V2 flow) */}
-        {content.queryTable && content.queryTable.state === 'placeholder' && (
+        {/* Query table for combined messages (V2 flow) */}
+        {content.queryTable && (
           <div className="ui-placeholder fade-in">
-            <div className="placeholder-table">
+            <div className="query-table-container">
               <div className="placeholder-header">
                 <IconFA name="table" size={14} />
                 <span>Top Queries by CPU Usage</span>
               </div>
-              <div className="placeholder-body">
-                <div className="placeholder-skeleton table-skeleton" />
-                <div className="placeholder-skeleton table-skeleton" />
-                <div className="placeholder-skeleton table-skeleton" />
+              <div className="query-table-wrapper">
+                <table className="query-table">
+                  <thead>
+                    <tr>
+                      <th>Database</th>
+                      <th>Activity</th>
+                      <th>Total CPU</th>
+                      <th>Elapsed</th>
+                      <th>Memory</th>
+                      <th>Disk I/O</th>
+                      <th>Network</th>
+                      <th>Execs</th>
+                      <th>Avg CPU/Exec</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {CPU_SPIKE_TOP_QUERIES.map((query, i) => (
+                      <tr key={i}>
+                        <td>{query.database}</td>
+                        <td className="activity-cell" title={query.activity}>{query.activity}</td>
+                        <td>{query.totalCPU}</td>
+                        <td>{query.elapsed}</td>
+                        <td>{query.memory}</td>
+                        <td>{query.diskIO}</td>
+                        <td>{query.network}</td>
+                        <td>{query.execs}</td>
+                        <td>{query.avgCPU}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

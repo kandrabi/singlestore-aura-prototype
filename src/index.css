@@ -6993,6 +6993,61 @@ body {
   background: #FFFFFF;
 }
 
+/* Query table styles for CPU spike investigation */
+.query-table-container {
+  background: #FFFFFF;
+  border: 1px solid #E6E5EA;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.query-table-wrapper {
+  overflow-x: auto;
+}
+
+.query-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.query-table thead {
+  background: #F5F5F5;
+}
+
+.query-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #4C4A57;
+  border-bottom: 1px solid #E6E5EA;
+  white-space: nowrap;
+}
+
+.query-table td {
+  padding: 10px 12px;
+  color: #4C4A57;
+  border-bottom: 1px solid #F0F0F0;
+  white-space: nowrap;
+}
+
+.query-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.query-table tbody tr:hover {
+  background: #FAFAFA;
+}
+
+.query-table .activity-cell {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+  font-size: 11px;
+  color: #6B0AB8;
+}
+
 .table-skeleton {
   height: 32px;
   width: 100%;
