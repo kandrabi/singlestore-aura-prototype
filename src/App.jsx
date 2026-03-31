@@ -400,8 +400,9 @@ const CPU_SPIKE_CHAT_FLOW = [
 ]
 
 // NEW FLOW: CPU Spike Investigation V2 (independent from existing cpu-spike flow)
+// Each step is a SINGLE message containing all content blocks
 const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
-  // Step 1: Initial message
+  // Step 0: Initial message
   {
     type: 'agent',
     content: {
@@ -420,59 +421,41 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
       actions: ['View affected queries', 'Investigate spike']
     }
   },
-  // Step 2: Investigate spike - Part 1 (chart placeholder)
+  // Step 1: Investigation results - SINGLE message with chart, analysis, table, and actions
   {
     type: 'agent',
     content: {
       text: [
         { type: 'text', content: 'Analyzing cluster activity during the spike window...' }
       ],
-      ui: { type: 'cpu-chart', state: 'placeholder' }
-    }
-  },
-  // Step 2: Investigate spike - Part 2 (analysis + table placeholder)
-  {
-    type: 'agent',
-    content: {
-      text: [
+      ui: { type: 'cpu-chart', state: 'placeholder' },
+      analysisText: [
         { type: 'text', content: 'Multiple nodes experienced elevated CPU simultaneously, indicating workload-driven pressure.' },
         { type: 'text', content: 'Top queries contributed to most of the load.' }
       ],
-      ui: { type: 'query-table', state: 'placeholder' }
-    }
-  },
-  // Step 2: Investigate spike - Part 3 (next actions)
-  {
-    type: 'agent',
-    content: {
-      text: [
+      queryTable: { type: 'query-table', state: 'placeholder' },
+      followUpText: [
         { type: 'text', content: 'What would you like to do next?' }
       ],
       actions: ['Investigate other events', 'Optimize queries']
     }
   },
-  // Step 3: Investigate other events - Part 1 (memory chart placeholder)
+  // Step 2: Other events investigation - SINGLE message with memory chart, analysis, and actions
   {
     type: 'agent',
     content: {
       text: [
         { type: 'text', content: 'Looking at other system signals during the same window...' }
       ],
-      ui: { type: 'memory-chart', state: 'placeholder' }
-    }
-  },
-  // Step 3: Investigate other events - Part 2 (analysis + action)
-  {
-    type: 'agent',
-    content: {
-      text: [
+      ui: { type: 'memory-chart', state: 'placeholder' },
+      analysisText: [
         { type: 'text', content: 'Memory, CPU, and disk were all under pressure at the same time — creating a resource contention scenario.' },
         { type: 'text', content: 'The fastest way to resolve this is by optimizing the queries driving the load.' }
       ],
       actions: ['Optimize queries']
     }
   },
-  // Step 4: Optimize queries
+  // Step 3: Optimization recommendations - SINGLE message
   {
     type: 'agent',
     content: {
@@ -1347,55 +1330,32 @@ function App() {
       }
     } else if (auraPanelFlow === 'cpu-spike-v2') {
       // Handle CPU spike investigation V2 flow actions
+      // Each action adds a SINGLE combined message (not multiple separate messages)
       if (actionText === 'View affected queries' || actionText === 'Investigate spike') {
-        // Step 1 → Step 2: Show chart (index 1), then analysis (index 2), then next actions (index 3)
+        // Add Step 1: Investigation results (single message with chart, table, actions)
         setIsAuraTyping(true)
         setTimeout(() => {
-          const msg1 = CPU_SPIKE_INVESTIGATION_V2_FLOW[1]
-          setAuraPanelMessages(prev => [...prev, { ...msg1, id: Date.now(), timestamp: new Date() }])
+          const message = CPU_SPIKE_INVESTIGATION_V2_FLOW[1]
+          setAuraPanelMessages(prev => [...prev, { ...message, id: Date.now(), timestamp: new Date() }])
+          setCpuSpikeV2FlowIndex(2)
           setIsAuraTyping(false)
         }, 500)
-        setTimeout(() => {
-          setIsAuraTyping(true)
-          setTimeout(() => {
-            const msg2 = CPU_SPIKE_INVESTIGATION_V2_FLOW[2]
-            setAuraPanelMessages(prev => [...prev, { ...msg2, id: Date.now(), timestamp: new Date() }])
-            setIsAuraTyping(false)
-          }, 500)
-        }, 1500)
-        setTimeout(() => {
-          setIsAuraTyping(true)
-          setTimeout(() => {
-            const msg3 = CPU_SPIKE_INVESTIGATION_V2_FLOW[3]
-            setAuraPanelMessages(prev => [...prev, { ...msg3, id: Date.now(), timestamp: new Date() }])
-            setCpuSpikeV2FlowIndex(4)
-            setIsAuraTyping(false)
-          }, 500)
-        }, 3000)
       } else if (actionText === 'Investigate other events') {
-        // Step 3 → Step 4: Show memory chart (index 4), then analysis (index 5)
+        // Add Step 2: Other events (single message with memory chart, analysis, actions)
         setIsAuraTyping(true)
         setTimeout(() => {
-          const msg4 = CPU_SPIKE_INVESTIGATION_V2_FLOW[4]
-          setAuraPanelMessages(prev => [...prev, { ...msg4, id: Date.now(), timestamp: new Date() }])
+          const message = CPU_SPIKE_INVESTIGATION_V2_FLOW[2]
+          setAuraPanelMessages(prev => [...prev, { ...message, id: Date.now(), timestamp: new Date() }])
+          setCpuSpikeV2FlowIndex(3)
           setIsAuraTyping(false)
         }, 500)
-        setTimeout(() => {
-          setIsAuraTyping(true)
-          setTimeout(() => {
-            const msg5 = CPU_SPIKE_INVESTIGATION_V2_FLOW[5]
-            setAuraPanelMessages(prev => [...prev, { ...msg5, id: Date.now(), timestamp: new Date() }])
-            setCpuSpikeV2FlowIndex(6)
-            setIsAuraTyping(false)
-          }, 500)
-        }, 1500)
       } else if (actionText === 'Optimize queries') {
-        // Go to final step: Show optimization recommendations (index 6)
+        // Add Step 3: Optimization recommendations (single message)
         setIsAuraTyping(true)
         setTimeout(() => {
-          const msg6 = CPU_SPIKE_INVESTIGATION_V2_FLOW[6]
-          setAuraPanelMessages(prev => [...prev, { ...msg6, id: Date.now(), timestamp: new Date() }])
-          setCpuSpikeV2FlowIndex(7)
+          const message = CPU_SPIKE_INVESTIGATION_V2_FLOW[3]
+          setAuraPanelMessages(prev => [...prev, { ...message, id: Date.now(), timestamp: new Date() }])
+          setCpuSpikeV2FlowIndex(4)
           setIsAuraTyping(false)
         }, 500)
       } else {
@@ -3230,6 +3190,47 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Additional analysis text for combined messages (V2 flow) */}
+        {content.analysisText && Array.isArray(content.analysisText) && (
+          <div className="analysis-text-section fade-in">
+            {content.analysisText.map((t, i) => (
+              <p key={i} className="message-text">
+                {t.type === 'bold' && <strong>{t.content}</strong>}
+                {t.type === 'text' && t.content}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* Query table placeholder for combined messages (V2 flow) */}
+        {content.queryTable && content.queryTable.state === 'placeholder' && (
+          <div className="ui-placeholder fade-in">
+            <div className="placeholder-table">
+              <div className="placeholder-header">
+                <IconFA name="table" size={14} />
+                <span>Top Queries by CPU Usage</span>
+              </div>
+              <div className="placeholder-body">
+                <div className="placeholder-skeleton table-skeleton" />
+                <div className="placeholder-skeleton table-skeleton" />
+                <div className="placeholder-skeleton table-skeleton" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Follow-up text for combined messages (V2 flow) */}
+        {content.followUpText && Array.isArray(content.followUpText) && (
+          <div className="followup-text-section fade-in">
+            {content.followUpText.map((t, i) => (
+              <p key={i} className="message-text">
+                {t.type === 'bold' && <strong>{t.content}</strong>}
+                {t.type === 'text' && t.content}
+              </p>
+            ))}
           </div>
         )}
 
