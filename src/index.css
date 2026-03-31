@@ -1783,6 +1783,161 @@ body {
   letter-spacing: 0.24px;
 }
 
+/* Expandable Query Cards */
+.query-card {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--border-radius-md);
+  padding: 12px 14px;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--color-white);
+}
+
+.query-card:hover {
+  border-color: var(--color-border-hover, #c0c0c0);
+  background: var(--color-bg-surface-subtle, #fafafa);
+}
+
+.query-card.expanded {
+  border-color: var(--color-brand-7, #d4b8f0);
+  background: var(--color-white);
+}
+
+.query-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.query-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.query-card-left .query-name {
+  font-weight: 500;
+}
+
+.query-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.query-card-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: var(--color-icon-secondary);
+  transition: transform 0.2s ease;
+}
+
+.query-card.expanded .query-card-chevron {
+  color: var(--color-brand-10);
+}
+
+.query-card-details {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease-out, margin-top 0.25s ease-out, opacity 0.2s ease-out;
+  opacity: 0;
+  margin-top: 0;
+}
+
+.query-card-details.show {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 14px;
+}
+
+.query-card-details > * {
+  overflow: hidden;
+}
+
+.query-sql-block {
+  background: var(--color-neutral-3, #f5f5f5);
+  border-radius: var(--border-radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+.query-sql-block pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.query-sql-block code {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+
+.query-recommendations {
+  margin-bottom: 12px;
+}
+
+.recommendations-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.query-recommendations ul {
+  margin: 0;
+  padding-left: 18px;
+  list-style-type: disc;
+}
+
+.query-recommendations li {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.query-recommendations li:last-child {
+  margin-bottom: 0;
+}
+
+.query-apply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.query-apply-btn:hover {
+  background: var(--color-bg-surface-brand, #f5eafd);
+  border-color: var(--color-brand-7, #d4b8f0);
+  color: var(--color-brand-10, #820ddf);
+}
+
+.query-apply-btn .fa-icon {
+  color: var(--color-brand-10, #820ddf);
+}
+
 /* Options Grid */
 .options-grid {
   display: flex;
@@ -3249,12 +3404,35 @@ body {
   gap: 8px;
 }
 
-.aura-panel-messages .query-item {
-  padding: 10px;
+.aura-panel-messages .query-item,
+.aura-panel-messages .query-card {
+  padding: 10px 12px;
 }
 
 .aura-panel-messages .query-name {
   font-size: 12px;
+}
+
+.aura-panel-messages .query-badges .badge {
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+.aura-panel-messages .query-sql-block {
+  padding: 10px;
+}
+
+.aura-panel-messages .query-sql-block code {
+  font-size: 11px;
+}
+
+.aura-panel-messages .query-recommendations li {
+  font-size: 11px;
+}
+
+.aura-panel-messages .query-apply-btn {
+  padding: 6px 10px;
+  font-size: 11px;
 }
 
 /* Scale down options grid in side panel */

@@ -928,11 +928,95 @@ const CHAT_FLOW = [
     content: {
       text: [{ type: 'text', content: 'These 5 queries account for 78% of your current CPU load. Optimizing even 2–3 of them could meaningfully reduce pressure on the workspace.' }],
       queries: [
-        { name: 'analytics.user_funnel_daily', cpu: '38% CPU share', cpuType: 'critical', time: 'avg 4.2s', frequency: '96 runs/day', desc1: 'Full table scan across 90-day window, no partition pruning', desc2: 'Runs every 15 min via scheduled job' },
-        { name: 'analytics.user_funnel_weekly', cpu: '21% CPU share', cpuType: 'critical', time: 'avg 3.8s', frequency: '12 runs/week', desc1: 'Incremental updates with partition pruning', desc2: 'Runs every hour via scheduled job' },
-        { name: 'analytics.user_funnel_monthly', cpu: '12% CPU share', cpuType: 'warning', time: 'avg 3.5s', frequency: '240 runs/month', desc1: 'Aggregated data with optimized queries', desc2: 'Runs daily via batch processing' },
-        { name: 'analytics.user_funnel_quarterly', cpu: '4% CPU share', cpuType: 'warning', time: 'avg 3.0s', frequency: '16 runs/quarter', desc1: 'Summary statistics with partitioning', desc2: 'Runs at the end of each quarter' },
-        { name: 'analytics.user_funnel_yearly', cpu: '3% CPU share', cpuType: 'warning', time: 'avg 2.5s', frequency: '~11k runs/year', desc1: 'Snapshot analysis with historical data', desc2: 'Runs annually with data archiving' }
+        { 
+          name: 'analytics.user_funnel_daily', 
+          cpu: '38% CPU share', 
+          cpuType: 'critical', 
+          time: 'avg 4.2s', 
+          frequency: '96 runs/day', 
+          desc1: 'Full table scan across 90-day window, no partition pruning', 
+          desc2: 'Runs every 15 min via scheduled job',
+          sql: `SELECT user_id, event_type, COUNT(*) as event_count
+FROM analytics.events
+WHERE event_date >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+GROUP BY user_id, event_type
+ORDER BY event_count DESC;`,
+          recommendations: [
+            'Add partition pruning on event_date column',
+            'Create composite index on (user_id, event_type, event_date)',
+            'Consider pre-aggregating data into a summary table'
+          ]
+        },
+        { 
+          name: 'analytics.user_funnel_weekly', 
+          cpu: '21% CPU share', 
+          cpuType: 'critical', 
+          time: 'avg 3.8s', 
+          frequency: '12 runs/week', 
+          desc1: 'Missing index on transaction_date column', 
+          desc2: 'Runs every hour via scheduled job',
+          sql: `SELECT DATE(transaction_date) as day, SUM(amount) as total
+FROM analytics.transactions
+WHERE transaction_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+GROUP BY DATE(transaction_date);`,
+          recommendations: [
+            'Add index on transaction_date column',
+            'Use columnstore index for aggregation queries',
+            'Move to off-peak hours (2-4 AM)'
+          ]
+        },
+        { 
+          name: 'analytics.user_funnel_monthly', 
+          cpu: '12% CPU share', 
+          cpuType: 'warning', 
+          time: 'avg 3.5s', 
+          frequency: '240 runs/month', 
+          desc1: 'Cross-join causing cartesian product', 
+          desc2: 'Runs daily via batch processing',
+          sql: `SELECT a.user_id, b.product_id, COUNT(*)
+FROM analytics.users a, analytics.products b
+WHERE a.region = b.region
+GROUP BY a.user_id, b.product_id;`,
+          recommendations: [
+            'Rewrite implicit join as explicit INNER JOIN',
+            'Add WHERE clause to filter early',
+            'Consider using EXISTS instead of JOIN'
+          ]
+        },
+        { 
+          name: 'analytics.user_funnel_quarterly', 
+          cpu: '4% CPU share', 
+          cpuType: 'warning', 
+          time: 'avg 3.0s', 
+          frequency: '16 runs/quarter', 
+          desc1: 'Summary statistics with partitioning', 
+          desc2: 'Runs at the end of each quarter',
+          sql: `SELECT quarter, region, AVG(revenue) as avg_revenue
+FROM analytics.quarterly_stats
+GROUP BY quarter, region;`,
+          recommendations: [
+            'Query is already well-optimized',
+            'Consider caching results for dashboard use',
+            'No immediate action required'
+          ]
+        },
+        { 
+          name: 'analytics.user_funnel_yearly', 
+          cpu: '3% CPU share', 
+          cpuType: 'warning', 
+          time: 'avg 2.5s', 
+          frequency: '~11k runs/year', 
+          desc1: 'Snapshot analysis with historical data', 
+          desc2: 'Runs annually with data archiving',
+          sql: `SELECT YEAR(created_at) as year, COUNT(*) as total_users
+FROM analytics.users
+GROUP BY YEAR(created_at);`,
+          recommendations: [
+            'Query performance is acceptable',
+            'Consider adding result caching',
+            'No optimization needed at this time'
+          ]
+        }
       ],
       options: [
         { icon: 'list-timeline', title: 'Optimize queries', description: 'Add partition pruning to query #1, index transaction_date for #2, rewrite cross-join in #3.', impact: 'High Impact', impactType: 'positive' },
@@ -2809,6 +2893,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
   const [currentParagraph, setCurrentParagraph] = useState(0)
   const [paragraphsCompleted, setParagraphsCompleted] = useState(textItems.length === 0)
   const [showConnections, setShowConnections] = useState(false)
+  const [expandedQueryIndex, setExpandedQueryIndex] = useState(null)
 
   useEffect(() => {
     if (!isTyping || textItems.length === 0) {
@@ -2987,23 +3072,54 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
             </div>
             {expandedQueries && (
               <div className="query-list">
-                {content.queries.map((query, i) => (
-                  <div key={i} className="query-item">
-                    <div className="query-item-content">
-                      <div className="query-title-row">
-                        <span className="query-name">{query.name}</span>
-                        <span className={`badge ${query.cpuType}`}>{query.cpu}</span>
-                        <span className="badge warning">{query.time}</span>
-                        <span className="badge neutral">{query.frequency}</span>
+                {content.queries.map((query, i) => {
+                  const isExpanded = expandedQueryIndex === i
+                  return (
+                    <div 
+                      key={i} 
+                      className={`query-card ${isExpanded ? 'expanded' : ''}`}
+                      onClick={() => setExpandedQueryIndex(isExpanded ? null : i)}
+                    >
+                      <div className="query-card-header">
+                        <div className="query-card-left">
+                          <span className="query-name">{query.name}</span>
+                          <div className="query-badges">
+                            <span className={`badge ${query.cpuType}`}>{query.cpu}</span>
+                            <span className="badge warning">{query.time}</span>
+                            <span className="badge neutral">{query.frequency}</span>
+                          </div>
+                          <div className="query-description">
+                            <span>{query.desc1}</span>
+                          </div>
+                        </div>
+                        <div className="query-card-chevron">
+                          <IconFA name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} />
+                        </div>
                       </div>
-                      <div className="query-description">
-                        <span>{query.desc1}</span>
-                        <span className="dot" />
-                        <span>{query.desc2}</span>
+                      <div className={`query-card-details ${isExpanded ? 'show' : ''}`}>
+                        {query.sql && (
+                          <div className="query-sql-block">
+                            <pre><code>{query.sql}</code></pre>
+                          </div>
+                        )}
+                        {query.recommendations && (
+                          <div className="query-recommendations">
+                            <span className="recommendations-label">Optimization recommendations:</span>
+                            <ul>
+                              {query.recommendations.map((rec, j) => (
+                                <li key={j}>{rec}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        <button className="query-apply-btn" onClick={(e) => { e.stopPropagation(); }}>
+                          <IconFA name="bolt" size={12} />
+                          <span>Apply optimization</span>
+                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
@@ -4565,6 +4681,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
   const [showConnections, setShowConnections] = useState(false)
   const [typedMessageIds, setTypedMessageIds] = useState(new Set())
+  const [expandedQueryIndex, setExpandedQueryIndex] = useState(null)
   const panelRef = useRef(null)
   const dropdownRef = useRef(null)
   
@@ -5142,23 +5259,54 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
               <span>Top 5 queries</span>
             </div>
             <div className="query-list">
-              {content.queries.map((query, i) => (
-                <div key={i} className="query-item">
-                  <div className="query-item-content">
-                    <div className="query-title-row">
-                      <span className="query-name">{query.name}</span>
-                      <span className={`badge ${query.cpuType}`}>{query.cpu}</span>
-                      <span className="badge warning">{query.time}</span>
-                      <span className="badge neutral">{query.frequency}</span>
+              {content.queries.map((query, i) => {
+                const isExpanded = expandedQueryIndex === i
+                return (
+                  <div 
+                    key={i} 
+                    className={`query-card ${isExpanded ? 'expanded' : ''}`}
+                    onClick={() => setExpandedQueryIndex(isExpanded ? null : i)}
+                  >
+                    <div className="query-card-header">
+                      <div className="query-card-left">
+                        <span className="query-name">{query.name}</span>
+                        <div className="query-badges">
+                          <span className={`badge ${query.cpuType}`}>{query.cpu}</span>
+                          <span className="badge warning">{query.time}</span>
+                          <span className="badge neutral">{query.frequency}</span>
+                        </div>
+                        <div className="query-description">
+                          <span>{query.desc1}</span>
+                        </div>
+                      </div>
+                      <div className="query-card-chevron">
+                        <IconFA name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} />
+                      </div>
                     </div>
-                    <div className="query-description">
-                      <span>{query.desc1}</span>
-                      <span className="dot" />
-                      <span>{query.desc2}</span>
+                    <div className={`query-card-details ${isExpanded ? 'show' : ''}`}>
+                      {query.sql && (
+                        <div className="query-sql-block">
+                          <pre><code>{query.sql}</code></pre>
+                        </div>
+                      )}
+                      {query.recommendations && (
+                        <div className="query-recommendations">
+                          <span className="recommendations-label">Optimization recommendations:</span>
+                          <ul>
+                            {query.recommendations.map((rec, j) => (
+                              <li key={j}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <button className="query-apply-btn" onClick={(e) => { e.stopPropagation(); }}>
+                        <IconFA name="bolt" size={12} />
+                        <span>Apply optimization</span>
+                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
