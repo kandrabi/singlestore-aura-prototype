@@ -3097,25 +3097,27 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                         </div>
                       </div>
                       <div className={`query-card-details ${isExpanded ? 'show' : ''}`}>
-                        {query.sql && (
-                          <div className="query-sql-block">
-                            <pre><code>{query.sql}</code></pre>
-                          </div>
-                        )}
-                        {query.recommendations && (
-                          <div className="query-recommendations">
-                            <span className="recommendations-label">Optimization recommendations:</span>
-                            <ul>
-                              {query.recommendations.map((rec, j) => (
-                                <li key={j}>{rec}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        <button className="query-apply-btn" onClick={(e) => { e.stopPropagation(); }}>
-                          <IconFA name="bolt" size={12} />
-                          <span>Apply optimization</span>
-                        </button>
+                        <div className="query-card-details-inner">
+                          {query.sql && (
+                            <div className="query-sql-block">
+                              <pre><code>{query.sql}</code></pre>
+                            </div>
+                          )}
+                          {query.recommendations && (
+                            <div className="query-recommendations">
+                              <span className="recommendations-label">Optimization recommendations:</span>
+                              <ul>
+                                {query.recommendations.map((rec, j) => (
+                                  <li key={j}>{rec}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          <button className="query-apply-btn" onClick={(e) => { e.stopPropagation(); }}>
+                            <IconFA name="bolt" size={12} />
+                            <span>Apply optimization</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )
@@ -5284,25 +5286,27 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                       </div>
                     </div>
                     <div className={`query-card-details ${isExpanded ? 'show' : ''}`}>
-                      {query.sql && (
-                        <div className="query-sql-block">
-                          <pre><code>{query.sql}</code></pre>
-                        </div>
-                      )}
-                      {query.recommendations && (
-                        <div className="query-recommendations">
-                          <span className="recommendations-label">Optimization recommendations:</span>
-                          <ul>
-                            {query.recommendations.map((rec, j) => (
-                              <li key={j}>{rec}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      <button className="query-apply-btn" onClick={(e) => { e.stopPropagation(); }}>
-                        <IconFA name="bolt" size={12} />
-                        <span>Apply optimization</span>
-                      </button>
+                      <div className="query-card-details-inner">
+                        {query.sql && (
+                          <div className="query-sql-block">
+                            <pre><code>{query.sql}</code></pre>
+                          </div>
+                        )}
+                        {query.recommendations && (
+                          <div className="query-recommendations">
+                            <span className="recommendations-label">Optimization recommendations:</span>
+                            <ul>
+                              {query.recommendations.map((rec, j) => (
+                                <li key={j}>{rec}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        <button className="query-apply-btn" onClick={(e) => { e.stopPropagation(); }}>
+                          <IconFA name="bolt" size={12} />
+                          <span>Apply optimization</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )

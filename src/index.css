@@ -1848,18 +1848,16 @@ body {
 .query-card-details {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.25s ease-out, margin-top 0.25s ease-out, opacity 0.2s ease-out;
-  opacity: 0;
+  transition: grid-template-rows 0.25s ease-out, margin-top 0.25s ease-out;
   margin-top: 0;
 }
 
 .query-card-details.show {
   grid-template-rows: 1fr;
-  opacity: 1;
   margin-top: 14px;
 }
 
-.query-card-details > * {
+.query-card-details-inner {
   overflow: hidden;
 }
 
