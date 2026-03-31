@@ -6976,6 +6976,23 @@ body {
   width: 100%;
 }
 
+/* Chart image styles for actual chart display */
+.chart-image-container {
+  padding: 16px;
+  background: #FFFFFF;
+}
+
+.chart-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 6px;
+}
+
+.cpu-chart-image {
+  background: #FFFFFF;
+}
+
 .table-skeleton {
   height: 32px;
   width: 100%;

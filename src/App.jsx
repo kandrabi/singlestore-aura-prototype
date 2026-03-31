@@ -3144,13 +3144,17 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         {content.ui && content.ui.state === 'placeholder' && (
           <div className="ui-placeholder fade-in">
             {content.ui.type === 'cpu-chart' && (
-              <div className="placeholder-chart">
+              <div className="placeholder-chart cpu-chart-image">
                 <div className="placeholder-header">
                   <IconFA name="chart-line" size={14} />
                   <span>CPU Usage — Cluster Activity</span>
                 </div>
-                <div className="placeholder-body">
-                  <div className="placeholder-skeleton chart-skeleton" />
+                <div className="chart-image-container">
+                  <img 
+                    src="/charts/cpu-spike.png" 
+                    alt="CPU usage during spike window"
+                    className="chart-image"
+                  />
                 </div>
               </div>
             )}
