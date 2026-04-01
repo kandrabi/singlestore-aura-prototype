@@ -2099,6 +2099,19 @@ function App() {
 
 function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
   const [expandedItems, setExpandedItems] = useState(['ingestion'])
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuOpen && userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setUserMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [userMenuOpen])
 
   const toggleExpand = (id) => {
     setExpandedItems(prev => 
@@ -2184,18 +2197,62 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
       </div>
       
       <div className="unified-sidebar-bottom">
-        <div className="unified-user" title={!isExpanded ? "Syed Kabeer Andrabi" : undefined}>
-          <div className="unified-user-avatar">SA</div>
-          <div className="unified-user-info">
-            <span className="unified-user-name">Syed Kabeer Andrabi</span>
-            <span className="unified-user-org">S2DB DPS - CLAUDE AI EVALU...</span>
+        <div className="unified-user-container" ref={userMenuRef}>
+          <div 
+            className="unified-user" 
+            title={!isExpanded ? "Syed Kabeer Andrabi" : undefined}
+            onClick={() => isExpanded && setUserMenuOpen(!userMenuOpen)}
+          >
+            <div className="unified-user-avatar">SA</div>
+            <div className="unified-user-info">
+              <span className="unified-user-name">Syed Kabeer Andrabi</span>
+              <span className="unified-user-org">S2DB DPS - CLAUDE AI EVALU...</span>
+            </div>
+            {isExpanded && (
+              <button className="unified-user-menu">
+                <IconFA name={userMenuOpen ? 'chevron-up' : 'chevron-down'} size={12} />
+              </button>
+            )}
           </div>
-          {isExpanded && (
-            <button className="unified-user-menu">
-              <IconFA name="chevron-down" size={12} />
-            </button>
+          
+          {userMenuOpen && isExpanded && (
+            <div className="user-dropdown-menu">
+              <div className="user-dropdown-section">
+                <span className="user-dropdown-label">Current Organization</span>
+                <button className="user-dropdown-org-select">
+                  <span>S2DB DPS - Claude AI evaluation</span>
+                  <IconFA name="chevron-down" size={12} />
+                </button>
+              </div>
+              
+              <div className="user-dropdown-divider" />
+              
+              <button className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                Billing & Usage
+              </button>
+              <button className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                Users & Permissions
+              </button>
+              <button className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                Install Self-Managed
+              </button>
+              <button className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                Organization Details
+              </button>
+              
+              <div className="user-dropdown-divider" />
+              
+              <button className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                User Settings
+              </button>
+              <button className="user-dropdown-item user-dropdown-logout" onClick={() => setUserMenuOpen(false)}>
+                <IconFA name="arrow-right-from-bracket" size={14} />
+                <span>Log Out</span>
+              </button>
+            </div>
           )}
         </div>
+        
         <button 
           className="unified-toggle-btn" 
           onClick={onToggleExpand}
@@ -4370,6 +4427,7 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'microphone': '\uf130',
     'paper-plane': '\uf1d8',
     'chevron-down': '\uf078',
+    'chevron-up': '\uf077',
     'chevron-right': '\uf054',
     'check': '\uf00c',
     'check-double': '\uf560',
@@ -4388,6 +4446,7 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'xmark': '\uf00d',
     'ellipsis-vertical': '\uf142',
     'arrow-up-right-from-square': '\uf08e',
+    'arrow-right-from-bracket': '\uf08b',
     'expand': '\uf065',
     'compress': '\uf066',
     'bolt': '\uf0e7',

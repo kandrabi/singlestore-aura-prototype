@@ -403,6 +403,107 @@ body {
   background: var(--color-bg-surface-3);
 }
 
+/* User dropdown menu */
+.unified-user-container {
+  position: relative;
+}
+
+.unified-user {
+  cursor: pointer;
+}
+
+.unified-user:hover {
+  background: var(--color-bg-surface-2);
+}
+
+.user-dropdown-menu {
+  position: fixed;
+  bottom: 70px;
+  left: 12px;
+  width: 230px;
+  background: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 8px;
+  z-index: 9999;
+}
+
+.user-dropdown-section {
+  padding: 8px;
+  margin-bottom: 0;
+}
+
+.user-dropdown-label {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.user-dropdown-org-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--color-bg-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.user-dropdown-org-select > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.user-dropdown-org-select:hover {
+  background: var(--color-bg-surface-3);
+}
+
+.user-dropdown-org-select .fa-icon {
+  color: var(--color-text-secondary);
+}
+
+.user-dropdown-divider {
+  height: 1px;
+  background: var(--color-border-default);
+  margin: 8px 0;
+}
+
+.user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--border-radius-md);
+  background: transparent;
+  border: none;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.user-dropdown-item:hover {
+  background: var(--color-bg-surface-3);
+}
+
+.user-dropdown-logout .fa-icon {
+  color: var(--color-text-secondary);
+}
+
 .unified-toggle-btn {
   display: flex;
   align-items: center;
