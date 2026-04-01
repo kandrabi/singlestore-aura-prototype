@@ -4264,6 +4264,7 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'check-double': '\uf560',
     'spinner': '\uf110',
     'circle-info': '\uf05a',
+    'lightbulb': '\uf0eb',
     'user-plus': '\uf234',
     'bell': '\uf0f3',
     'magnifying-glass': '\uf002',
