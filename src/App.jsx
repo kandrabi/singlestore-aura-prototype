@@ -799,7 +799,85 @@ const BILLING_PROMPTS = [
   'Why am I exceeding my credits?',
   'Show workspaces driving the most cost',
   'How can I reduce on-demand usage?',
-  'Simulate cost reduction options'
+  'Diagnose credit burn in last 3 months'
+]
+
+// Billing Agent Conversation Flow
+const BILLING_CHAT_FLOW = [
+  // Message 1: Acknowledge + show usage data
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: "Got it — here's your recent usage and what's projected next." }
+      ],
+      billingChart: {
+        title: 'Credit Usage Trend',
+        historical: [
+          { month: 'Jan', credits: 620 },
+          { month: 'Feb', credits: 710 },
+          { month: 'Mar', credits: 880 }
+        ],
+        forecast: [
+          { month: 'Apr', credits: 1050 },
+          { month: 'May', credits: 1240 },
+          { month: 'Jun', credits: 1380 }
+        ]
+      },
+      analysisText: [
+        { type: 'text', content: 'Your usage is trending upward — about a ~55% increase over the next quarter.' },
+        { type: 'text', content: 'This typically happens when workloads enter a higher traffic phase.' },
+        { type: 'bold', content: 'This looks like growth, not just higher usage.' },
+        { type: 'text', content: 'Do you want to understand what\'s driving this, or how to handle it?' }
+      ],
+      actions: ["What's driving the increase?", "How should I handle this?"]
+    }
+  },
+  // Message 2a: What's driving the increase (branch 1)
+  {
+    type: 'agent',
+    branch: 'drivers',
+    content: {
+      text: [
+        { type: 'text', content: 'Your production workloads are the main driver — they\'re scaling with increased demand.' },
+        { type: 'text', content: 'At this rate, they\'re likely to hit capacity during peak hours.' }
+      ],
+      actions: ['Show recommended actions']
+    }
+  },
+  // Message 2b: How should I handle this (branch 2) - goes straight to recommendations
+  // Message 3: Recommendations
+  {
+    type: 'agent',
+    branch: 'recommendations',
+    content: {
+      text: [
+        { type: 'text', content: 'Here are my recommendations to handle your growing usage:' }
+      ],
+      billingRecommendations: [
+        {
+          title: 'Scale for Peak Demand',
+          description: 'Your production workloads are likely to hit capacity during peak hours.',
+          action: 'Scale from S2 → S3',
+          cta: 'Scale for Peak Demand',
+          icon: 'arrow-up'
+        },
+        {
+          title: 'Pre-scale Ahead of Spikes',
+          description: 'You can stay ahead of spikes by scaling proactively.',
+          action: 'Set up auto-scaling',
+          cta: 'Set Auto-Scaling',
+          icon: 'clock'
+        },
+        {
+          title: 'Expand Capacity',
+          description: 'At your current growth rate, additional capacity will be needed.',
+          ctas: ['Upgrade Plan', 'Talk to Sales'],
+          icon: 'chart-line'
+        }
+      ]
+    }
+  }
 ]
 
 const AGENT_CONFIG = {
@@ -1388,6 +1466,9 @@ function App() {
   const [auraPanelFlowIndex, setAuraPanelFlowIndex] = useState(0)
   const [migrationFlowIndex, setMigrationFlowIndex] = useState(0)
   const [cpuSpikeV2FlowIndex, setCpuSpikeV2FlowIndex] = useState(0)
+  const [billingFlowIndex, setBillingFlowIndex] = useState(0)
+  const [billingFlowBranch, setBillingFlowBranch] = useState(null) // 'drivers' or 'recommendations'
+  const [billingFlowStarted, setBillingFlowStarted] = useState(false) // Guard against double execution
   const [isAuraTyping, setIsAuraTyping] = useState(false)
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS)
   // Query Tuning Agent state
@@ -1605,6 +1686,9 @@ function App() {
     setAuraPanelInput('')
     setMigrationFlowIndex(0)
     setCpuSpikeV2FlowIndex(0)
+    setBillingFlowIndex(0)
+    setBillingFlowBranch(null)
+    setBillingFlowStarted(false)
     setAuraPanelFlow('none')
     setAuraPanelFlowIndex(0)
     setIsAuraTyping(false)
@@ -1618,6 +1702,9 @@ function App() {
     setAuraPanelInput('')
     setMigrationFlowIndex(0)
     setCpuSpikeV2FlowIndex(0)
+    setBillingFlowIndex(0)
+    setBillingFlowBranch(null)
+    setBillingFlowStarted(false)
     setAuraPanelFlow('none')
     setAuraPanelFlowIndex(0)
     setIsAuraTyping(false)
@@ -1674,8 +1761,83 @@ function App() {
     }, 1000)
   }
 
+  // Billing Agent flow message handler
+  const addNextBillingMessage = (messageIndex, branch = null) => {
+    let message
+    
+    if (messageIndex === 0) {
+      // First message - usage data
+      message = BILLING_CHAT_FLOW[0]
+    } else if (branch === 'drivers') {
+      // "What's driving the increase?" branch
+      message = BILLING_CHAT_FLOW.find(m => m.branch === 'drivers')
+    } else if (branch === 'recommendations') {
+      // Recommendations (from either branch)
+      message = BILLING_CHAT_FLOW.find(m => m.branch === 'recommendations')
+    }
+    
+    if (!message) return
+    
+    setIsAuraTyping(true)
+    setTimeout(() => {
+      setIsAuraTyping(false)
+      setAuraPanelMessages(prev => [...prev, { ...message, id: Date.now(), timestamp: new Date() }])
+      setBillingFlowIndex(messageIndex + 1)
+      if (branch) setBillingFlowBranch(branch)
+    }, 1000)
+  }
+
+  // Check if text triggers billing flow
+  const isBillingFlowTrigger = (text) => {
+    const lowerText = text.toLowerCase()
+    return (
+      lowerText.includes('credit burn') ||
+      lowerText.includes('last 3 months') ||
+      lowerText.includes('usage trend') ||
+      lowerText.includes('diagnose credit')
+    )
+  }
+
+  // SINGLE entry point for billing credit burn flow
+  const handleBillingCreditBurnFlow = (userMessage = null) => {
+    // Guard against double execution
+    if (billingFlowStarted) {
+      console.log('[BILLING_FLOW] Already started, skipping')
+      return
+    }
+    
+    console.log('[BILLING_FLOW] Starting billing credit burn flow')
+    setBillingFlowStarted(true)
+    
+    // Add user message if provided
+    if (userMessage) {
+      setAuraPanelMessages(prev => [...prev, { 
+        type: 'user', 
+        id: Date.now(), 
+        text: userMessage, 
+        timestamp: new Date() 
+      }])
+    }
+    
+    setAuraPanelInput('')
+    setAuraPanelFlow('billing')
+    setBillingFlowIndex(0)
+    setBillingFlowBranch(null)
+    
+    // Add first billing message
+    setTimeout(() => addNextBillingMessage(0), 500)
+  }
+
   const handleAuraPanelSend = (text) => {
     if (!text.trim()) return
+    
+    // Check for billing flow trigger FIRST and return immediately
+    if (auraPanelAgentName === 'Billing Agent' && isBillingFlowTrigger(text)) {
+      handleBillingCreditBurnFlow(text)
+      return // IMPORTANT: Stop here, don't continue
+    }
+    
+    // For all other flows, add user message normally
     setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text, timestamp: new Date() }])
     setAuraPanelInput('')
     
@@ -1824,6 +1986,37 @@ function App() {
         }, 500)
       } else {
         // Fallback for unhandled actions
+        handleTriggerAction(actionText)
+      }
+    } else if (auraPanelFlow === 'billing' || auraPanelAgentName === 'Billing Agent') {
+      // Handle Billing Agent flow actions
+      if (actionText === "What's driving the increase?") {
+        // Show drivers analysis, then will show recommendations
+        setTimeout(() => addNextBillingMessage(1, 'drivers'), 500)
+      } else if (actionText === "How should I handle this?" || actionText === 'Show recommended actions') {
+        // Go straight to recommendations
+        setTimeout(() => addNextBillingMessage(2, 'recommendations'), 500)
+      } else if (actionText === 'Scale for Peak Demand' || actionText === 'Set Auto-Scaling' || 
+                 actionText === 'Upgrade Plan' || actionText === 'Talk to Sales') {
+        // Handle CTA clicks - show confirmation
+        setIsAuraTyping(true)
+        setTimeout(() => {
+          setIsAuraTyping(false)
+          const response = {
+            type: 'agent',
+            id: Date.now(),
+            timestamp: new Date(),
+            content: {
+              text: [
+                { type: 'text', content: `I've initiated the "${actionText}" action for you.` },
+                { type: 'text', content: 'A team member will follow up with next steps shortly.' }
+              ]
+            }
+          }
+          setAuraPanelMessages(prev => [...prev, response])
+        }, 1000)
+      } else {
+        // Fallback for unhandled billing actions
         handleTriggerAction(actionText)
       }
     } else if (auraPanelFlow === 'default') {
@@ -4402,7 +4595,8 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         )}
 
         {/* Additional analysis text for combined messages (V2 flow) - staged typing */}
-        {content.analysisText && Array.isArray(content.analysisText) && showChart && (
+        {/* Skip for billing messages (those with billingChart) - they use their own renderer */}
+        {content.analysisText && Array.isArray(content.analysisText) && showChart && !content.billingChart && (
           <div className="analysis-text-section fade-in">
             {content.analysisText.map((t, i) => {
               const isCurrentlyTypingAnalysis = analysisTypingActive && i === currentAnalysisParagraph && !analysisCompleted
@@ -4697,6 +4891,72 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
               <span className="aura-action-required-label">Action Required:</span>
               <span className="aura-action-required-text">{content.actionRequired.text}</span>
             </div>
+          </div>
+        )}
+
+        {/* Billing Agent: Credit Usage Chart */}
+        {content.billingChart && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-billing-chart fade-in">
+            <div className="aura-billing-chart-header">{content.billingChart.title}</div>
+            <div className="aura-billing-chart-content">
+              <div className="aura-billing-section">
+                <div className="aura-billing-section-title">Last 3 months</div>
+                {content.billingChart.historical.map((item, i) => (
+                  <div key={i} className="aura-billing-row">
+                    <span className="aura-billing-month">{item.month}:</span>
+                    <span className="aura-billing-value">{item.credits} CR</span>
+                  </div>
+                ))}
+              </div>
+              <div className="aura-billing-section">
+                <div className="aura-billing-section-title">Forecast</div>
+                {content.billingChart.forecast.map((item, i) => (
+                  <div key={i} className="aura-billing-row aura-billing-forecast">
+                    <span className="aura-billing-month">{item.month}:</span>
+                    <span className="aura-billing-value">{item.credits} CR</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Billing Agent: Analysis Text - only render when billingChart is present to avoid duplication with V2 flow renderer */}
+        {content.billingChart && content.analysisText && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-billing-analysis fade-in">
+            {content.analysisText.map((item, i) => (
+              <p key={i} className={`message-text ${item.type === 'bold' ? 'message-text-bold' : ''}`}>
+                {item.type === 'bold' ? <strong>{item.content}</strong> : item.content}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* Billing Agent: Recommendation Cards */}
+        {content.billingRecommendations && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-billing-recommendations fade-in">
+            {content.billingRecommendations.map((rec, i) => (
+              <div key={i} className="aura-billing-rec-card">
+                <div className="aura-billing-rec-header">
+                  <IconFA name={rec.icon} size={16} />
+                  <span className="aura-billing-rec-title">{rec.title}</span>
+                </div>
+                <p className="aura-billing-rec-description">{rec.description}</p>
+                {rec.action && <p className="aura-billing-rec-action">{rec.action}</p>}
+                <div className="aura-billing-rec-ctas">
+                  {rec.cta && (
+                    <button className="aura-billing-rec-cta" onClick={() => onAction(rec.cta)}>
+                      {rec.cta}
+                    </button>
+                  )}
+                  {rec.ctas && rec.ctas.map((cta, j) => (
+                    <button key={j} className="aura-billing-rec-cta" onClick={() => onAction(cta)}>
+                      {cta}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -6542,7 +6802,8 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                   key={i} 
                   className="aura-prompt-chip"
                   onClick={() => {
-                    setInputValue(prompt)
+                    // Directly send the prompt instead of just setting input
+                    onSend(prompt)
                   }}
                 >
                   {prompt}

@@ -8315,3 +8315,155 @@ body {
   padding: 4px 8px;
   border-radius: 4px;
 }
+
+/* ============================================
+   BILLING AGENT CONVERSATION STYLES
+   ============================================ */
+
+/* Billing Chart Card */
+.aura-billing-chart {
+  background: #F9FAFB;
+  border: 1px solid #E6E5EA;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.aura-billing-chart-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4C4A57;
+  margin-bottom: 12px;
+}
+
+.aura-billing-chart-content {
+  display: flex;
+  gap: 32px;
+}
+
+.aura-billing-section {
+  flex: 1;
+}
+
+.aura-billing-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B6B6B;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.aura-billing-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.aura-billing-month {
+  color: #6B6B6B;
+}
+
+.aura-billing-value {
+  font-weight: 500;
+  color: #1A1A1A;
+}
+
+.aura-billing-forecast .aura-billing-value {
+  color: #6B0AB8;
+}
+
+/* Billing Analysis Text */
+.aura-billing-analysis {
+  margin: 12px 0;
+}
+
+.aura-billing-analysis .message-text {
+  margin-bottom: 8px;
+}
+
+.aura-billing-analysis .message-text-bold {
+  color: #1A1A1A;
+}
+
+/* Billing Recommendation Cards */
+.aura-billing-recommendations {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.aura-billing-rec-card {
+  background: #FFFFFF;
+  border: 1px solid #E6E5EA;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.aura-billing-rec-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.aura-billing-rec-header .fa-icon {
+  color: #6B0AB8;
+}
+
+.aura-billing-rec-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.aura-billing-rec-description {
+  font-size: 13px;
+  color: #6B6B6B;
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+
+.aura-billing-rec-action {
+  font-size: 12px;
+  color: #4C4A57;
+  margin: 0 0 12px 0;
+  padding: 8px 12px;
+  background: #F5F5F5;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+}
+
+.aura-billing-rec-ctas {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.aura-billing-rec-cta {
+  background: #6B0AB8;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.aura-billing-rec-cta:hover {
+  background: #5A0999;
+}
+
+.aura-billing-rec-cta:nth-child(2) {
+  background: #FFFFFF;
+  color: #6B0AB8;
+  border: 1px solid #6B0AB8;
+}
+
+.aura-billing-rec-cta:nth-child(2):hover {
+  background: #F5F0FA;
+}
