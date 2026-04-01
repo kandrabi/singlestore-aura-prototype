@@ -208,8 +208,8 @@ function TypedText({ children, speed = 12, onComplete }) {
 }
 
 function AnimatedList({ items, isTyping, onComplete }) {
-  const [visibleCount, setVisibleCount] = useState(isTyping ? 0 : items.length)
   const onCompleteRef = useRef(onComplete)
+  const [hasRendered, setHasRendered] = useState(!isTyping)
   
   useEffect(() => {
     onCompleteRef.current = onComplete
@@ -217,28 +217,18 @@ function AnimatedList({ items, isTyping, onComplete }) {
   
   useEffect(() => {
     if (!isTyping) {
-      setVisibleCount(items.length)
+      setHasRendered(true)
       return
     }
     
-    // Stagger the appearance of each item
-    let count = 0
-    const showNextItem = () => {
-      count++
-      setVisibleCount(count)
-      
-      if (count < items.length) {
-        setTimeout(showNextItem, 300) // 300ms delay between items
-      } else {
-        // All items shown, trigger completion after a short delay
-        setTimeout(() => {
-          onCompleteRef.current?.()
-        }, 200)
-      }
-    }
+    // Render all items at once after a brief delay, then complete
+    const timer = setTimeout(() => {
+      setHasRendered(true)
+      setTimeout(() => {
+        onCompleteRef.current?.()
+      }, 100)
+    }, 100)
     
-    // Start showing items after a brief initial delay
-    const timer = setTimeout(showNextItem, 100)
     return () => clearTimeout(timer)
   }, [isTyping, items.length])
   
@@ -247,8 +237,7 @@ function AnimatedList({ items, isTyping, onComplete }) {
       {items.map((item, i) => (
         <li 
           key={i} 
-          className={i < visibleCount ? 'fade-in' : 'hidden'}
-          style={{ animationDelay: `${i * 0.1}s` }}
+          className={hasRendered ? 'fade-in' : 'hidden'}
         >
           {item}
         </li>
@@ -467,9 +456,9 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
     content: {
       text: [
         { type: 'bold', content: 'CPU spike detected' },
-        { type: 'text', content: " — I've started analyzing what happened." },
+        { type: 'text', content: "I've started analyzing what happened." },
         { type: 'text', content: 'Between 3:45–5:00 AM PST, CPU usage increased significantly and impacted workload performance.' },
-        { type: 'text', content: 'I can help you:' },
+        { type: 'text', content: "Here's what I can help with:" },
         { type: 'list', items: [
           'Identify the queries responsible',
           'Understand system behavior during the spike',
@@ -485,16 +474,17 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'Analyzing cluster activity during the spike window...' }
+        { type: 'text', content: 'Analyzing cluster activity during the spike window...' },
+        { type: 'mixed', content: 'High CPU spike driven by ', bold: '2–3 heavy queries', after: ' between ', bold2: '12:00–12:45 UTC', after2: '.' }
       ],
       ui: { type: 'cpu-chart', state: 'placeholder' },
       analysisText: [
-        { type: 'text', content: 'Multiple nodes experienced elevated CPU simultaneously, indicating workload-driven pressure.' },
-        { type: 'text', content: 'Top queries contributed to most of the load.' }
+        { type: 'mixed', content: 'CPU usage spiked in parallel across ', bold: 'multiple nodes', after: ', indicating a ', bold2: 'cluster-wide workload issue', after2: ' rather than a single-node hardware constraint.' },
+        { type: 'mixed', content: 'The load is highly concentrated — the top ', bold: '2 queries drive ~70% of total CPU', after: ' during this window. Optimizing them will deliver the fastest and most meaningful reduction in pressure.' }
       ],
       queryTable: { type: 'query-table', state: 'placeholder' },
       followUpText: [
-        { type: 'text', content: 'What would you like to do next?' }
+        { type: 'mixed', content: '', bold: 'Recommended next step:', after: ' Review and optimize the top 2 queries — this will reduce CPU load by up to ', bold2: '70%', after2: '.' }
       ],
       actions: ['Investigate other events', 'Optimize queries']
     }
@@ -504,12 +494,12 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'Looking at other system signals during the same window...' }
+        { type: 'text', content: 'Analyzing memory, disk, and system resource usage during the spike window...' }
       ],
       ui: { type: 'memory-chart', state: 'placeholder' },
       analysisText: [
-        { type: 'text', content: 'Memory, CPU, and disk were all under pressure at the same time — creating a resource contention scenario.' },
-        { type: 'text', content: 'The fastest way to resolve this is by optimizing the queries driving the load.' }
+        { type: 'mixed', content: '', bold: 'Memory, CPU, and disk usage', after: ' all spiked together during this window, indicating ', bold2: 'resource contention', after2: ' across the cluster.' },
+        { type: 'mixed', content: 'This pattern is consistent with a few ', bold: 'heavy queries exhausting shared resources', after: ' — optimizing them will reduce pressure across all signals.' }
       ],
       actions: ['Optimize queries']
     }
@@ -519,8 +509,8 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'These queries account for the majority of CPU usage.' },
-        { type: 'text', content: 'Optimizing even a few of them would significantly reduce load on your cluster.' }
+        { type: 'text', content: 'Here are the highest-impact queries contributing to the spike, ranked by resource usage.' },
+        { type: 'text', content: 'Optimizing these first will reduce cluster pressure most effectively.' }
       ],
       ui: { type: 'optimization-recommendations', state: 'placeholder' },
       optimizationQueries: [
@@ -3158,19 +3148,45 @@ function AnimatedResizeProgress({ resizeProgress }) {
 function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete, agentName = 'Aura Agent', compact = false, onAdvanceSilently }) {
   // Only treat text as items if it's an array (not a string)
   const textItems = message.type === 'agent' && Array.isArray(message.content?.text) ? message.content.text : []
+  const analysisTextItems = message.type === 'agent' && Array.isArray(message.content?.analysisText) ? message.content.analysisText : []
+  
+  // Staged rendering: intro text → chart → analysis text → query table
+  const hasChart = message.content?.ui?.state === 'placeholder'
+  const hasAnalysisText = analysisTextItems.length > 0
+  const hasQueryTable = message.content?.queryTable
+  const isMultiStageMessage = hasChart && hasAnalysisText
+  
   // Initialize paragraphsCompleted to true if there are no text items (e.g., progress-only messages, or text is a string)
   const [currentParagraph, setCurrentParagraph] = useState(0)
   const [paragraphsCompleted, setParagraphsCompleted] = useState(textItems.length === 0)
   const [showConnections, setShowConnections] = useState(false)
   const [expandedQueryIndex, setExpandedQueryIndex] = useState(null)
   const [expandedOptQueryIndex, setExpandedOptQueryIndex] = useState(null)
+  
+  // Staged rendering state for multi-stage messages (e.g., investigation results)
+  const [showChart, setShowChart] = useState(!isTyping || !isMultiStageMessage)
+  const [currentAnalysisParagraph, setCurrentAnalysisParagraph] = useState(0)
+  const [analysisTypingActive, setAnalysisTypingActive] = useState(false)
+  const [analysisCompleted, setAnalysisCompleted] = useState(!isTyping || !isMultiStageMessage)
+  const [showQueryTable, setShowQueryTable] = useState(!isTyping || !isMultiStageMessage)
+  
+  // Optimization cards staggered animation state
+  const hasOptimizationCards = message.content?.ui?.type === 'optimization-recommendations' && message.content?.optimizationQueries
+  const optimizationCardCount = message.content?.optimizationQueries?.length || 0
+  const [showOptimizationCards, setShowOptimizationCards] = useState(!isTyping)
+  const [visibleOptCardCount, setVisibleOptCardCount] = useState(!isTyping ? optimizationCardCount : 0)
 
   useEffect(() => {
     if (!isTyping || textItems.length === 0) {
       setCurrentParagraph(textItems.length)
       setParagraphsCompleted(true)
+      if (!isMultiStageMessage) {
+        setShowChart(true)
+        setAnalysisCompleted(true)
+        setShowQueryTable(true)
+      }
     }
-  }, [isTyping, textItems.length])
+  }, [isTyping, textItems.length, isMultiStageMessage])
 
   // For messages without text array, call onTypingComplete after appropriate delay
   useEffect(() => {
@@ -3192,12 +3208,73 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
     }
   }, [isTyping, textItems.length, message.content?.progress, message.content?.steps, onTypingComplete])
 
+  // Stage 2: Show chart after intro text completes (for multi-stage messages)
+  useEffect(() => {
+    if (isMultiStageMessage && paragraphsCompleted && !showChart) {
+      const timer = setTimeout(() => {
+        setShowChart(true)
+        // Start analysis text typing after chart appears
+        setTimeout(() => {
+          setAnalysisTypingActive(true)
+        }, 300)
+      }, 200)
+      return () => clearTimeout(timer)
+    }
+  }, [isMultiStageMessage, paragraphsCompleted, showChart])
+  
+  // Staggered animation for optimization cards (after typing completes)
+  useEffect(() => {
+    if (hasOptimizationCards && paragraphsCompleted && !showOptimizationCards) {
+      // Wait 300ms after typing completes, then start showing cards
+      const startTimer = setTimeout(() => {
+        setShowOptimizationCards(true)
+        
+        // Stagger each card with 80ms delay
+        let count = 0
+        const showNextCard = () => {
+          count++
+          setVisibleOptCardCount(count)
+          if (count < optimizationCardCount) {
+            setTimeout(showNextCard, 80)
+          } else {
+            // All cards shown, trigger typing complete
+            setTimeout(() => {
+              onTypingComplete?.()
+            }, 100)
+          }
+        }
+        showNextCard()
+      }, 300)
+      return () => clearTimeout(startTimer)
+    }
+  }, [hasOptimizationCards, paragraphsCompleted, showOptimizationCards, optimizationCardCount, onTypingComplete])
+
   const handleParagraphComplete = () => {
     if (currentParagraph < textItems.length - 1) {
       setCurrentParagraph(prev => prev + 1)
     } else {
       setParagraphsCompleted(true)
-      onTypingComplete?.()
+      // For multi-stage messages or optimization cards, don't call onTypingComplete yet
+      if (!isMultiStageMessage && !hasOptimizationCards) {
+        onTypingComplete?.()
+      }
+    }
+  }
+  
+  // Handle analysis paragraph completion (for multi-stage messages)
+  const handleAnalysisParagraphComplete = () => {
+    if (currentAnalysisParagraph < analysisTextItems.length - 1) {
+      setCurrentAnalysisParagraph(prev => prev + 1)
+    } else {
+      setAnalysisCompleted(true)
+      // Show query table after analysis completes
+      setTimeout(() => {
+        setShowQueryTable(true)
+        // Now the entire message is complete
+        setTimeout(() => {
+          onTypingComplete?.()
+        }, 200)
+      }, 200)
     }
   }
 
@@ -3590,7 +3667,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         {/* UI Placeholder blocks for V2 flows */}
         {content.ui && content.ui.state === 'placeholder' && (
           <div className="ui-placeholder fade-in">
-            {content.ui.type === 'cpu-chart' && (
+            {content.ui.type === 'cpu-chart' && showChart && (
               <div className="placeholder-chart cpu-chart-image">
                 <div className="placeholder-header">
                   <IconFA name="chart-line" size={14} />
@@ -3606,49 +3683,48 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
               </div>
             )}
             {content.ui.type === 'query-table' && (
-              <div className="query-table-container">
-                <div className="placeholder-header">
-                  <IconFA name="table" size={14} />
-                  <span>Top Queries by CPU Usage</span>
-                </div>
-                <div className="query-table-wrapper">
-                  <table className="query-table">
-                    <thead>
-                      <tr>
-                        <th>Database</th>
-                        <th>Activity</th>
-                        <th>Total CPU</th>
-                        <th>Elapsed</th>
-                        <th>Memory</th>
-                        <th>Disk I/O</th>
-                        <th>Network</th>
-                        <th>Execs</th>
-                        <th>Avg CPU/Exec</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {CPU_SPIKE_TOP_QUERIES.map((query, i) => (
-                        <tr key={i}>
-                          <td>{query.database}</td>
-                          <td className="activity-cell" title={query.activity}>{query.activity}</td>
-                          <td>{query.totalCPU}</td>
-                          <td>{query.elapsed}</td>
-                          <td>{query.memory}</td>
-                          <td>{query.diskIO}</td>
-                          <td>{query.network}</td>
-                          <td>{query.execs}</td>
-                          <td>{query.avgCPU}</td>
+              <>
+                <h3 className="analysis-section-header">Top Queries by CPU Usage</h3>
+                <div className="query-table-container query-table-flat">
+                  <div className="query-table-wrapper">
+                    <table className="query-table">
+                      <thead>
+                        <tr>
+                          <th>Database</th>
+                          <th>Activity</th>
+                          <th>Total CPU</th>
+                          <th>Elapsed</th>
+                          <th>Memory</th>
+                          <th>Disk I/O</th>
+                          <th>Network</th>
+                          <th>Execs</th>
+                          <th>Avg CPU/Exec</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {CPU_SPIKE_TOP_QUERIES.map((query, i) => (
+                          <tr key={i}>
+                            <td>{query.database}</td>
+                            <td className="activity-cell" title={query.activity}>{query.activity}</td>
+                            <td>{query.totalCPU}</td>
+                            <td>{query.elapsed}</td>
+                            <td>{query.memory}</td>
+                            <td>{query.diskIO}</td>
+                            <td>{query.network}</td>
+                            <td>{query.execs}</td>
+                            <td>{query.avgCPU}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
-            {content.ui.type === 'memory-chart' && (
+            {content.ui.type === 'memory-chart' && showChart && (
               <div className="placeholder-chart cpu-chart-image">
                 <div className="placeholder-header">
-                  <IconFA name="memory" size={14} />
+                  <IconFA name="chart-line" size={14} />
                   <span>Memory & Resource Usage</span>
                 </div>
                 <div className="chart-image-container">
@@ -3660,7 +3736,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                 </div>
               </div>
             )}
-            {content.ui.type === 'optimization-recommendations' && (
+            {content.ui.type === 'optimization-recommendations' && showOptimizationCards && (
               <div className="optimization-recommendations">
                 <div className="optimization-header">
                   <IconFA name="lightbulb" size={14} />
@@ -3670,10 +3746,11 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                   <div className="query-list">
                     {content.optimizationQueries.map((query, i) => {
                       const isExpanded = expandedOptQueryIndex === i
+                      const isVisible = i < visibleOptCardCount
                       return (
                         <div 
                           key={i} 
-                          className={`query-card ${isExpanded ? 'expanded' : ''}`}
+                          className={`query-card optimization-card ${isExpanded ? 'expanded' : ''} ${isVisible ? 'visible' : ''}`}
                           onClick={() => setExpandedOptQueryIndex(isExpanded ? null : i)}
                         >
                           <div className="query-card-header">
@@ -3754,26 +3831,55 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
-        {/* Additional analysis text for combined messages (V2 flow) */}
-        {content.analysisText && Array.isArray(content.analysisText) && (
+        {/* Additional analysis text for combined messages (V2 flow) - staged typing */}
+        {content.analysisText && Array.isArray(content.analysisText) && showChart && (
           <div className="analysis-text-section fade-in">
-            {content.analysisText.map((t, i) => (
-              <p key={i} className="message-text">
-                {t.type === 'bold' && <strong>{t.content}</strong>}
-                {t.type === 'text' && t.content}
-              </p>
-            ))}
+            {content.analysisText.map((t, i) => {
+              const isCurrentlyTypingAnalysis = analysisTypingActive && i === currentAnalysisParagraph && !analysisCompleted
+              const shouldShowAnalysis = !isTyping || analysisCompleted || (analysisTypingActive && i <= currentAnalysisParagraph)
+              
+              if (!shouldShowAnalysis) return null
+              
+              // Get plain text for typing animation
+              const getAnalysisPlainText = (item) => {
+                if (item.type === 'text') return item.content
+                if (item.type === 'bold') return item.content
+                if (item.type === 'mixed') {
+                  return `${item.content || ''}${item.bold || ''}${item.after || ''}${item.bold2 || ''}${item.after2 || ''}${item.bold3 || ''}`
+                }
+                return ''
+              }
+              
+              if (isCurrentlyTypingAnalysis) {
+                return (
+                  <p key={i} className="message-text">
+                    <TypedText onComplete={handleAnalysisParagraphComplete}>
+                      {getAnalysisPlainText(t)}
+                    </TypedText>
+                  </p>
+                )
+              }
+              
+              return (
+                <p key={i} className="message-text">
+                  {t.type === 'bold' && <strong>{t.content}</strong>}
+                  {t.type === 'text' && t.content}
+                  {t.type === 'mixed' && (
+                    <>
+                      {t.content}<strong>{t.bold}</strong>{t.after}{t.bold2 && <strong>{t.bold2}</strong>}{t.after2}{t.bold3 && <strong>{t.bold3}</strong>}
+                    </>
+                  )}
+                </p>
+              )
+            })}
           </div>
         )}
 
-        {/* Query table for combined messages (V2 flow) */}
-        {content.queryTable && (
-          <div className="ui-placeholder fade-in">
-            <div className="query-table-container">
-              <div className="placeholder-header">
-                <IconFA name="table" size={14} />
-                <span>Top Queries by CPU Usage</span>
-              </div>
+        {/* Query table for combined messages (V2 flow) - staged rendering */}
+        {content.queryTable && showQueryTable && (
+          <div className="fade-in">
+            <h3 className="analysis-section-header">Top Queries by CPU Usage</h3>
+            <div className="query-table-container query-table-flat">
               <div className="query-table-wrapper">
                 <table className="query-table">
                   <thead>
@@ -3810,13 +3916,18 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
-        {/* Follow-up text for combined messages (V2 flow) */}
-        {content.followUpText && Array.isArray(content.followUpText) && (
+        {/* Follow-up text for combined messages (V2 flow) - appears after query table */}
+        {content.followUpText && Array.isArray(content.followUpText) && showQueryTable && (
           <div className="followup-text-section fade-in">
             {content.followUpText.map((t, i) => (
               <p key={i} className="message-text">
                 {t.type === 'bold' && <strong>{t.content}</strong>}
                 {t.type === 'text' && t.content}
+                {t.type === 'mixed' && (
+                  <>
+                    {t.content}<strong>{t.bold}</strong>{t.after}{t.bold2 && <strong>{t.bold2}</strong>}{t.after2}{t.bold3 && <strong>{t.bold3}</strong>}
+                  </>
+                )}
               </p>
             ))}
           </div>
@@ -4144,7 +4255,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           <p className="message-text fade-in">{content.followUp}</p>
         )}
 
-        {content.actions && !content.progress && (message.showContent !== false) && paragraphsCompleted && !(content.connections && showConnections) && (
+        {content.actions && !content.progress && (message.showContent !== false) && paragraphsCompleted && (!isMultiStageMessage || (analysisCompleted && showQueryTable)) && !(content.connections && showConnections) && (
           <div className="action-buttons fade-in">
             {content.actions.map((action, i) => {
               const isPrimary = typeof action === 'object' && action.primary

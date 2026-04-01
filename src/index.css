@@ -7287,6 +7287,18 @@ body {
   padding-left: 0;
 }
 
+/* Optimization card staggered animation */
+.optimization-card {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.optimization-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* Chart image styles for actual chart display */
 .chart-image-container {
   padding: 16px;
@@ -7304,12 +7316,40 @@ body {
   background: #FFFFFF;
 }
 
+/* Analysis text section for V2 flow */
+.analysis-text-section {
+  margin-bottom: 6px;
+}
+
+.analysis-text-section p + p {
+  margin-top: 12px;
+}
+
+/* Follow-up text section for V2 flow */
+.followup-text-section {
+  margin-top: 16px;
+}
+
+/* Analysis section header for structured insights */
+.analysis-section-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4C4A57;
+  margin: 6px 0 10px 0;
+  padding: 0;
+}
+
 /* Query table styles for CPU spike investigation */
 .query-table-container {
   background: #FFFFFF;
   border: 1px solid #E6E5EA;
   border-radius: 8px;
   overflow: hidden;
+}
+
+/* Flat table variant - no internal header */
+.query-table-container.query-table-flat {
+  border-radius: 6px;
 }
 
 .query-table-wrapper {
