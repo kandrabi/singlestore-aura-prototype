@@ -795,6 +795,58 @@ const QUERY_TUNING_PROMPTS = [
   'Review query performance metrics'
 ]
 
+const BILLING_PROMPTS = [
+  'Why am I exceeding my credits?',
+  'Show workspaces driving the most cost',
+  'How can I reduce on-demand usage?',
+  'Simulate cost reduction options'
+]
+
+const AGENT_CONFIG = {
+  'Aura Agent': {
+    title: 'Aura AI Assistant',
+    description: 'I can help you monitor workspaces, analyze performance, and manage your SingleStore environment.',
+    prompts: AURA_PROMPTS,
+    placeholder: 'Ask Aura anything...'
+  },
+  'Data Migration Agent': {
+    title: 'AI-Powered Migration Assistant',
+    description: 'I can help you migrate data from PostgreSQL, MySQL, Oracle, MongoDB, and more to SingleStore.',
+    prompts: MIGRATION_PROMPTS,
+    placeholder: 'Ask about data migration...'
+  },
+  'Query Tuning Agent': {
+    title: 'Query Optimization Assistant',
+    description: 'I can help you optimize queries, analyze execution plans, and improve database performance.',
+    prompts: QUERY_TUNING_PROMPTS,
+    placeholder: 'Ask about query optimization...'
+  },
+  'Billing Agent': {
+    title: 'Billing & Usage Advisor',
+    description: 'I can help you monitor credit usage, prevent overages, and optimize compute costs across your workspaces.',
+    prompts: BILLING_PROMPTS,
+    placeholder: 'Ask about billing, usage, or cost optimization...'
+  },
+  'Support Agent': {
+    title: 'Support Assistant',
+    description: 'I can help you troubleshoot issues, find documentation, and connect you with support resources.',
+    prompts: AURA_PROMPTS,
+    placeholder: 'Describe your issue...'
+  },
+  'Observability Agent': {
+    title: 'Observability Assistant',
+    description: 'I can help you monitor metrics, analyze logs, and track system health across your infrastructure.',
+    prompts: AURA_PROMPTS,
+    placeholder: 'Ask about monitoring and observability...'
+  },
+  'Incident Agent': {
+    title: 'Incident Response Assistant',
+    description: 'I can help you investigate incidents, identify root causes, and coordinate response actions.',
+    prompts: AURA_PROMPTS,
+    placeholder: 'Describe the incident...'
+  }
+}
+
 const MIGRATION_CHAT_FLOW = [
   // Scene 1: Initial greeting & frictionless input
   {
@@ -1392,13 +1444,15 @@ function App() {
     return () => { delete window.startCpuSpikeV2Flow }
   }, [])
 
-  // Get default agent based on page context (Priority 3)
+  // Get default agent based on page context (Priority 4)
   const getDefaultAgentForPage = (pageView) => {
     switch (pageView) {
       case 'load-data':
         return 'Data Migration Agent'
       case 'editor':
         return 'Query Tuning Agent'
+      case 'billing':
+        return 'Billing Agent'
       default:
         return 'Aura Agent'
     }
@@ -1450,14 +1504,22 @@ function App() {
       return
     }
     
-    // Priority 2: If there's an active conversation (user has sent a message), keep current agent
+    // Priority 2: If a specific agent is explicitly requested (e.g., Billing Agent)
+    if (agent) {
+      console.log('[OPEN_PANEL] Explicit agent requested:', agent)
+      setAuraPanelAgentName(agent)
+      setAuraPanelOpen(true)
+      return
+    }
+    
+    // Priority 3: If there's an active conversation (user has sent a message), keep current agent
     if (hasActiveConversation()) {
       console.log('[OPEN_PANEL] Active conversation exists, keeping current agent')
       setAuraPanelOpen(true)
       return
     }
     
-    // Priority 3: No active conversation, use page context routing
+    // Priority 4: No active conversation, use page context routing
     const nextAgent = getDefaultAgentForPage(view)
     console.log('[OPEN_PANEL] No active conversation, setting agent to:', nextAgent)
     setAuraPanelAgentName(nextAgent)
@@ -2040,6 +2102,8 @@ function App() {
         return <WorkspacesView />
       case 'editor':
         return <EditorView onOpenAura={handleOpenAuraPanel} pendingEditorQuery={pendingEditorQuery} onClearPendingQuery={() => setPendingEditorQuery(null)} />
+      case 'billing':
+        return <BillingPage onOpenAura={handleOpenAuraPanel} />
       default:
         return null
     }
@@ -2227,7 +2291,7 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
               
               <div className="user-dropdown-divider" />
               
-              <button className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+              <button className="user-dropdown-item" onClick={() => { setUserMenuOpen(false); onNavigate('billing'); }}>
                 Billing & Usage
               </button>
               <button className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
@@ -2684,6 +2748,455 @@ function WorkspaceIconSuspended() {
       <path d="M31.15 15.6763C30.95 12.6987 28.55 10.2857 25.6 10.2857C25.2 10.2857 24.8 10.3371 24.45 10.4397C22.85 8.38616 20.4 7 17.6 7C13.35 7 9.8 10.0804 8.95 14.1875C5.95 15.471 4 18.4487 4 21.7857C4 26.3549 7.55 30 12 30H28.8C32.75 30 36 26.7143 36 22.6071C36 19.4754 34 16.7031 31.15 15.6763ZM28.8 27.5357H12C8.9 27.5357 6.4 24.9688 6.4 21.7857C6.4 18.9107 8.45 16.4978 11.2 16.1384V16.0357C11.2 12.442 14.05 9.46429 17.6 9.46429C20.25 9.46429 22.55 11.1585 23.5 13.5714C24.05 13.058 24.8 12.75 25.6 12.75C27.35 12.75 28.8 14.2388 28.8 16.0357C28.8 16.6518 28.6 17.2165 28.35 17.7299C28.5 17.7299 28.65 17.6786 28.8 17.6786C31.45 17.6786 33.6 19.8862 33.6 22.6071C33.6 25.3281 31.45 27.5357 28.8 27.5357Z" fill="#4C4A57"/>
       <path d="M30 15.5C34.6955 15.5 38.5 19.3045 38.5 24C38.5 28.6955 34.6955 32.5 30 32.5C25.3045 32.5 21.5 28.6955 21.5 24C21.5 19.3045 25.3045 15.5 30 15.5ZM27.4131 21.4102C27.408 21.4155 27.405 21.4218 27.4033 21.4258V26.5811C27.4034 26.5874 27.4048 26.5906 27.4053 26.5918C27.4058 26.593 27.4061 26.5936 27.4062 26.5938C27.4064 26.5939 27.407 26.5942 27.4082 26.5947C27.4094 26.5952 27.4126 26.5966 27.4189 26.5967H28.9619C28.9658 26.595 28.9714 26.5918 28.9766 26.5869C28.9808 26.5829 28.9825 26.5788 28.9834 26.5771V21.4365C28.9826 21.4352 28.9816 21.4333 28.9805 21.4316C28.9774 21.4273 28.9733 21.4225 28.9688 21.418C28.9642 21.4134 28.9594 21.4093 28.9551 21.4062C28.9536 21.4052 28.9524 21.4041 28.9512 21.4033H27.4229C27.4212 21.4042 27.4173 21.4058 27.4131 21.4102ZM31.0264 21.4102C31.0213 21.4155 31.0183 21.4218 31.0166 21.4258V26.5811C31.0166 26.5871 31.0171 26.5904 31.0176 26.5918L31.0186 26.5938C31.0187 26.5939 31.0195 26.5943 31.0205 26.5947C31.0214 26.5951 31.025 26.5967 31.0322 26.5967H32.5742C32.5782 26.595 32.5845 26.592 32.5898 26.5869C32.5942 26.5827 32.5958 26.5788 32.5967 26.5771V21.4365C32.5959 21.4352 32.595 21.4334 32.5938 21.4316C32.5906 21.4273 32.5867 21.4226 32.582 21.418C32.5774 21.4133 32.5727 21.4094 32.5684 21.4062C32.5666 21.405 32.5648 21.4041 32.5635 21.4033H31.0352C31.0334 21.4043 31.0301 21.4063 31.0264 21.4102Z" fill="#777582" stroke="white"/>
     </svg>
+  )
+}
+
+// ============================================
+// BILLING PAGE COMPONENT
+// ============================================
+
+const BILLING_CHART_DATA = [
+  { month: "Aug'25", contracted: 25, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { month: "Sep'25", contracted: 50, onDemand: 5, forecastContracted: 0, forecastOnDemand: 0 },
+  { month: "Oct'25", contracted: 45, onDemand: 3, forecastContracted: 0, forecastOnDemand: 0 },
+  { month: "Nov'25", contracted: 60, onDemand: 8, forecastContracted: 0, forecastOnDemand: 0 },
+  { month: "Dec'25", contracted: 25, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { month: "Jan'26", contracted: 30, onDemand: 0, forecastContracted: 10, forecastOnDemand: 5 },
+  { month: "Feb'26", contracted: 0, onDemand: 0, forecastContracted: 25, forecastOnDemand: 12 },
+  { month: "Mar'26", contracted: 0, onDemand: 0, forecastContracted: 20, forecastOnDemand: 8 },
+  { month: "Apr'26", contracted: 0, onDemand: 0, forecastContracted: 18, forecastOnDemand: 6 },
+]
+
+const BILLING_RESOURCES_DATA = [
+  { 
+    id: 1,
+    name: 'Production Analytics',
+    subtitle: 'Analytics',
+    type: 'Deployment',
+    edition: 'Standard',
+    cloud: 'AWS',
+    region: 'US West 2 (Oregon)',
+    size: 'S-2',
+    status: 'Active',
+    creditUsage: '500 CR'
+  },
+  { 
+    id: 2,
+    name: 'Develop Analytics',
+    subtitle: 'Analytics',
+    type: 'Deployment',
+    edition: 'Standard',
+    cloud: 'AWS',
+    region: 'US West 2 (Oregon)',
+    size: 'S-2',
+    status: 'Active',
+    creditUsage: '500 CR'
+  },
+  { 
+    id: 3,
+    name: 'Staging Analytics',
+    subtitle: 'Analytics',
+    type: 'Deployment',
+    edition: 'Standard',
+    cloud: 'AWS',
+    region: 'US West 2 (Oregon)',
+    size: 'S-2',
+    status: 'Suspended',
+    creditUsage: '500 CR'
+  },
+]
+
+function BillingPage({ onOpenAura }) {
+  const [activeTab, setActiveTab] = useState('usage')
+  const [viewMode, setViewMode] = useState('month')
+  const [chartType, setChartType] = useState('chart')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const maxChartValue = 75
+  const barWidth = 24
+  const chartHeight = 200
+  const todayIndex = 5 // Jan'26 is the "today" marker
+
+  return (
+    <div className="billing-page">
+      <div className="billing-container">
+        {/* Header Section */}
+        <div className="billing-header">
+          <div className="billing-title-row">
+            <IconFA name="browser" size={20} />
+            <h1 className="billing-title">Usage & Billing</h1>
+          </div>
+          
+          {/* Tabs */}
+          <div className="billing-tabs">
+            <button 
+              className={`billing-tab ${activeTab === 'usage' ? 'active' : ''}`}
+              onClick={() => setActiveTab('usage')}
+            >
+              Usage Estimate
+            </button>
+            <button 
+              className={`billing-tab ${activeTab === 'billing' ? 'active' : ''}`}
+              onClick={() => setActiveTab('billing')}
+            >
+              Billing info
+            </button>
+          </div>
+        </div>
+
+        {/* Filters Section */}
+        <div className="billing-filters">
+          <div className="billing-filters-left">
+            <button className="billing-filter-btn">
+              <span className="filter-label">Time period:</span>
+              <span className="filter-value">Last 6 months</span>
+              <IconFA name="chevron-down" size={12} />
+            </button>
+            <div className="billing-filter-divider" />
+            <button className="billing-filter-btn">
+              <IconFA name="folder" size={14} />
+              <span className="filter-value">All</span>
+              <IconFA name="chevron-down" size={12} />
+            </button>
+            <div className="billing-filter-divider" />
+            <button className="billing-filter-btn">
+              <span className="filter-label">Name:</span>
+              <span className="filter-value">All</span>
+              <IconFA name="chevron-down" size={12} />
+            </button>
+            <button className="billing-filter-btn">
+              <span className="filter-label">Type:</span>
+              <span className="filter-value">All</span>
+              <IconFA name="chevron-down" size={12} />
+            </button>
+            <button className="billing-filter-btn">
+              <span className="filter-label">Cloud:</span>
+              <span className="filter-value">All</span>
+              <IconFA name="chevron-down" size={12} />
+            </button>
+            <button className="billing-filter-btn">
+              <span className="filter-label">Region:</span>
+              <span className="filter-value">All</span>
+              <IconFA name="chevron-down" size={12} />
+            </button>
+          </div>
+          <button className="billing-download-btn">
+            <IconFA name="download" size={14} />
+            <span>Download Report</span>
+          </button>
+        </div>
+
+        {/* Alert Banner */}
+        <div className="billing-alert-banner">
+          <div className="billing-alert-content">
+            <div className="billing-alert-icon">
+              <IconFA name="triangle-exclamation" size={18} />
+            </div>
+            <div className="billing-alert-text">
+              <div className="billing-alert-title">
+                Your 800 CR monthly credit was exhausted on March 20 — on-demand charges are now accruing
+              </div>
+              <div className="billing-alert-subtitle">
+                You've used 1,000 CR so far (200 CR on-demand). Estimated month total: 1.5K CR (+700 CR on-demand).
+              </div>
+            </div>
+          </div>
+          <button 
+            className="billing-prevent-btn"
+            onClick={() => onOpenAura && onOpenAura({ agent: 'Billing Agent' })}
+          >
+            <IconFA name="sparkles" size={14} />
+            <span>Prevent Overages</span>
+          </button>
+        </div>
+
+        {/* Usage Cards */}
+        <div className="billing-cards">
+          {/* Compute Card */}
+          <div className="billing-card billing-card-compute">
+            <div className="billing-card-header">
+              <div className="billing-card-title">
+                <IconFA name="microchip" size={16} />
+                <span>Compute</span>
+                <IconFA name="circle-info" size={12} />
+              </div>
+              <span className="billing-card-badge billing-card-badge-warning">
+                Credit remaining: 0 CR
+              </span>
+            </div>
+            <div className="billing-card-usage">
+              <span className="billing-card-used">1000 CR used</span>
+              <div className="billing-card-estimated">
+                <span>of 1,550 CR estimated</span>
+                <IconFA name="circle-info" size={10} />
+              </div>
+            </div>
+            <div className="billing-progress-bar">
+              <div className="billing-progress-contracted" style={{ width: '52%' }}></div>
+              <div className="billing-progress-ondemand" style={{ width: '13%', left: '52%' }}></div>
+              <div className="billing-progress-forecast" style={{ width: '35%', left: '65%' }}></div>
+            </div>
+          </div>
+
+          {/* Storage Card */}
+          <div className="billing-card">
+            <div className="billing-card-header">
+              <div className="billing-card-title">
+                <IconFA name="database" size={16} />
+                <span>Storage</span>
+                <IconFA name="circle-info" size={12} />
+              </div>
+            </div>
+            <div className="billing-card-usage">
+              <span className="billing-card-used">1 GB used</span>
+              <div className="billing-card-estimated">
+                <span>of 16 GB estimated</span>
+                <IconFA name="circle-info" size={10} />
+              </div>
+            </div>
+            <div className="billing-progress-bar">
+              <div className="billing-progress-contracted" style={{ width: '6%' }}></div>
+              <div className="billing-progress-forecast" style={{ width: '94%', left: '6%' }}></div>
+            </div>
+          </div>
+
+          {/* Transfer Card */}
+          <div className="billing-card billing-card-disabled">
+            <div className="billing-card-header">
+              <div className="billing-card-title">
+                <IconFA name="server" size={16} />
+                <span>Transfer</span>
+                <IconFA name="circle-info" size={12} />
+              </div>
+            </div>
+            <div className="billing-card-usage">
+              <span className="billing-card-used">0 GB used</span>
+              <span className="billing-card-estimated-simple">of 0 GB estimated</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly Chart Section */}
+        <div className="billing-chart-section">
+          <div className="billing-chart-header">
+            <h2 className="billing-chart-title">Monthly Compute Credits Usage</h2>
+            <div className="billing-chart-controls">
+              <div className="billing-chart-view-toggle">
+                <span className="billing-chart-label">Info view</span>
+                <div className="billing-toggle-group">
+                  <button 
+                    className={`billing-toggle-btn ${chartType === 'chart' ? 'active' : ''}`}
+                    onClick={() => setChartType('chart')}
+                  >
+                    <IconFA name="chart-column" size={14} />
+                  </button>
+                  <button 
+                    className={`billing-toggle-btn ${chartType === 'table' ? 'active' : ''}`}
+                    onClick={() => setChartType('table')}
+                  >
+                    <IconFA name="table" size={14} />
+                  </button>
+                </div>
+              </div>
+              <div className="billing-chart-divider" />
+              <div className="billing-toggle-group">
+                <button 
+                  className={`billing-toggle-btn billing-toggle-text ${viewMode === 'month' ? 'active' : ''}`}
+                  onClick={() => setViewMode('month')}
+                >
+                  Month
+                </button>
+                <button 
+                  className={`billing-toggle-btn billing-toggle-text ${viewMode === 'day' ? 'active' : ''}`}
+                  onClick={() => setViewMode('day')}
+                >
+                  Day
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="billing-chart-legend">
+            <div className="billing-legend-item">
+              <span className="billing-legend-dot billing-legend-contracted"></span>
+              <span>Contracted</span>
+            </div>
+            <div className="billing-legend-item">
+              <span className="billing-legend-dot billing-legend-ondemand"></span>
+              <span>On-demand</span>
+            </div>
+            <div className="billing-legend-item">
+              <span className="billing-legend-dot billing-legend-forecast-contracted"></span>
+              <span>Contracted forecasted</span>
+            </div>
+            <div className="billing-legend-item">
+              <span className="billing-legend-dot billing-legend-forecast-ondemand"></span>
+              <span>On-demand forecasted</span>
+            </div>
+            <div className="billing-legend-item">
+              <span className="billing-legend-line"></span>
+              <span>Today</span>
+            </div>
+          </div>
+
+          {/* Chart */}
+          <div className="billing-chart-container">
+            <div className="billing-chart-y-axis">
+              <span>75</span>
+              <span>60</span>
+              <span>45</span>
+              <span>30</span>
+              <span>15</span>
+              <span>0</span>
+            </div>
+            <div className="billing-chart-y-label">Credits</div>
+            <div className="billing-chart-area">
+              {/* Grid lines */}
+              <div className="billing-chart-grid">
+                {[0, 1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="billing-chart-gridline"></div>
+                ))}
+              </div>
+              
+              {/* Today marker */}
+              <div className="billing-chart-today" style={{ left: `${(todayIndex / BILLING_CHART_DATA.length) * 100}%` }}>
+                <span className="billing-today-label">Today</span>
+                <div className="billing-today-line"></div>
+              </div>
+
+              {/* Forecast background */}
+              <div className="billing-chart-forecast-bg" style={{ left: `${(todayIndex / BILLING_CHART_DATA.length) * 100}%` }}></div>
+
+              {/* Bars */}
+              <div className="billing-chart-bars">
+                {BILLING_CHART_DATA.map((data, index) => {
+                  const isForecast = index >= todayIndex
+                  const total = data.contracted + data.onDemand + data.forecastContracted + data.forecastOnDemand
+                  const contractedHeight = (data.contracted / maxChartValue) * chartHeight
+                  const onDemandHeight = (data.onDemand / maxChartValue) * chartHeight
+                  const forecastContractedHeight = (data.forecastContracted / maxChartValue) * chartHeight
+                  const forecastOnDemandHeight = (data.forecastOnDemand / maxChartValue) * chartHeight
+                  
+                  return (
+                    <div key={data.month} className="billing-chart-bar-group">
+                      <div className="billing-chart-bar-stack" style={{ height: chartHeight }}>
+                        {/* Contracted (solid blue) */}
+                        {data.contracted > 0 && (
+                          <div 
+                            className="billing-bar billing-bar-contracted"
+                            style={{ height: contractedHeight }}
+                          ></div>
+                        )}
+                        {/* On-demand (solid orange) */}
+                        {data.onDemand > 0 && (
+                          <div 
+                            className="billing-bar billing-bar-ondemand"
+                            style={{ height: onDemandHeight, bottom: contractedHeight }}
+                          ></div>
+                        )}
+                        {/* Forecast contracted (striped blue) */}
+                        {data.forecastContracted > 0 && (
+                          <div 
+                            className="billing-bar billing-bar-forecast-contracted"
+                            style={{ height: forecastContractedHeight }}
+                          ></div>
+                        )}
+                        {/* Forecast on-demand (striped orange) */}
+                        {data.forecastOnDemand > 0 && (
+                          <div 
+                            className="billing-bar billing-bar-forecast-ondemand"
+                            style={{ height: forecastOnDemandHeight, bottom: forecastContractedHeight }}
+                          ></div>
+                        )}
+                      </div>
+                      <span className="billing-chart-bar-label">{data.month}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="billing-chart-x-label">July month</div>
+          </div>
+        </div>
+
+        {/* Resources List */}
+        <div className="billing-resources-section">
+          <div className="billing-resources-header">
+            <div className="billing-resources-title-row">
+              <h2 className="billing-resources-title">Resources List</h2>
+              <div className="billing-resources-actions">
+                <div className="billing-search">
+                  <IconFA name="search" size={14} />
+                  <input 
+                    type="text" 
+                    placeholder="Search..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <button className="billing-simulate-btn">
+                  <IconFA name="play" size={12} />
+                  <span>Simulate changes</span>
+                </button>
+              </div>
+            </div>
+            <div className="billing-resources-subtitle">
+              Active resources: 2 | Suspended resources: 1
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="billing-table-container">
+            <table className="billing-table">
+              <thead>
+                <tr>
+                  <th className="billing-th-checkbox">
+                    <input type="checkbox" />
+                  </th>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Edition</th>
+                  <th>Cloud</th>
+                  <th>Region</th>
+                  <th>Size</th>
+                  <th>Status</th>
+                  <th className="billing-th-right">Credit usage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {BILLING_RESOURCES_DATA.map(resource => (
+                  <tr key={resource.id}>
+                    <td className="billing-td-checkbox">
+                      <input type="checkbox" />
+                    </td>
+                    <td>
+                      <div className="billing-resource-name">
+                        <span className="billing-resource-primary">{resource.name}</span>
+                        <span className="billing-resource-secondary">{resource.subtitle}</span>
+                      </div>
+                    </td>
+                    <td>{resource.type}</td>
+                    <td>{resource.edition}</td>
+                    <td>{resource.cloud}</td>
+                    <td>{resource.region}</td>
+                    <td>{resource.size}</td>
+                    <td>
+                      <span className={`billing-status ${resource.status === 'Active' ? 'billing-status-active' : 'billing-status-suspended'}`}>
+                        {resource.status === 'Active' && <span className="billing-status-dot"></span>}
+                        {resource.status === 'Suspended' && <IconFA name="pause" size={10} />}
+                        {resource.status}
+                      </span>
+                    </td>
+                    <td className="billing-td-right">{resource.creditUsage}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -4453,6 +4966,13 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'play': '\uf04b',
     'table': '\uf0ce',
     'check-circle': '\uf058',
+    'browser': '\uf37e',
+    'microchip': '\uf2db',
+    'server': '\uf233',
+    'download': '\uf019',
+    'chart-column': '\ue0e3',
+    'pause': '\uf04c',
+    'credit-card': '\uf09d',
   }
   
   const weightClass = weight === 'solid' ? 'fa-solid' : weight === 'light' ? 'fa-light' : 'fa-regular'
@@ -4828,6 +5348,7 @@ const AURA_AGENTS = [
   { id: 'aura', name: 'Aura Agent', icon: 'sparkles' },
   { id: 'data-migration', name: 'Data Migration Agent', icon: 'database' },
   { id: 'query-tuning', name: 'Query Tuning Agent', icon: 'chart-line' },
+  { id: 'billing', name: 'Billing Agent', icon: 'credit-card' },
   { id: 'support', name: 'Support Agent', icon: 'circle-question' },
   { id: 'observability', name: 'Observability Agent', icon: 'chart-line' },
   { id: 'incident', name: 'Incident Agent', icon: 'warning' },
@@ -5199,7 +5720,9 @@ function AnimatedProgressCard({ content }) {
 
 function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange, onNewChat, queryTuningResult, queryTuningContext, onApplyQuery }) {
   const [isResizing, setIsResizing] = useState(false)
-  const [selectedAgent, setSelectedAgent] = useState(AURA_AGENTS[0])
+  const [selectedAgent, setSelectedAgent] = useState(() => 
+    AURA_AGENTS.find(a => a.name === agentName) || AURA_AGENTS[0]
+  )
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
   const [showConnections, setShowConnections] = useState(false)
   const [typedMessageIds, setTypedMessageIds] = useState(new Set())
@@ -6011,16 +6534,10 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
             <div className="aura-empty-icon">
               <IconFA name={selectedAgent.icon} size={32} />
             </div>
-            <h3>{agentName === 'Data Migration Agent' ? 'AI-Powered Migration Assistant' : 
-                 agentName === 'Query Tuning Agent' ? 'Query Optimization Assistant' : 
-                 'Aura AI Assistant'}</h3>
-            <p>{agentName === 'Data Migration Agent' ? 'I can help you migrate data from PostgreSQL, MySQL, Oracle, MongoDB, and more to SingleStore.' :
-                agentName === 'Query Tuning Agent' ? 'I can help you optimize queries, analyze execution plans, and improve database performance.' :
-                'I can help you monitor workspaces, analyze performance, and manage your SingleStore environment.'}</p>
+            <h3>{(AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).title}</h3>
+            <p>{(AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).description}</p>
             <div className="aura-suggested-prompts">
-              {(agentName === 'Data Migration Agent' ? MIGRATION_PROMPTS : 
-                agentName === 'Query Tuning Agent' ? QUERY_TUNING_PROMPTS : 
-                AURA_PROMPTS).map((prompt, i) => (
+              {(AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).prompts.map((prompt, i) => (
                 <button 
                   key={i} 
                   className="aura-prompt-chip"
@@ -6076,9 +6593,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
       <div className="aura-panel-input">
         <div className="aura-input-container">
           <textarea
-            placeholder={agentName === 'Data Migration Agent' ? 'Ask about data migration...' :
-                         agentName === 'Query Tuning Agent' ? 'Ask about query optimization...' :
-                         'Ask Aura anything...'}
+            placeholder={(AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).placeholder}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
