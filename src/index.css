@@ -1882,8 +1882,37 @@ body {
   color: var(--color-text-primary);
 }
 
+.section-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.query-what-happening {
+  margin-bottom: 14px;
+}
+
+.query-what-happening ul {
+  margin: 0;
+  padding-left: 18px;
+  list-style-type: disc;
+}
+
+.query-what-happening li {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.query-what-happening li:last-child {
+  margin-bottom: 0;
+}
+
 .query-recommendations {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .recommendations-label {

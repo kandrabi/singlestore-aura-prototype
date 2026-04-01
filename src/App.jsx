@@ -525,88 +525,97 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
       ui: { type: 'optimization-recommendations', state: 'placeholder' },
       optimizationQueries: [
         { 
-          name: 'analytics.user_funnel_daily', 
-          cpu: '38% CPU share', 
-          cpuType: 'critical', 
-          time: 'avg 4.2s', 
-          frequency: '96 runs/day', 
-          desc1: 'Full table scan across 90-day window, no partition pruning',
-          sql: `SELECT user_id, event_type, COUNT(*) as event_count
-FROM analytics.events
-WHERE event_date >= DATE_SUB(NOW(), INTERVAL 90 DAY)
-GROUP BY user_id, event_type
-ORDER BY event_count DESC;`,
+          name: 'InsertSelect_aws_cost_usage', 
+          badges: [
+            { label: '430 CPU-min', type: 'critical' },
+            { label: '9.4 TB memory', type: 'critical' },
+            { label: '694 GB network', type: 'warning' }
+          ],
+          summary: 'Heavy anti-join on target table causing massive memory + network shuffle.',
+          whatHappening: [
+            'Full scan + hash build on billing.aws_cost_usage',
+            'Cross-shard join causing large data movement'
+          ],
           recommendations: [
-            'Add partition pruning on event_date column',
-            'Create composite index on (user_id, event_type, event_date)',
-            'Consider pre-aggregating data into a summary table'
-          ]
+            'Replace anti-join with incremental load using ExtractedAt timestamp',
+            'Use NOT EXISTS instead of LEFT JOIN ... IS NULL',
+            'Add index on (hash_key, usage_month)',
+            'Batch by billing_period'
+          ],
+          cta: 'View query in Editor'
         },
         { 
-          name: 'analytics.user_funnel_weekly', 
-          cpu: '21% CPU share', 
-          cpuType: 'critical', 
-          time: 'avg 3.8s', 
-          frequency: '12 runs/week', 
-          desc1: 'Missing index on transaction_date column',
-          sql: `SELECT DATE(transaction_date) as day, SUM(amount) as total
-FROM analytics.transactions
-WHERE transaction_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-GROUP BY DATE(transaction_date);`,
+          name: 'Delete_aws_cost_usage', 
+          badges: [
+            { label: '309 CPU-min', type: 'critical' },
+            { label: '65 GB memory', type: 'warning' }
+          ],
+          summary: 'Large delete using anti-join pattern causing heavy scans + contention.',
+          whatHappening: [
+            'Scans metadata + joins against large table',
+            'Likely conflicting with INSERT workload'
+          ],
           recommendations: [
-            'Add index on transaction_date column',
-            'Use columnstore index for aggregation queries',
-            'Move to off-peak hours (2-4 AM)'
-          ]
+            'Run DELETE before INSERT (not concurrently)',
+            'Introduce tracking table for processed data',
+            'Batch deletes (LIMIT-based)',
+            'Schedule during off-peak hours'
+          ],
+          cta: 'View query in Editor'
         },
         { 
-          name: 'analytics.user_funnel_monthly', 
-          cpu: '12% CPU share', 
-          cpuType: 'warning', 
-          time: 'avg 3.5s', 
-          frequency: '240 runs/month', 
-          desc1: 'Cross-join causing cartesian product',
-          sql: `SELECT a.user_id, b.product_id, COUNT(*)
-FROM analytics.users a, analytics.products b
-WHERE a.region = b.region
-GROUP BY a.user_id, b.product_id;`,
+          name: 'Select_AwsCURMetadata', 
+          badges: [
+            { label: '144 CPU-min', type: 'warning' },
+            { label: '51 GB memory', type: 'warning' }
+          ],
+          summary: 'Redundant COUNT query duplicating DELETE logic.',
+          whatHappening: [
+            'Full scan just to count orphaned rows'
+          ],
           recommendations: [
-            'Rewrite implicit join as explicit INNER JOIN',
-            'Add WHERE clause to filter early',
-            'Consider using EXISTS instead of JOIN'
-          ]
+            'Remove this query entirely',
+            'Use EXISTS or LIMIT 1 for checks',
+            'Use ROW_COUNT() after DELETE instead'
+          ],
+          cta: 'View query in Editor'
         },
         { 
-          name: 'analytics.user_funnel_quarterly', 
-          cpu: '4% CPU share', 
-          cpuType: 'warning', 
-          time: 'avg 3.0s', 
-          frequency: '16 runs/quarter', 
-          desc1: 'Summary statistics with partitioning',
-          sql: `SELECT quarter, region, AVG(revenue) as avg_revenue
-FROM analytics.quarterly_stats
-GROUP BY quarter, region;`,
+          name: 'Select_sharedtierdatabases', 
+          badges: [
+            { label: '92 CPU-min', type: 'warning' },
+            { label: '5.6 TB memory', type: 'critical' },
+            { label: '4.7 TB cache miss', type: 'critical' }
+          ],
+          summary: 'Massive multi-join + CROSS JOIN causing extreme I/O + cache misses.',
+          whatHappening: [
+            '10+ table joins',
+            'Character set mismatch breaking indexes',
+            'CROSS JOIN inflating result size ~50x'
+          ],
           recommendations: [
-            'Query is already well-optimized',
-            'Consider caching results for dashboard use',
-            'No immediate action required'
-          ]
+            'Fix charset mismatches (critical)',
+            'Precompute aggregation into summary table',
+            'Remove CROSS JOIN unpivot (move to ETL/app layer)',
+            'Add time partitioning on Events.CreatedAt'
+          ],
+          cta: 'View query in Editor'
         },
         { 
-          name: 'analytics.user_funnel_yearly', 
-          cpu: '3% CPU share', 
-          cpuType: 'warning', 
-          time: 'avg 2.5s', 
-          frequency: '~11k runs/year', 
-          desc1: 'Snapshot analysis with historical data',
-          sql: `SELECT YEAR(created_at) as year, COUNT(*) as total_users
-FROM analytics.users
-GROUP BY YEAR(created_at);`,
+          name: 'InsertSelect_mxp_events', 
+          badges: [
+            { label: '34 CPU-min', type: 'neutral' },
+            { label: '107 GB disk spill', type: 'warning' }
+          ],
+          summary: 'Query spilling to disk due to large intermediate results.',
+          whatHappening: [
+            'Memory limit exceeded → disk spill'
+          ],
           recommendations: [
-            'Query performance is acceptable',
-            'Consider adding result caching',
-            'No optimization needed at this time'
-          ]
+            'Increase memory per query OR use larger resource pool',
+            'Break into smaller batches'
+          ],
+          cta: 'View query in Editor'
         }
       ]
     }
@@ -3497,12 +3506,12 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                             <div className="query-card-left">
                               <span className="query-name">{query.name}</span>
                               <div className="query-badges">
-                                <span className={`badge ${query.cpuType}`}>{query.cpu}</span>
-                                <span className="badge warning">{query.time}</span>
-                                <span className="badge neutral">{query.frequency}</span>
+                                {query.badges.map((badge, j) => (
+                                  <span key={j} className={`badge ${badge.type}`}>{badge.label}</span>
+                                ))}
                               </div>
                               <div className="query-description">
-                                <span>{query.desc1}</span>
+                                <span>{query.summary}</span>
                               </div>
                             </div>
                             <div className="query-card-chevron">
@@ -3511,14 +3520,19 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                           </div>
                           <div className={`query-card-details ${isExpanded ? 'show' : ''}`}>
                             <div className="query-card-details-inner">
-                              {query.sql && (
-                                <div className="query-sql-block">
-                                  <pre><code>{query.sql}</code></pre>
+                              {query.whatHappening && (
+                                <div className="query-what-happening">
+                                  <span className="section-label">What's happening:</span>
+                                  <ul>
+                                    {query.whatHappening.map((item, j) => (
+                                      <li key={j}>{item}</li>
+                                    ))}
+                                  </ul>
                                 </div>
                               )}
                               {query.recommendations && (
                                 <div className="query-recommendations">
-                                  <span className="recommendations-label">Optimization recommendations:</span>
+                                  <span className="section-label">Recommendations:</span>
                                   <ul>
                                     {query.recommendations.map((rec, j) => (
                                       <li key={j}>{rec}</li>
@@ -3527,8 +3541,8 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                                 </div>
                               )}
                               <button className="query-apply-btn" onClick={(e) => { e.stopPropagation(); }}>
-                                <IconFA name="bolt" size={12} />
-                                <span>Apply optimization</span>
+                                <IconFA name="arrow-up-right-from-square" size={12} />
+                                <span>{query.cta || 'View query in Editor'}</span>
                               </button>
                             </div>
                           </div>
