@@ -3711,10 +3711,10 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                                     {query.recommendations.map((rec, j) => (
                                       <div key={j} className="recommendation-item">
                                         {typeof rec === 'string' ? (
-                                          <p className="recommendation-text">{rec}</p>
+                                          <p className="recommendation-text"><span className="recommendation-number">{j + 1}.</span> {rec}</p>
                                         ) : (
                                           <>
-                                            <h4 className="recommendation-title">{rec.title}</h4>
+                                            <h4 className="recommendation-title"><span className="recommendation-number">{j + 1}.</span> {rec.title}</h4>
                                             <p className="recommendation-description">{rec.description}</p>
                                             {rec.code && (
                                               <pre className="recommendation-code"><code>{rec.code}</code></pre>

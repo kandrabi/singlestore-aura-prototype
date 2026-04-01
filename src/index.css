@@ -1953,6 +1953,11 @@ body {
   gap: 0;
 }
 
+.recommendation-number {
+  color: var(--color-text-tertiary, #999);
+  font-weight: 600;
+}
+
 .recommendation-title {
   font-size: var(--font-size-sm);
   font-weight: 600;
