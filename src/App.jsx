@@ -542,13 +542,112 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
             'Add index on (hash_key, usage_month)',
             'Batch by billing_period'
           ],
-          sql: `INSERT INTO billing.aws_cost_usage (hash_key, usage_month, cost, usage_type)
-SELECT s.hash_key, s.usage_month, s.cost, s.usage_type
-FROM staging.aws_cost_raw s
-LEFT JOIN billing.aws_cost_usage t 
-  ON s.hash_key = t.hash_key 
-  AND s.usage_month = t.usage_month
-WHERE t.hash_key IS NULL;`,
+          sql: `INSERT INTO billing.aws_cost_usage (
+   assembly_id,
+   billing_period,
+   hash_key,
+   csp_account_id,
+   account_name,
+   amortized_cost,
+   csp_sku_id,
+   effective_cost,
+   instance_type,
+   line_item_type,
+   operation,
+   product_code,
+   product_name,
+   region,
+   reservation_arn,
+   resource_id,
+   savings_plan_effective_cost,
+   service_code,
+   total_commitment_to_date,
+   unblended_cost,
+   unused_amortized_upfront_fee,
+   unused_recurring_fee,
+   usage_day,
+   usage_end_date,
+   usage_month,
+   usage_start_date,
+   usage_year,
+   usage_type,
+   used_commitment,
+   refreshed_at,
+   usage_amount,
+   pricing_unit,
+   resource_tags,
+   sku_hash
+)
+SELECT
+   TO_CHAR(a.ExtractedAt, 'YYYYMMDDTHH24MISSZ') AS assembly_id,
+   CONCAT(
+       TO_CHAR(a.BillingPeriod, 'YYYYMMDD'),
+       '-',
+       TO_CHAR(DATE_ADD(a.BillingPeriod, INTERVAL 1 MONTH), 'YYYYMMDD')
+   ) AS billing_period,
+   a.HashKey AS hash_key,
+   a.CspAccountID AS csp_account_id,
+   a.CspAccountName AS account_name,
+   COALESCE(
+       CASE
+           WHEN a.LineItemType = 'SavingsPlanCoveredUsage'
+               THEN a.SavingsPlanEffectiveCost
+           WHEN a.LineItemType = 'SavingsPlanRecurringFee'
+               THEN (a.TotalCommitmentToDate - a.UsedCommitment)
+           WHEN a.LineItemType IN ('SavingsPlanNegation', 'SavingsPlanUpfrontFee')
+               THEN 0
+           WHEN a.LineItemType = 'DiscountedUsage'
+               THEN a.EffectiveCost
+           WHEN a.LineItemType = 'RIFee'
+               THEN (a.UnusedAmortizedUpfrontFee + a.UnusedRecurringFee)
+           WHEN (a.LineItemType = 'Fee' AND a.ReservationArn != '')
+               THEN 0
+           ELSE a.UnblendedCost
+       END,
+       0
+   ) AS amortized_cost,
+   csd.sku_id AS csp_sku_id,
+   a.EffectiveCost AS effective_cost,
+   a.InstanceType AS instance_type,
+   a.LineItemType AS line_item_type,
+   a.Operation AS operation,
+   a.ProductCode AS product_code,
+   JSON_EXTRACT_STRING(a.Product, 'product_name') AS product_name,
+   JSON_EXTRACT_STRING(a.Product, 'region') AS region,
+   a.ReservationArn AS reservation_arn,
+   a.ResourceID AS resource_id,
+   a.SavingsPlanEffectiveCost AS savings_plan_effective_cost,
+   a.ProductServicecode AS service_code,
+   a.TotalCommitmentToDate AS total_commitment_to_date,
+   a.UnblendedCost AS unblended_cost,
+   a.UnusedAmortizedUpfrontFee AS unused_amortized_upfront_fee,
+   a.UnusedRecurringFee AS unused_recurring_fee,
+   a.UsageDay AS usage_day,
+   a.UsageEndDate AS usage_end_date,
+   a.UsageMonth AS usage_month,
+   a.UsageStartDate AS usage_start_date,
+   a.UsageYear AS usage_year,
+   a.UsageType AS usage_type,
+   a.UsedCommitment AS used_commitment,
+   CURRENT_TIMESTAMP() AS refreshed_at,
+   a.LineItemUsageAmount AS usage_amount,
+   a.PricingUnit AS pricing_unit,
+   IF(JSON_LENGTH(a.ResourceTags) > 0, a.ResourceTags, NULL) AS resource_tags,
+   a.SkuHash AS sku_hash
+FROM csp.AwsCostAndUsageV2 AS a
+LEFT OUTER JOIN (
+   SELECT acu.hash_key
+   FROM billing.aws_cost_usage AS acu
+   WHERE acu.usage_month >= 202510
+   GROUP BY acu.hash_key
+) AS acu
+   ON a.HashKey = acu.hash_key
+LEFT OUTER JOIN billing.csp_sku_details AS csd
+   ON a.ProductCode = csd.sku_name
+   AND a.LineItemType = csd.sku_type
+   AND a.UsageType = csd.sku_subset
+   AND csd.csp = 'aws'
+WHERE acu.hash_key IS NULL;`,
           cta: 'View query in Editor'
         },
         { 
