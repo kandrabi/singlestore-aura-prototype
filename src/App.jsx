@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Editor, { DiffEditor } from '@monaco-editor/react'
 import './index.css'
+import { BillingPage } from './components/billing'
 
 // Logo assets from Figma
 const LOGO_MONGODB = "https://www.figma.com/api/mcp/asset/9ce333e3-b5f6-4278-ba24-5c403554f35d"
@@ -2040,6 +2041,8 @@ function App() {
         return <WorkspacesView />
       case 'editor':
         return <EditorView onOpenAura={handleOpenAuraPanel} pendingEditorQuery={pendingEditorQuery} onClearPendingQuery={() => setPendingEditorQuery(null)} />
+      case 'billing':
+        return <BillingPage />
       default:
         return null
     }
@@ -2227,7 +2230,7 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
               
               <div className="user-dropdown-divider" />
               
-              <button className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+              <button className="user-dropdown-item" onClick={() => { setUserMenuOpen(false); onNavigate('billing'); }}>
                 Billing & Usage
               </button>
               <button className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
