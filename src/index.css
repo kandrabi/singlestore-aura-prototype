@@ -7596,7 +7596,7 @@ body {
 .billing-filters {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 24px;
   gap: 16px;
 }
@@ -7654,6 +7654,7 @@ body {
   color: #4C4A57;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .billing-download-btn:hover {
@@ -7752,6 +7753,7 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  gap: 12px;
 }
 
 .billing-card-title {
@@ -7761,6 +7763,7 @@ body {
   font-size: 14px;
   font-weight: 500;
   color: #4C4A57;
+  flex-shrink: 0;
 }
 
 .billing-card-title .fa-icon {
@@ -7772,6 +7775,11 @@ body {
   font-weight: 500;
   padding: 4px 8px;
   border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  flex-shrink: 0;
 }
 
 .billing-card-badge-warning {
