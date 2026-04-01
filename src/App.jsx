@@ -5878,20 +5878,31 @@ function EditorView({ onOpenAura, pendingEditorQuery, onClearPendingQuery }) {
   const selectionRangeRef = useRef(null)
   const lockedSelectionRef = useRef(null) // Preserved selection for optimization session
   const diffEditorRef = useRef(null)
+  const processedQueryRef = useRef(null) // Track processed query to prevent duplicates
   
   // Handle pending editor query from Aura panel
   useEffect(() => {
-    if (pendingEditorQuery) {
-      const newTabId = `tab-${Date.now()}`
-      const newTab = {
-        id: newTabId,
-        name: `${pendingEditorQuery.title}.sql`,
-        query: pendingEditorQuery.query
-      }
-      setEditorTabs(prev => [...prev, newTab])
-      setActiveEditorTab(newTabId)
-      onClearPendingQuery?.()
+    if (!pendingEditorQuery) return
+    
+    // Prevent duplicate processing by checking if we've already processed this exact query
+    const queryKey = `${pendingEditorQuery.title}-${pendingEditorQuery.query}`
+    if (processedQueryRef.current === queryKey) return
+    processedQueryRef.current = queryKey
+    
+    const newTabId = `tab-${Date.now()}`
+    const newTab = {
+      id: newTabId,
+      name: `${pendingEditorQuery.title}.sql`,
+      query: pendingEditorQuery.query
     }
+    setEditorTabs(prev => [...prev, newTab])
+    setActiveEditorTab(newTabId)
+    onClearPendingQuery?.()
+    
+    // Reset the processed query ref after a short delay to allow for future queries
+    setTimeout(() => {
+      processedQueryRef.current = null
+    }, 100)
   }, [pendingEditorQuery, onClearPendingQuery])
 
   // [AI_HOOK] Get the currently selected query text
