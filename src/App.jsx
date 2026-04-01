@@ -542,6 +542,13 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
             'Add index on (hash_key, usage_month)',
             'Batch by billing_period'
           ],
+          sql: `INSERT INTO billing.aws_cost_usage (hash_key, usage_month, cost, usage_type)
+SELECT s.hash_key, s.usage_month, s.cost, s.usage_type
+FROM staging.aws_cost_raw s
+LEFT JOIN billing.aws_cost_usage t 
+  ON s.hash_key = t.hash_key 
+  AND s.usage_month = t.usage_month
+WHERE t.hash_key IS NULL;`,
           cta: 'View query in Editor'
         },
         { 
@@ -561,6 +568,14 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
             'Batch deletes (LIMIT-based)',
             'Schedule during off-peak hours'
           ],
+          sql: `DELETE FROM billing.aws_cost_usage
+WHERE (hash_key, usage_month) IN (
+  SELECT c.hash_key, c.usage_month
+  FROM billing.aws_cost_usage c
+  LEFT JOIN billing.aws_cur_metadata m
+    ON c.billing_period = m.billing_period
+  WHERE m.billing_period IS NULL
+);`,
           cta: 'View query in Editor'
         },
         { 
@@ -578,6 +593,11 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
             'Use EXISTS or LIMIT 1 for checks',
             'Use ROW_COUNT() after DELETE instead'
           ],
+          sql: `SELECT COUNT(*) as orphaned_count
+FROM billing.aws_cost_usage c
+LEFT JOIN billing.aws_cur_metadata m
+  ON c.billing_period = m.billing_period
+WHERE m.billing_period IS NULL;`,
           cta: 'View query in Editor'
         },
         { 
@@ -599,6 +619,18 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
             'Remove CROSS JOIN unpivot (move to ETL/app layer)',
             'Add time partitioning on Events.CreatedAt'
           ],
+          sql: `SELECT 
+  d.DatabaseName, d.Tier, o.OrgName,
+  e.EventType, e.EventCount, e.CreatedAt
+FROM SharedTierDatabases d
+JOIN Organizations o ON d.OrgID = o.OrgID
+JOIN Events e ON d.DatabaseID = e.DatabaseID
+CROSS JOIN (
+  SELECT 'Read' as MetricType UNION ALL
+  SELECT 'Write' UNION ALL
+  SELECT 'Delete'
+) metrics
+WHERE e.CreatedAt >= DATE_SUB(NOW(), INTERVAL 30 DAY);`,
           cta: 'View query in Editor'
         },
         { 
@@ -615,6 +647,13 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
             'Increase memory per query OR use larger resource pool',
             'Break into smaller batches'
           ],
+          sql: `INSERT INTO analytics.mxp_events_processed
+SELECT 
+  event_id, user_id, event_type,
+  properties, timestamp, processed_at
+FROM staging.mxp_events_raw
+WHERE processed_at IS NULL
+ORDER BY timestamp;`,
           cta: 'View query in Editor'
         }
       ]
@@ -1190,6 +1229,8 @@ function App() {
   const [queryTuningResult, setQueryTuningResult] = useState(null)
   const [queryTuningContext, setQueryTuningContext] = useState(null)
   const applyQueryRef = useRef(null) // Callback to apply query to editor
+  // Editor tab management - for opening queries from Aura
+  const [pendingEditorQuery, setPendingEditorQuery] = useState(null)
   const chatEndRef = useRef(null)
   const auraChatEndRef = useRef(null)
 
@@ -1550,6 +1591,16 @@ function App() {
   }
 
   const handleAuraAction = (action) => {
+    // Handle structured actions with type
+    if (typeof action === 'object' && action.type === 'open-query-in-editor') {
+      const { title, query } = action.payload || {}
+      // Set pending query for EditorView to pick up
+      setPendingEditorQuery({ title: title || 'Optimized Query', query: query || '' })
+      // Navigate to editor - this will automatically move chat to side panel
+      handleNavigate('editor')
+      return
+    }
+    
     const actionText = typeof action === 'string' ? action : action.text
     setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text: actionText, timestamp: new Date() }])
     
@@ -1875,7 +1926,7 @@ function App() {
       case 'workspaces':
         return <WorkspacesView />
       case 'editor':
-        return <EditorView onOpenAura={handleOpenAuraPanel} />
+        return <EditorView onOpenAura={handleOpenAuraPanel} pendingEditorQuery={pendingEditorQuery} onClearPendingQuery={() => setPendingEditorQuery(null)} />
       default:
         return null
     }
@@ -3540,7 +3591,19 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                                   </ul>
                                 </div>
                               )}
-                              <button className="query-apply-btn" onClick={(e) => { e.stopPropagation(); }}>
+                              <button 
+                                className="query-apply-btn" 
+                                onClick={(e) => { 
+                                  e.stopPropagation()
+                                  onAction({
+                                    type: 'open-query-in-editor',
+                                    payload: {
+                                      title: query.name,
+                                      query: query.sql || ''
+                                    }
+                                  })
+                                }}
+                              >
                                 <IconFA name="arrow-up-right-from-square" size={12} />
                                 <span>{query.cta || 'View query in Editor'}</span>
                               </button>
@@ -5779,14 +5842,30 @@ const SAMPLE_QUERY_HISTORY = [
   { id: 3, query: "SELECT 1", duration: 120, status: 'success', time: '2 min ago' },
 ]
 
-function EditorView({ onOpenAura }) {
+function EditorView({ onOpenAura, pendingEditorQuery, onClearPendingQuery }) {
+  // Tab management state
+  const [editorTabs, setEditorTabs] = useState([
+    { id: 'tab-1', name: 'untitled query-1.sql', query: SAMPLE_QUERY }
+  ])
+  const [activeEditorTab, setActiveEditorTab] = useState('tab-1')
+  
+  // Get the current tab's query
+  const currentTab = editorTabs.find(t => t.id === activeEditorTab) || editorTabs[0]
+  const query = currentTab?.query || ''
+  
+  // Update query for current tab
+  const setQuery = (newQuery) => {
+    setEditorTabs(prev => prev.map(tab => 
+      tab.id === activeEditorTab ? { ...tab, query: newQuery } : tab
+    ))
+  }
+  
   // Editor state
-  const [query, setQuery] = useState(SAMPLE_QUERY)
   const [selectedQuery, setSelectedQuery] = useState('')
   const [selectionPosition, setSelectionPosition] = useState(null)
   const [queryHistory, setQueryHistory] = useState(SAMPLE_QUERY_HISTORY)
   const [isRunning, setIsRunning] = useState(false)
-  const [activeTab, setActiveTab] = useState('logs')
+  const [activeResultTab, setActiveResultTab] = useState('logs')
   
   // Diff view state
   const [showDiff, setShowDiff] = useState(false)
@@ -5799,6 +5878,21 @@ function EditorView({ onOpenAura }) {
   const selectionRangeRef = useRef(null)
   const lockedSelectionRef = useRef(null) // Preserved selection for optimization session
   const diffEditorRef = useRef(null)
+  
+  // Handle pending editor query from Aura panel
+  useEffect(() => {
+    if (pendingEditorQuery) {
+      const newTabId = `tab-${Date.now()}`
+      const newTab = {
+        id: newTabId,
+        name: `${pendingEditorQuery.title}.sql`,
+        query: pendingEditorQuery.query
+      }
+      setEditorTabs(prev => [...prev, newTab])
+      setActiveEditorTab(newTabId)
+      onClearPendingQuery?.()
+    }
+  }, [pendingEditorQuery, onClearPendingQuery])
 
   // [AI_HOOK] Get the currently selected query text
   const getSelectedQuery = () => selectedQuery
@@ -6045,12 +6139,38 @@ function EditorView({ onOpenAura }) {
                 <IconFA name="folder" size={14} />
                 <span>My files</span>
               </button>
-              <button className="editor-tab active">
-                <IconFA name="database" size={14} />
-                <span>untitled query-1.sql</span>
-                <span className="editor-tab-close">×</span>
-              </button>
-              <button className="editor-tab-add">+</button>
+              {editorTabs.map(tab => (
+                <button 
+                  key={tab.id}
+                  className={`editor-tab ${activeEditorTab === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveEditorTab(tab.id)}
+                >
+                  <IconFA name="database" size={14} />
+                  <span>{tab.name}</span>
+                  {editorTabs.length > 1 && (
+                    <span 
+                      className="editor-tab-close" 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const remaining = editorTabs.filter(t => t.id !== tab.id)
+                        setEditorTabs(remaining)
+                        if (activeEditorTab === tab.id && remaining.length > 0) {
+                          setActiveEditorTab(remaining[0].id)
+                        }
+                      }}
+                    >×</span>
+                  )}
+                </button>
+              ))}
+              <button 
+                className="editor-tab-add"
+                onClick={() => {
+                  const newId = `tab-${Date.now()}`
+                  const tabNum = editorTabs.length + 1
+                  setEditorTabs(prev => [...prev, { id: newId, name: `untitled query-${tabNum}.sql`, query: '' }])
+                  setActiveEditorTab(newId)
+                }}
+              >+</button>
             </div>
           </div>
         </div>
@@ -6223,16 +6343,16 @@ function EditorView({ onOpenAura }) {
           <div className="results-panel">
             <div className="results-tabs">
               <button 
-                className={`results-tab ${activeTab === 'logs' ? 'active' : ''}`}
-                onClick={() => setActiveTab('logs')}
+                className={`results-tab ${activeResultTab === 'logs' ? 'active' : ''}`}
+                onClick={() => setActiveResultTab('logs')}
               >
                 <span>Message Logs</span>
               </button>
               {queryHistory.slice(0, 3).map((item, index) => (
                 <button 
                   key={item.id}
-                  className={`results-tab ${activeTab === `result-${index}` ? 'active' : ''}`}
-                  onClick={() => setActiveTab(`result-${index}`)}
+                  className={`results-tab ${activeResultTab === `result-${index}` ? 'active' : ''}`}
+                  onClick={() => setActiveResultTab(`result-${index}`)}
                 >
                   <IconFA name="table" size={12} />
                   <span>{item.query.substring(0, 12)}...</span>
@@ -6245,7 +6365,7 @@ function EditorView({ onOpenAura }) {
             </div>
 
             <div className="results-content">
-              {activeTab === 'logs' ? (
+              {activeResultTab === 'logs' ? (
                 queryHistory.length > 0 ? (
                   <table className="results-table">
                     <thead>
