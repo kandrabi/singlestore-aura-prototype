@@ -1944,7 +1944,7 @@ body {
 .recommendations-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .recommendation-item {
@@ -1954,8 +1954,8 @@ body {
 }
 
 .recommendation-number {
-  color: var(--color-text-tertiary, #999);
-  font-weight: 600;
+  color: var(--color-text-secondary, #666);
+  margin-right: 6px;
 }
 
 .recommendation-title {
@@ -3520,7 +3520,7 @@ body {
 }
 
 .aura-panel-messages .recommendations-list {
-  gap: 16px;
+  gap: 14px;
 }
 
 .aura-panel-messages .recommendation-title {
