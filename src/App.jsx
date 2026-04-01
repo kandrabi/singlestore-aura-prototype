@@ -537,10 +537,34 @@ const CPU_SPIKE_INVESTIGATION_V2_FLOW = [
             'Cross-shard join causing large data movement'
           ],
           recommendations: [
-            'Replace anti-join with incremental load using ExtractedAt timestamp',
-            'Use NOT EXISTS instead of LEFT JOIN ... IS NULL',
-            'Add index on (hash_key, usage_month)',
-            'Batch by billing_period'
+            {
+              title: 'Use incremental load instead of anti-join',
+              description: 'Instead of scanning the entire table, process only new records.',
+              code: `-- Instead of:
+LEFT JOIN billing.aws_cost_usage acu ...
+WHERE acu.hash_key IS NULL
+
+-- Use:
+WHERE a.ExtractedAt > <last_loaded_timestamp>`
+            },
+            {
+              title: 'Use NOT EXISTS instead of LEFT JOIN',
+              description: 'Improves performance by avoiding full join materialization.',
+              code: `WHERE NOT EXISTS (
+  SELECT 1
+  FROM billing.aws_cost_usage acu
+  WHERE acu.hash_key = a.HashKey
+    AND acu.usage_month >= @usage_month
+)`
+            },
+            {
+              title: 'Add composite index',
+              description: 'Avoid full table scans on billing.aws_cost_usage. Add index on (hash_key, usage_month) or (usage_month, hash_key).'
+            },
+            {
+              title: 'Partition load by billing_period',
+              description: 'Break large INSERT into smaller batches by billing_period to reduce peak memory and improve concurrency.'
+            }
           ],
           sql: `INSERT INTO billing.aws_cost_usage (
    assembly_id,
@@ -3683,11 +3707,23 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                               {query.recommendations && (
                                 <div className="query-recommendations">
                                   <span className="section-label">Recommendations:</span>
-                                  <ul>
+                                  <div className="recommendations-list">
                                     {query.recommendations.map((rec, j) => (
-                                      <li key={j}>{rec}</li>
+                                      <div key={j} className="recommendation-item">
+                                        {typeof rec === 'string' ? (
+                                          <p className="recommendation-text">{rec}</p>
+                                        ) : (
+                                          <>
+                                            <h4 className="recommendation-title">{rec.title}</h4>
+                                            <p className="recommendation-description">{rec.description}</p>
+                                            {rec.code && (
+                                              <pre className="recommendation-code"><code>{rec.code}</code></pre>
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
                                     ))}
-                                  </ul>
+                                  </div>
                                 </div>
                               )}
                               <button 
