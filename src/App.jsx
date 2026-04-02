@@ -259,7 +259,7 @@ const ALERTS = [
     title: 'Workspace prod-analytics is at 80% capacity',
     severity: 'high',
     description: 'Memory utilization has been above 80% for the last 10 minutes.',
-    extra: 'Recommended size: S4 (currently S2).',
+    extra: 'Recommended size: S-224 (currently S-160).',
     action: 'Review size recommendation'
   },
   {
@@ -1288,14 +1288,14 @@ const CHAT_FLOW = [
       recommendation: {
         label: 'RECOMMENDED',
         title: 'Resize workspace',
-        badge: 'S2 → S4',
-        impact: ['Reduce latency by 35–50%', 'Eliminate query queueing during peak'],
-        cost: '4,380 CR/ month'
+        badge: 'S-160 → S-224',
+        impact: ['Reduce latency by 35–50%', 'Eliminate query queueing during peak', 'Increase concurrency capacity by ~40%'],
+        cost: '+46,000 CR / month'
       },
       why: [
-        'Current workload exceeds S2 capacity consistently',
-        'S4 provides enough headroom without over-provisioning',
-        'S8 would increase cost without meaningful performance gains'
+        'Current workload exceeds S-160 capacity during peak hours',
+        'S-224 provides headroom without over-provisioning',
+        'S-288 is unnecessary for current load'
       ],
       actions: ['Suggest alternate options', 'Apply resize']
     }
@@ -1407,7 +1407,7 @@ GROUP BY YEAR(created_at);`,
   {
     type: 'agent',
     content: {
-      text: [{ type: 'mixed', content: "You're about to resize prod-analytics from ", bold: 'S2 → S4', after: '. This will increase compute capacity and may take a few minutes to complete.' }],
+      text: [{ type: 'mixed', content: "You're about to resize prod-analytics from ", bold: 'S-160 → S-224', after: '. This will increase compute capacity and may take a few minutes to complete.' }],
       actions: ['Cancel', 'Confirm']
     }
   },
@@ -1430,7 +1430,7 @@ GROUP BY YEAR(created_at);`,
       success: true,
       title: 'Resize complete',
       details: [
-        { type: 'text', content: 'Workspace prod-analytics is now running at S4.' },
+        { type: 'text', content: 'Workspace prod-analytics is now running at S-224.' },
         { type: 'mixed', content: 'Latency improved by ', bold: '~18%', after: ' in the last few minutes.' }
       ]
     }
@@ -4235,7 +4235,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
 
         {content.why && (!isTyping || paragraphsCompleted) && (
           <div className="why-section fade-in">
-            <h4>Why S4?</h4>
+            <h4>Why S-224?</h4>
             <ul>
               {content.why.map((item, i) => (
                 <li key={i}>{item}</li>
@@ -4317,13 +4317,15 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
               <div className="options-grid">
                 {content.options.map((option, i) => (
                   <div key={i} className="option-card">
+                    <div className="option-icon">
+                      <IconFA name={option.icon} />
+                    </div>
                     <div className="option-card-content">
-                      <div className="option-icon">
-                        <IconFA name={option.icon} />
+                      <div className="option-card-header">
+                        <span className="option-title">{option.title}</span>
+                        <span className={`badge ${option.impactType}`}>{option.impact}</span>
                       </div>
-                      <span className="option-title">{option.title}</span>
                       <p className="option-description">{option.description}</p>
-                      <span className={`badge ${option.impactType}`}>{option.impact}</span>
                     </div>
                   </div>
                 ))}
@@ -6684,7 +6686,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
 
         {allDone && content.why && (
           <div className="why-section aura-fade-in">
-            <h4>Why S4?</h4>
+            <h4>Why S-224?</h4>
             <ul>
               {content.why.map((item, i) => (
                 <li key={i}>{item}</li>
@@ -6763,13 +6765,15 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
             <div className="options-grid">
               {content.options.map((option, i) => (
                 <div key={i} className="option-card">
+                  <div className="option-icon">
+                    <IconFA name={option.icon} />
+                  </div>
                   <div className="option-card-content">
-                    <div className="option-icon">
-                      <IconFA name={option.icon} />
+                    <div className="option-card-header">
+                      <span className="option-title">{option.title}</span>
+                      <span className={`badge ${option.impactType}`}>{option.impact}</span>
                     </div>
-                    <span className="option-title">{option.title}</span>
                     <p className="option-description">{option.description}</p>
-                    <span className={`badge ${option.impactType}`}>{option.impact}</span>
                   </div>
                 </div>
               ))}

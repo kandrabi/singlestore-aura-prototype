@@ -1749,8 +1749,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 102px;
-  padding: 4px 12px;
+  width: fit-content;
+  padding: 4px 16px;
   background: var(--color-bg-surface-brand);
   border-radius: var(--border-radius-md);
   font-size: var(--font-size-lg);
@@ -2131,52 +2131,84 @@ body {
 /* Options Grid */
 .options-grid {
   display: flex;
-  gap: 16px;
-  width: 100%;
+  flex-direction: column;
+  gap: 0;
+  margin-left: 22px;
+  border: 1px solid #E6E5EA;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .option-card {
-  flex: 1;
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--border-radius-md);
-  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #F0F0F0;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.option-card:last-child {
+  border-bottom: none;
+}
+
+.option-card:hover {
+  background: #FAFAFA;
 }
 
 .option-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.option-card-header {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
+  margin-bottom: 4px;
+}
+
+.option-card-header .badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: #EDEDED;
+  color: #4C4C4C;
+  border-radius: 4px;
+}
+
+.option-card-header .badge.positive,
+.option-card-header .badge.warning,
+.option-card-header .badge.neutral {
+  background: #EDEDED;
+  color: #4C4C4C;
 }
 
 .option-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--border-radius-md);
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg-surface-brand);
-  border: 1px solid var(--color-brand-7);
-  color: var(--color-icon-secondary);
-  font-size: var(--font-size-sm);
+  color: #666666;
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .option-title {
-  font-size: var(--font-size-md);
-  font-weight: 700;
-  color: var(--color-text-primary);
-  line-height: 1.5;
-  letter-spacing: 0.28px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #191919;
+  line-height: 1.4;
 }
 
 .option-description {
-  font-size: var(--font-size-md);
-  color: var(--color-text-primary);
-  line-height: 1.5;
-  letter-spacing: 0.28px;
-  height: 63px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 12px;
+  color: #666666;
+  line-height: 1.4;
+  margin: 0;
 }
 
 /* Progress Card */
@@ -3646,13 +3678,8 @@ body {
 }
 
 /* Scale down options grid in side panel */
-.aura-panel-messages .options-grid {
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
 .aura-panel-messages .option-card {
-  padding: 10px;
+  padding: 12px;
 }
 
 /* Scale down table in side panel */
