@@ -796,13 +796,13 @@ const QUERY_TUNING_PROMPTS = [
 ]
 
 const BILLING_PROMPTS = [
+  'Diagnose credit burn in last 3 months',
   'Why am I exceeding my credits?',
   'Show workspaces driving the most cost',
-  'How can I reduce on-demand usage?',
-  'Diagnose credit burn in last 3 months'
+  'How can I reduce on-demand usage?'
 ]
 
-// Billing Agent Conversation Flow
+// Support Agent (Billing) Conversation Flow
 const BILLING_CHAT_FLOW = [
   // Message 1: Acknowledge + show usage data
   {
@@ -899,17 +899,11 @@ const AGENT_CONFIG = {
     prompts: QUERY_TUNING_PROMPTS,
     placeholder: 'Ask about query optimization...'
   },
-  'Billing Agent': {
-    title: 'Billing & Usage Advisor',
+  'Support Agent': {
+    title: 'Support Agent — Billing & Usage',
     description: 'I can help you monitor credit usage, prevent overages, and optimize compute costs across your workspaces.',
     prompts: BILLING_PROMPTS,
     placeholder: 'Ask about billing, usage, or cost optimization...'
-  },
-  'Support Agent': {
-    title: 'Support Assistant',
-    description: 'I can help you troubleshoot issues, find documentation, and connect you with support resources.',
-    prompts: AURA_PROMPTS,
-    placeholder: 'Describe your issue...'
   },
   'Observability Agent': {
     title: 'Observability Assistant',
@@ -1533,7 +1527,7 @@ function App() {
       case 'editor':
         return 'Query Tuning Agent'
       case 'billing':
-        return 'Billing Agent'
+        return 'Support Agent'
       default:
         return 'Aura Agent'
     }
@@ -1585,7 +1579,7 @@ function App() {
       return
     }
     
-    // Priority 2: If a specific agent is explicitly requested (e.g., Billing Agent)
+    // Priority 2: If a specific agent is explicitly requested (e.g., Support Agent)
     if (agent) {
       console.log('[OPEN_PANEL] Explicit agent requested:', agent)
       setAuraPanelAgentName(agent)
@@ -1761,7 +1755,7 @@ function App() {
     }, 1000)
   }
 
-  // Billing Agent flow message handler
+  // Support Agent billing flow message handler
   const addNextBillingMessage = (messageIndex, branch = null) => {
     let message
     
@@ -1832,7 +1826,7 @@ function App() {
     if (!text.trim()) return
     
     // Check for billing flow trigger FIRST and return immediately
-    if (auraPanelAgentName === 'Billing Agent' && isBillingFlowTrigger(text)) {
+    if (auraPanelAgentName === 'Support Agent' && isBillingFlowTrigger(text)) {
       handleBillingCreditBurnFlow(text)
       return // IMPORTANT: Stop here, don't continue
     }
@@ -1988,8 +1982,8 @@ function App() {
         // Fallback for unhandled actions
         handleTriggerAction(actionText)
       }
-    } else if (auraPanelFlow === 'billing' || auraPanelAgentName === 'Billing Agent') {
-      // Handle Billing Agent flow actions
+    } else if (auraPanelFlow === 'billing' || auraPanelAgentName === 'Support Agent') {
+      // Handle Support Agent billing flow actions
       if (actionText === "What's driving the increase?") {
         // Show drivers analysis, then will show recommendations
         setTimeout(() => addNextBillingMessage(1, 'drivers'), 500)
@@ -2676,16 +2670,6 @@ const INITIAL_NOTIFICATIONS = [
     unread: true
   },
   {
-    id: 1,
-    type: 'alert',
-    icon: 'chart-line',
-    title: 'CPU spike detected',
-    message: 'Cluster 1b5e7b2d-5fdc-459a-b413-940377dc8c06 experienced high CPU usage',
-    time: 'Today at 04:12 AM',
-    action: 'Click here to investigate',
-    unread: true
-  },
-  {
     id: 2,
     type: 'warning',
     icon: 'database',
@@ -3130,7 +3114,7 @@ function BillingPage({ onOpenAura }) {
             </div>
             <button 
               className="billing-toast-btn"
-              onClick={() => onOpenAura && onOpenAura({ agent: 'Billing Agent' })}
+              onClick={() => onOpenAura && onOpenAura({ agent: 'Support Agent' })}
             >
               <IconFA name="sparkles" size={14} />
               <span>View growth insights</span>
@@ -4966,7 +4950,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
-        {/* Billing Agent: Credit Usage Chart */}
+        {/* Support Agent Billing: Credit Usage Chart */}
         {content.billingChart && (!isTyping || paragraphsCompleted) && (
           <div className="aura-billing-chart fade-in">
             <div className="aura-billing-chart-header">
@@ -5021,7 +5005,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
-        {/* Billing Agent: Analysis Text - only render when billingChart is present to avoid duplication with V2 flow renderer */}
+        {/* Support Agent Billing: Analysis Text - only render when billingChart is present to avoid duplication with V2 flow renderer */}
         {content.billingChart && content.analysisText && (!isTyping || paragraphsCompleted) && (
           <div className="aura-billing-analysis fade-in">
             {content.analysisText.map((item, i) => (
@@ -5040,7 +5024,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
-        {/* Billing Agent: Recommendation Checklist */}
+        {/* Support Agent Billing: Recommendation Checklist */}
         {content.billingRecommendations && (!isTyping || paragraphsCompleted) && (
           <BillingChecklist 
             recommendations={content.billingRecommendations} 
@@ -5233,6 +5217,7 @@ function SidebarIcon({ name, active }) {
     'laptop-code': '\uf5fc',
     'sidebar': '\ue24e',
     'cookie-bite': '\uf564',
+    'headphones': '\uf025',
   }
   
   const unicode = iconMap[name]
@@ -5323,6 +5308,7 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'credit-card': '\uf09d',
     'arrow-trend-up': '\ue098',
     'arrow-right': '\uf061',
+    'headphones': '\uf025',
   }
   
   const weightClass = weight === 'solid' ? 'fa-solid' : weight === 'light' ? 'fa-light' : 'fa-regular'
@@ -5698,8 +5684,7 @@ const AURA_AGENTS = [
   { id: 'aura', name: 'Aura Agent', icon: 'sparkles' },
   { id: 'data-migration', name: 'Data Migration Agent', icon: 'database' },
   { id: 'query-tuning', name: 'Query Tuning Agent', icon: 'chart-line' },
-  { id: 'billing', name: 'Billing Agent', icon: 'credit-card' },
-  { id: 'support', name: 'Support Agent', icon: 'circle-question' },
+  { id: 'support', name: 'Support Agent', icon: 'headphones' },
   { id: 'observability', name: 'Observability Agent', icon: 'chart-line' },
   { id: 'incident', name: 'Incident Agent', icon: 'warning' },
 ]

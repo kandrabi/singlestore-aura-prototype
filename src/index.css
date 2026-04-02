@@ -889,17 +889,8 @@ body {
   color: #22c55e;
 }
 
-.notification-item.ai-investigation {
-  background: linear-gradient(135deg, rgba(130, 13, 223, 0.03) 0%, rgba(168, 85, 247, 0.03) 100%);
-  border-left: 3px solid #820DDF;
-}
-
 .notification-item.ai-investigation .notification-icon {
-  background: linear-gradient(135deg, rgba(130, 13, 223, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
-  color: #820DDF;
-}
-
-.notification-item.ai-investigation .notification-item-title {
+  background: rgba(130, 13, 223, 0.1);
   color: #820DDF;
 }
 
