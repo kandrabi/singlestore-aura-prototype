@@ -802,7 +802,7 @@ const BILLING_PROMPTS = [
   'How can I reduce on-demand usage?'
 ]
 
-// Support Agent (Billing) Conversation Flow
+// Billing Conversation Flow (used by Aura Agent on billing page or Support Agent)
 const BILLING_CHAT_FLOW = [
   // Message 1: Acknowledge + show usage data
   {
@@ -882,19 +882,19 @@ const BILLING_CHAT_FLOW = [
 
 const AGENT_CONFIG = {
   'Aura Agent': {
-    title: 'Aura AI Assistant',
+    title: 'Aura Agent',
     description: 'I can help you monitor workspaces, analyze performance, and manage your SingleStore environment.',
     prompts: AURA_PROMPTS,
     placeholder: 'Ask Aura anything...'
   },
   'Data Migration Agent': {
-    title: 'AI-Powered Migration Assistant',
+    title: 'Data Migration Agent',
     description: 'I can help you migrate data from PostgreSQL, MySQL, Oracle, MongoDB, and more to SingleStore.',
     prompts: MIGRATION_PROMPTS,
     placeholder: 'Ask about data migration...'
   },
   'Query Tuning Agent': {
-    title: 'Query Optimization Assistant',
+    title: 'Query Tuning Agent',
     description: 'I can help you optimize queries, analyze execution plans, and improve database performance.',
     prompts: QUERY_TUNING_PROMPTS,
     placeholder: 'Ask about query optimization...'
@@ -1527,7 +1527,7 @@ function App() {
       case 'editor':
         return 'Query Tuning Agent'
       case 'billing':
-        return 'Support Agent'
+        return 'Aura Agent'
       default:
         return 'Aura Agent'
     }
@@ -1755,7 +1755,7 @@ function App() {
     }, 1000)
   }
 
-  // Support Agent billing flow message handler
+  // Billing flow message handler (Aura Agent on billing page or Support Agent)
   const addNextBillingMessage = (messageIndex, branch = null) => {
     let message
     
@@ -1826,7 +1826,9 @@ function App() {
     if (!text.trim()) return
     
     // Check for billing flow trigger FIRST and return immediately
-    if (auraPanelAgentName === 'Support Agent' && isBillingFlowTrigger(text)) {
+    // Triggers when using Aura Agent on billing page OR Support Agent anywhere
+    if ((view === 'billing' && auraPanelAgentName === 'Aura Agent' && isBillingFlowTrigger(text)) ||
+        (auraPanelAgentName === 'Support Agent' && isBillingFlowTrigger(text))) {
       handleBillingCreditBurnFlow(text)
       return // IMPORTANT: Stop here, don't continue
     }
@@ -1982,8 +1984,8 @@ function App() {
         // Fallback for unhandled actions
         handleTriggerAction(actionText)
       }
-    } else if (auraPanelFlow === 'billing' || auraPanelAgentName === 'Support Agent') {
-      // Handle Support Agent billing flow actions
+    } else if (auraPanelFlow === 'billing' || auraPanelAgentName === 'Support Agent' || (view === 'billing' && auraPanelAgentName === 'Aura Agent')) {
+      // Handle billing flow actions (Aura Agent on billing page or Support Agent)
       if (actionText === "What's driving the increase?") {
         // Show drivers analysis, then will show recommendations
         setTimeout(() => addNextBillingMessage(1, 'drivers'), 500)
@@ -2340,6 +2342,7 @@ function App() {
             onNewChat={handleNewChat}
             queryTuningResult={queryTuningResult}
             queryTuningContext={queryTuningContext}
+            pageContext={view}
             onApplyQuery={handleApplyQueryToEditor}
           />
         )}
@@ -2820,8 +2823,8 @@ const WORKSPACES_DATA = [
     project: 'Acme',
     edition: 'Standard',
     cloudRegion: 'AWS • US East',
-    size: 'S-2',
-    sizeDetail: '2x 4x',
+    size: 'S-164',
+    sizeDetail: '1312 vCPUs • 10 TB',
     vCPU: 45.2,
     memory: 88,
     cache: 52.3,
@@ -2836,8 +2839,8 @@ const WORKSPACES_DATA = [
     project: 'Acme',
     edition: 'Standard',
     cloudRegion: 'AWS • US East',
-    size: 'S-2',
-    sizeDetail: '2x 4x',
+    size: 'S-320',
+    sizeDetail: '2560 vCPUs • 20 TB',
     vCPU: 33.54,
     memory: 33.54,
     cache: 33.54,
@@ -2852,8 +2855,8 @@ const WORKSPACES_DATA = [
     project: 'Acme',
     edition: 'Shared',
     cloudRegion: 'AWS • US East',
-    size: 'S-2',
-    sizeDetail: '2x 4x',
+    size: 'S-288',
+    sizeDetail: '2304 vCPUs • 18 TB',
     vCPU: null,
     memory: null,
     cache: null,
@@ -2868,8 +2871,8 @@ const WORKSPACES_DATA = [
     project: 'Kixo',
     edition: 'Standard',
     cloudRegion: 'AWS • US East',
-    size: 'S-2',
-    sizeDetail: '2x 4x',
+    size: 'S-384',
+    sizeDetail: '3072 vCPUs • 24 TB',
     vCPU: null,
     memory: null,
     cache: null,
@@ -2884,8 +2887,8 @@ const WORKSPACES_DATA = [
     project: 'Kixo',
     edition: 'Enterprise',
     cloudRegion: 'GCP • US East',
-    size: 'S-2',
-    sizeDetail: '2x 4x',
+    size: 'S-352',
+    sizeDetail: '2816 vCPUs • 22 TB',
     vCPU: 33.54,
     memory: 33.54,
     cache: 33.54,
@@ -2900,8 +2903,8 @@ const WORKSPACES_DATA = [
     project: 'Acme',
     edition: 'Standard',
     cloudRegion: 'AWS • US East',
-    size: 'S-2',
-    sizeDetail: '2x 4x',
+    size: 'S-256',
+    sizeDetail: '2048 vCPUs • 16 TB',
     vCPU: 33.54,
     memory: 33.54,
     cache: 33.54,
@@ -3105,19 +3108,19 @@ function BillingPage({ onOpenAura }) {
               </div>
               <div className="billing-toast-text">
                 <div className="billing-toast-title">
-                  Strong growth detected — 124% increase projected through Q2
+                  ~55% growth projected next quarter based on recent usage
                 </div>
                 <div className="billing-toast-subtitle">
-                  Your usage is trending upward. Scale infrastructure to handle the demand and maintain performance.
+                  Your compute usage has increased steadily over the last 3 months. Plan ahead to maintain performance as demand continues to rise.
                 </div>
               </div>
             </div>
             <button 
               className="billing-toast-btn"
-              onClick={() => onOpenAura && onOpenAura({ agent: 'Support Agent' })}
+              onClick={() => onOpenAura && onOpenAura({ agent: 'Aura Agent' })}
             >
               <IconFA name="sparkles" size={14} />
-              <span>View growth insights</span>
+              <span>View insights</span>
             </button>
           </div>
         </div>
@@ -6150,7 +6153,7 @@ function AgentInput({
   )
 }
 
-function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange, onNewChat, queryTuningResult, queryTuningContext, onApplyQuery }) {
+function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange, onNewChat, queryTuningResult, queryTuningContext, onApplyQuery, pageContext }) {
   const [isResizing, setIsResizing] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState(() => 
     AURA_AGENTS.find(a => a.name === agentName) || AURA_AGENTS[0]
@@ -6949,9 +6952,14 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
               <IconFA name={selectedAgent.icon} size={32} />
             </div>
             <h3>{(AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).title}</h3>
-            <p>{(AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).description}</p>
+            <p>{pageContext === 'billing' && agentName === 'Aura Agent'
+              ? 'I can help you monitor credit usage, prevent overages, and optimize compute costs across your workspaces.'
+              : (AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).description}</p>
             <div className="aura-suggested-prompts">
-              {(AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).prompts.map((prompt, i) => (
+              {(pageContext === 'billing' && agentName === 'Aura Agent' 
+                ? BILLING_PROMPTS 
+                : (AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).prompts
+              ).map((prompt, i) => (
                 <button 
                   key={i} 
                   className="aura-prompt-chip"
@@ -7013,7 +7021,9 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
           onSend={onSend}
           selectedAgent={selectedAgent}
           onAgentSelect={handleAgentSelect}
-          placeholder={(AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).placeholder}
+          placeholder={pageContext === 'billing' && agentName === 'Aura Agent' 
+            ? 'Ask about billing, usage, or cost optimization...' 
+            : (AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).placeholder}
         />
       </div>
     </div>

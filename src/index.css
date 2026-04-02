@@ -6215,6 +6215,12 @@ body {
   color: var(--color-text-secondary);
 }
 
+.workspaces-table th:nth-child(3),
+.workspaces-table td:nth-child(3) {
+  min-width: 70px;
+  white-space: nowrap;
+}
+
 .workspaces-table tbody tr:hover {
   background: var(--color-bg-surface-2);
 }
@@ -7921,7 +7927,7 @@ body {
   align-items: center;
   justify-content: space-between;
   flex: 1;
-  padding: 10px 16px 10px 10px;
+  padding: 16px 16px 16px 10px;
   gap: 16px;
 }
 
