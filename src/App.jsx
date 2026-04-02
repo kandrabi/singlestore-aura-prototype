@@ -1424,8 +1424,8 @@ GROUP BY YEAR(created_at);`,
       success: true,
       title: 'Resize complete',
       details: [
-        { type: 'text', content: 'Workspace prod-analytics is now running at S-224.' },
-        { type: 'mixed', content: 'Latency improved by ', bold: '~18%', after: ' in the last few minutes.' }
+        { type: 'mixed', content: 'Workspace ', link: 'prod-analytics', after: ' is now running at S-224.' },
+        { type: 'mixed', content: 'This change may result in up to ', bold: '~18%', after: ' latency improvement.' }
       ]
     }
   }
@@ -3108,7 +3108,7 @@ function BillingPage({ onOpenAura }) {
                   Strong growth detected — 124% increase projected through Q2
                 </div>
                 <div className="billing-toast-subtitle">
-                  Your usage is trending upward. Scale infrastructure to handle seasonal demand and maintain performance.
+                  Your usage is trending upward. Scale infrastructure to handle the demand and maintain performance.
                 </div>
               </div>
             </div>
@@ -3133,7 +3133,7 @@ function BillingPage({ onOpenAura }) {
                 <IconFA name="circle-info" size={12} />
               </div>
               <span className="billing-card-badge billing-card-badge-warning">
-                Credit remaining: 0 CR
+                Credit remaining: 50K CR
               </span>
             </div>
             <div className="billing-card-usage">
@@ -3615,35 +3615,12 @@ function PortalView({
   agentName,
   onAgentChange
 }) {
-  const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
-  const dropdownRef = useRef(null)
   const selectedAgent = AURA_AGENTS.find(a => a.name === agentName) || AURA_AGENTS[0]
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setAgentDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      if (onSend && auraPanelInput?.trim()) {
-        onSend(auraPanelInput)
-      }
-    }
-  }
 
   const handleAgentSelect = (agent) => {
     if (agent.name !== selectedAgent.name && onAgentChange) {
       onAgentChange(agent.name)
     }
-    setAgentDropdownOpen(false)
   }
 
   // Check if we should show the CPU spike V2 conversation in main area
@@ -3690,41 +3667,17 @@ function PortalView({
           </div>
         </div>
 
-        {/* Input area - same as ChatView */}
+        {/* Input area - using shared AgentInput component */}
         <div className="chat-input-bottom">
-          <div className="chat-input-bottom-container">
-            <div className="chat-input-text">
-              <input
-                type="text"
-                placeholder="Ask Aura anything..."
-                value={auraPanelInput || ''}
-                onChange={(e) => setAuraPanelInput && setAuraPanelInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
-            </div>
-            <div className="chat-input-controls">
-              <div className="chat-input-actions">
-                <button className="icon-btn">
-                  <PlusIcon />
-                </button>
-                <button className="icon-btn">
-                  <MicIcon />
-                </button>
-                <button className="agent-selector">
-                  <AgentIcon />
-                  <span>{selectedAgent.name}</span>
-                  <ChevronDownIcon className="chevron" />
-                </button>
-              </div>
-              <button 
-                className="send-btn" 
-                disabled={!auraPanelInput?.trim()} 
-                onClick={() => onSend && onSend(auraPanelInput)}
-              >
-                <SendIcon />
-              </button>
-            </div>
-          </div>
+          <AgentInput
+            variant="homepage"
+            inputValue={auraPanelInput}
+            setInputValue={setAuraPanelInput}
+            onSend={onSend}
+            selectedAgent={selectedAgent}
+            onAgentSelect={handleAgentSelect}
+            placeholder="Ask Aura anything..."
+          />
         </div>
       </div>
     )
@@ -3739,31 +3692,15 @@ function PortalView({
       </div>
 
       <div className="chat-input-container">
-        <textarea
-          className="chat-textarea"
+        <AgentInput
+          variant="homepage"
+          inputValue={inputValue}
+          setInputValue={setInputValue}
+          onSend={onSend}
+          selectedAgent={selectedAgent}
+          onAgentSelect={handleAgentSelect}
           placeholder="Ask anything to get started"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          rows={2}
         />
-        <div className="chat-input-controls">
-          <div className="chat-input-actions">
-            <button className="icon-btn">
-              <PlusIcon />
-            </button>
-            <button className="icon-btn">
-              <MicIcon />
-            </button>
-            <button className="agent-selector">
-              <AgentIcon />
-              <span>Agent</span>
-              <ChevronDownIcon className="chevron" />
-            </button>
-          </div>
-          <button className="send-btn" disabled={!inputValue.trim()}>
-            <SendIcon />
-          </button>
-        </div>
       </div>
 
       <div className="suggested-prompts">
@@ -4341,7 +4278,12 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
               <p key={i} className="message-text">
                 {d.type === 'text' && d.content}
                 {d.type === 'mixed' && (
-                  <>{d.content}<strong>{d.bold}</strong>{d.after}</>
+                  <>
+                    {d.content}
+                    {d.link && <span className="text-link">{d.link}</span>}
+                    {d.bold && <strong>{d.bold}</strong>}
+                    {d.after}
+                  </>
                 )}
               </p>
             ))}
@@ -6101,17 +6043,122 @@ function AnimatedProgressCard({ content }) {
   )
 }
 
+// ============================================
+// SHARED AGENT INPUT COMPONENT
+// Used in both Homepage and Side Panel
+// ============================================
+function AgentInput({ 
+  variant = 'panel',
+  inputValue, 
+  setInputValue, 
+  onSend, 
+  selectedAgent,
+  onAgentSelect,
+  placeholder = 'Ask anything...',
+  disabled = false
+}) {
+  const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setAgentDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (inputValue?.trim() && onSend) {
+        onSend(inputValue)
+      }
+    }
+  }
+
+  const handleAgentClick = (agent) => {
+    if (onAgentSelect) {
+      onAgentSelect(agent)
+    }
+    setAgentDropdownOpen(false)
+  }
+
+  const isHomepage = variant === 'homepage'
+  const containerClass = isHomepage ? 'agent-input agent-input-homepage' : 'agent-input agent-input-panel'
+
+  return (
+    <div className={containerClass}>
+      <textarea
+        placeholder={placeholder}
+        value={inputValue || ''}
+        onChange={(e) => setInputValue && setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        rows={2}
+        disabled={disabled}
+      />
+      <div className="agent-input-controls">
+        <div className="agent-input-actions">
+          <button className="icon-btn" type="button">
+            <PlusIcon />
+          </button>
+          {isHomepage && (
+            <button className="icon-btn" type="button">
+              <MicIcon />
+            </button>
+          )}
+          <div className="agent-dropdown-wrapper" ref={dropdownRef}>
+            <button 
+              className="agent-selector-btn"
+              onClick={() => setAgentDropdownOpen(!agentDropdownOpen)}
+              type="button"
+            >
+              <IconFA name={selectedAgent?.icon || 'sparkles'} size={14} />
+              <span>{selectedAgent?.name || 'Aura Agent'}</span>
+              <ChevronDownIcon className="chevron" />
+            </button>
+            {agentDropdownOpen && (
+              <div className="agent-dropdown">
+                {AURA_AGENTS.map((agent) => (
+                  <button
+                    key={agent.id}
+                    className={`agent-dropdown-option ${selectedAgent?.id === agent.id ? 'selected' : ''}`}
+                    onClick={() => handleAgentClick(agent)}
+                    type="button"
+                  >
+                    <IconFA name={agent.icon} size={14} />
+                    <span>{agent.name}</span>
+                    {selectedAgent?.id === agent.id && <IconFA name="check" size={12} />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <button 
+          className="send-btn" 
+          disabled={!inputValue?.trim() || disabled} 
+          onClick={() => onSend && onSend(inputValue)}
+          type="button"
+        >
+          <SendIcon />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange, onNewChat, queryTuningResult, queryTuningContext, onApplyQuery }) {
   const [isResizing, setIsResizing] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState(() => 
     AURA_AGENTS.find(a => a.name === agentName) || AURA_AGENTS[0]
   )
-  const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
   const [showConnections, setShowConnections] = useState(false)
   const [typedMessageIds, setTypedMessageIds] = useState(new Set())
   const [expandedQueryIndex, setExpandedQueryIndex] = useState(null)
   const panelRef = useRef(null)
-  const dropdownRef = useRef(null)
   
   const sidebarWidth = sidebarExpanded ? 220 : 48
   
@@ -6159,30 +6206,12 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
     }
   }, [isResizing, onWidthChange])
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setAgentDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      onSend(inputValue)
-    }
-  }
-
   const handleAgentSelect = (agent) => {
     // If selecting a different agent, start a new conversation
     if (agent.name !== selectedAgent.name && onAgentChange) {
       onAgentChange(agent.name)
     }
     setSelectedAgent(agent)
-    setAgentDropdownOpen(false)
   }
 
   if (!isOpen) return null
@@ -6977,50 +7006,15 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
       </div>
 
       <div className="aura-panel-input">
-        <div className="aura-input-container">
-          <textarea
-            placeholder={(AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).placeholder}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={2}
-          />
-          <div className="aura-input-controls">
-            <div className="aura-input-actions">
-              <button className="icon-btn">
-                <PlusIcon />
-              </button>
-              <div className="aura-agent-dropdown-wrapper" ref={dropdownRef}>
-                <button 
-                  className="aura-agent-selector"
-                  onClick={() => setAgentDropdownOpen(!agentDropdownOpen)}
-                >
-                  <IconFA name={selectedAgent.icon} size={14} />
-                  <span>{selectedAgent.name}</span>
-                  <ChevronDownIcon className="chevron" />
-                </button>
-                {agentDropdownOpen && (
-                  <div className="aura-agent-dropdown">
-                    {AURA_AGENTS.map((agent) => (
-                      <button
-                        key={agent.id}
-                        className={`aura-agent-option ${selectedAgent.id === agent.id ? 'selected' : ''}`}
-                        onClick={() => handleAgentSelect(agent)}
-                      >
-                        <IconFA name={agent.icon} size={14} />
-                        <span>{agent.name}</span>
-                        {selectedAgent.id === agent.id && <IconFA name="check" size={12} />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <button className="send-btn" disabled={!inputValue.trim()} onClick={() => onSend(inputValue)}>
-              <SendIcon />
-            </button>
-          </div>
-        </div>
+        <AgentInput
+          variant="panel"
+          inputValue={inputValue}
+          setInputValue={setInputValue}
+          onSend={onSend}
+          selectedAgent={selectedAgent}
+          onAgentSelect={handleAgentSelect}
+          placeholder={(AGENT_CONFIG[agentName] || AGENT_CONFIG['Aura Agent']).placeholder}
+        />
       </div>
     </div>
   )
