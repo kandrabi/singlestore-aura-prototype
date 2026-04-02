@@ -8322,56 +8322,133 @@ body {
 
 /* Billing Chart Card */
 .aura-billing-chart {
-  background: #F9FAFB;
+  background: #FFFFFF;
   border: 1px solid #E6E5EA;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 16px;
   margin: 12px 0;
 }
 
 .aura-billing-chart-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #4C4A57;
-  margin-bottom: 12px;
+  color: #1A1A1A;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #E6E5EA;
+}
+
+.aura-billing-chart-header .fa-icon {
+  color: #666666;
+  font-size: 14px;
+}
+
+.aura-billing-trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+  background: #EDEDED;
+  color: #4C4C4C;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.24px;
+}
+
+.aura-billing-trend-badge .fa-icon {
+  font-size: 10px;
+  color: #4C4C4C;
 }
 
 .aura-billing-chart-content {
   display: flex;
-  gap: 32px;
+  flex-direction: column;
+  gap: 0;
 }
 
 .aura-billing-section {
-  flex: 1;
+  padding: 0;
+}
+
+.aura-billing-divider {
+  height: 1px;
+  background: #E6E5EA;
+  margin: 12px 0;
 }
 
 .aura-billing-section-title {
-  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
   font-weight: 600;
   color: #6B6B6B;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
+}
+
+.aura-billing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.aura-billing-dot-historical {
+  background: #586BFF;
+}
+
+.aura-billing-dot-forecast {
+  background: #E08F4E;
 }
 
 .aura-billing-row {
   display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  font-size: 13px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 12px;
 }
 
 .aura-billing-month {
   color: #6B6B6B;
+  font-weight: 500;
+  min-width: 28px;
+}
+
+.aura-billing-bar-container {
+  flex: 1;
+  height: 6px;
+  background: #F3F4F6;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.aura-billing-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease-out;
+}
+
+.aura-billing-bar-historical {
+  background: #586BFF;
+}
+
+.aura-billing-bar-forecast {
+  background: #E08F4E;
 }
 
 .aura-billing-value {
-  font-weight: 500;
-  color: #1A1A1A;
-}
-
-.aura-billing-forecast .aura-billing-value {
-  color: #6B0AB8;
+  font-weight: 600;
+  color: #191919;
+  min-width: 60px;
+  text-align: right;
+  font-size: 12px;
 }
 
 /* Billing Analysis Text */
@@ -8387,83 +8464,92 @@ body {
   color: #1A1A1A;
 }
 
-/* Billing Recommendation Cards */
-.aura-billing-recommendations {
+/* Billing Recommendations - Simple Cards */
+.billing-recs {
+  margin: 16px 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin: 12px 0;
+  gap: 10px;
 }
 
-.aura-billing-rec-card {
-  background: #FFFFFF;
-  border: 1px solid #E6E5EA;
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.aura-billing-rec-header {
+.billing-rec {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  gap: 16px;
+  background: #FFFFFF;
+  border: 1px solid #E6E5EA;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.aura-billing-rec-header .fa-icon {
-  color: #6B0AB8;
+.billing-rec:hover {
+  border-color: #D0D0D0;
+  background: #FAFAFA;
 }
 
-.aura-billing-rec-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1A1A1A;
+.billing-rec.active {
+  border-color: #820DDF;
+  border-width: 1.5px;
+  background: #FDFBFE;
 }
 
-.aura-billing-rec-description {
+.billing-rec-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.billing-rec-title {
+  display: block;
   font-size: 13px;
-  color: #6B6B6B;
-  margin: 0 0 8px 0;
-  line-height: 1.5;
+  font-weight: 600;
+  color: #191919;
+  margin-bottom: 4px;
 }
 
-.aura-billing-rec-action {
+.billing-rec-action {
   font-size: 12px;
-  color: #4C4A57;
-  margin: 0 0 12px 0;
-  padding: 8px 12px;
-  background: #F5F5F5;
-  border-radius: 4px;
-  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+  color: #666666;
+  margin: 0;
+  line-height: 1.4;
 }
 
-.aura-billing-rec-ctas {
+.billing-rec-action strong {
+  color: #191919;
+  font-weight: 600;
+}
+
+.billing-rec-desc {
+  font-size: 12px;
+  color: #666666;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.billing-rec-buttons {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
-.aura-billing-rec-cta {
-  background: #6B0AB8;
-  color: #FFFFFF;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
+.billing-rec-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--border-radius-md, 6px);
+  border: 1px solid var(--color-neutral-6, #D0D0D0);
+  background: var(--color-neutral-1, #FFFFFF);
   cursor: pointer;
-  transition: all 0.2s;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-neutral-11, #191919);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
 }
 
-.aura-billing-rec-cta:hover {
-  background: #5A0999;
-}
-
-.aura-billing-rec-cta:nth-child(2) {
-  background: #FFFFFF;
-  color: #6B0AB8;
-  border: 1px solid #6B0AB8;
-}
-
-.aura-billing-rec-cta:nth-child(2):hover {
-  background: #F5F0FA;
+.billing-rec-btn:hover {
+  background: var(--color-bg-surface-3, #F5F5F5);
 }

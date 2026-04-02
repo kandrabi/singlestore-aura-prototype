@@ -814,19 +814,18 @@ const BILLING_CHAT_FLOW = [
       billingChart: {
         title: 'Credit Usage Trend',
         historical: [
-          { month: 'Jan', credits: 620 },
-          { month: 'Feb', credits: 710 },
-          { month: 'Mar', credits: 880 }
+          { month: 'Jan', credits: '90K' },
+          { month: 'Feb', credits: '100K' },
+          { month: 'Mar', credits: '110K' }
         ],
         forecast: [
-          { month: 'Apr', credits: 1050 },
-          { month: 'May', credits: 1240 },
-          { month: 'Jun', credits: 1380 }
+          { month: 'Apr', credits: '125K' },
+          { month: 'May', credits: '140K' },
+          { month: 'Jun', credits: '160K' }
         ]
       },
       analysisText: [
-        { type: 'text', content: 'Your usage is trending upward — about a ~55% increase over the next quarter.' },
-        { type: 'text', content: 'This typically happens when workloads enter a higher traffic phase.' },
+        { type: 'mixed', content: 'Your usage is trending upward — roughly a ', bold: '~45% increase', after: ' over the next quarter. This typically happens when workloads enter a higher traffic phase.' },
         { type: 'bold', content: 'This looks like growth, not just higher usage.' },
         { type: 'text', content: 'Do you want to understand what\'s driving this, or how to handle it?' }
       ],
@@ -857,23 +856,24 @@ const BILLING_CHAT_FLOW = [
       billingRecommendations: [
         {
           title: 'Scale for Peak Demand',
-          description: 'Your production workloads are likely to hit capacity during peak hours.',
-          action: 'Scale from S2 → S3',
-          cta: 'Scale for Peak Demand',
-          icon: 'arrow-up'
+          actionParts: [
+            { text: 'Scale from ' },
+            { text: 'S-224', bold: true },
+            { text: ' → ' },
+            { text: 'S-256', bold: true },
+            { text: ' during peak demand windows' }
+          ],
+          cta: 'Scale compute'
         },
         {
-          title: 'Pre-scale Ahead of Spikes',
-          description: 'You can stay ahead of spikes by scaling proactively.',
-          action: 'Set up auto-scaling',
-          cta: 'Set Auto-Scaling',
-          icon: 'clock'
+          title: 'Configure Auto-Scaling',
+          description: 'Stay ahead of spikes by scaling proactively',
+          cta: 'Set up'
         },
         {
           title: 'Expand Capacity',
-          description: 'At your current growth rate, additional capacity will be needed.',
-          ctas: ['Upgrade Plan', 'Talk to Sales'],
-          icon: 'chart-line'
+          description: 'Additional capacity will be needed at current growth rate',
+          ctas: ['Upgrade Plan', 'Talk to Sales']
         }
       ]
     }
@@ -3087,10 +3087,10 @@ function BillingPage({ onOpenAura }) {
             </div>
             <div className="billing-alert-text">
               <div className="billing-alert-title">
-                Your 800 CR monthly credit was exhausted on March 20 — on-demand charges are now accruing
+                Strong growth detected — 124% increase projected through Q2
               </div>
               <div className="billing-alert-subtitle">
-                You've used 1,000 CR so far (200 CR on-demand). Estimated month total: 1.5K CR (+700 CR on-demand).
+                Your usage is trending upward. Scale infrastructure to handle seasonal demand and maintain performance.
               </div>
             </div>
           </div>
@@ -3099,7 +3099,7 @@ function BillingPage({ onOpenAura }) {
             onClick={() => onOpenAura && onOpenAura({ agent: 'Billing Agent' })}
           >
             <IconFA name="sparkles" size={14} />
-            <span>Prevent Overages</span>
+            <span>View growth insights</span>
           </button>
         </div>
 
@@ -3118,9 +3118,9 @@ function BillingPage({ onOpenAura }) {
               </span>
             </div>
             <div className="billing-card-usage">
-              <span className="billing-card-used">1000 CR used</span>
+              <span className="billing-card-used">110K CR used</span>
               <div className="billing-card-estimated">
-                <span>of 1,550 CR estimated</span>
+                <span>of 160K CR estimated</span>
                 <IconFA name="circle-info" size={10} />
               </div>
             </div>
@@ -3141,9 +3141,9 @@ function BillingPage({ onOpenAura }) {
               </div>
             </div>
             <div className="billing-card-usage">
-              <span className="billing-card-used">1 GB used</span>
+              <span className="billing-card-used">8.4 TB used</span>
               <div className="billing-card-estimated">
-                <span>of 16 GB estimated</span>
+                <span>of 12 TB estimated</span>
                 <IconFA name="circle-info" size={10} />
               </div>
             </div>
@@ -4897,25 +4897,53 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         {/* Billing Agent: Credit Usage Chart */}
         {content.billingChart && (!isTyping || paragraphsCompleted) && (
           <div className="aura-billing-chart fade-in">
-            <div className="aura-billing-chart-header">{content.billingChart.title}</div>
+            <div className="aura-billing-chart-header">
+              <IconFA name="chart-line" />
+              <span>{content.billingChart.title}</span>
+              <span className="aura-billing-trend-badge">
+                <IconFA name="arrow-trend-up" />
+                <span>+45%</span>
+              </span>
+            </div>
             <div className="aura-billing-chart-content">
-              <div className="aura-billing-section">
-                <div className="aura-billing-section-title">Last 3 months</div>
-                {content.billingChart.historical.map((item, i) => (
-                  <div key={i} className="aura-billing-row">
-                    <span className="aura-billing-month">{item.month}:</span>
-                    <span className="aura-billing-value">{item.credits} CR</span>
-                  </div>
-                ))}
+              <div className="aura-billing-section aura-billing-historical">
+                <div className="aura-billing-section-title">
+                  <span className="aura-billing-dot aura-billing-dot-historical"></span>
+                  Last 3 months
+                </div>
+                {content.billingChart.historical.map((item, i) => {
+                  const creditNum = parseInt(item.credits.replace('K', '')) * 1000
+                  const barWidth = Math.min((creditNum / 160000) * 100, 100)
+                  return (
+                    <div key={i} className="aura-billing-row">
+                      <span className="aura-billing-month">{item.month}</span>
+                      <div className="aura-billing-bar-container">
+                        <div className="aura-billing-bar aura-billing-bar-historical" style={{ width: `${barWidth}%` }}></div>
+                      </div>
+                      <span className="aura-billing-value">{item.credits} CR</span>
+                    </div>
+                  )
+                })}
               </div>
-              <div className="aura-billing-section">
-                <div className="aura-billing-section-title">Forecast</div>
-                {content.billingChart.forecast.map((item, i) => (
-                  <div key={i} className="aura-billing-row aura-billing-forecast">
-                    <span className="aura-billing-month">{item.month}:</span>
-                    <span className="aura-billing-value">{item.credits} CR</span>
-                  </div>
-                ))}
+              <div className="aura-billing-divider"></div>
+              <div className="aura-billing-section aura-billing-forecast">
+                <div className="aura-billing-section-title">
+                  <span className="aura-billing-dot aura-billing-dot-forecast"></span>
+                  Forecast
+                </div>
+                {content.billingChart.forecast.map((item, i) => {
+                  const creditNum = parseInt(item.credits.replace('K', '')) * 1000
+                  const barWidth = Math.min((creditNum / 160000) * 100, 100)
+                  return (
+                    <div key={i} className="aura-billing-row aura-billing-row-forecast">
+                      <span className="aura-billing-month">{item.month}</span>
+                      <div className="aura-billing-bar-container">
+                        <div className="aura-billing-bar aura-billing-bar-forecast" style={{ width: `${barWidth}%` }}></div>
+                      </div>
+                      <span className="aura-billing-value">{item.credits} CR</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -4925,39 +4953,27 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         {content.billingChart && content.analysisText && (!isTyping || paragraphsCompleted) && (
           <div className="aura-billing-analysis fade-in">
             {content.analysisText.map((item, i) => (
-              <p key={i} className={`message-text ${item.type === 'bold' ? 'message-text-bold' : ''}`}>
-                {item.type === 'bold' ? <strong>{item.content}</strong> : item.content}
+              <p key={i} className="message-text">
+                {item.type === 'text' && item.content}
+                {item.type === 'bold' && <strong>{item.content}</strong>}
+                {item.type === 'mixed' && (
+                  <>
+                    {item.content}<strong>{item.bold}</strong>{item.after}
+                    {item.bold2 && <strong>{item.bold2}</strong>}{item.after2}
+                    {item.bold3 && <strong>{item.bold3}</strong>}
+                  </>
+                )}
               </p>
             ))}
           </div>
         )}
 
-        {/* Billing Agent: Recommendation Cards */}
+        {/* Billing Agent: Recommendation Checklist */}
         {content.billingRecommendations && (!isTyping || paragraphsCompleted) && (
-          <div className="aura-billing-recommendations fade-in">
-            {content.billingRecommendations.map((rec, i) => (
-              <div key={i} className="aura-billing-rec-card">
-                <div className="aura-billing-rec-header">
-                  <IconFA name={rec.icon} size={16} />
-                  <span className="aura-billing-rec-title">{rec.title}</span>
-                </div>
-                <p className="aura-billing-rec-description">{rec.description}</p>
-                {rec.action && <p className="aura-billing-rec-action">{rec.action}</p>}
-                <div className="aura-billing-rec-ctas">
-                  {rec.cta && (
-                    <button className="aura-billing-rec-cta" onClick={() => onAction(rec.cta)}>
-                      {rec.cta}
-                    </button>
-                  )}
-                  {rec.ctas && rec.ctas.map((cta, j) => (
-                    <button key={j} className="aura-billing-rec-cta" onClick={() => onAction(cta)}>
-                      {cta}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <BillingChecklist 
+            recommendations={content.billingRecommendations} 
+            onAction={onAction}
+          />
         )}
 
         {content.interactiveManualReview && (!isTyping || paragraphsCompleted) && (
@@ -5233,6 +5249,8 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'chart-column': '\ue0e3',
     'pause': '\uf04c',
     'credit-card': '\uf09d',
+    'arrow-trend-up': '\ue098',
+    'arrow-right': '\uf061',
   }
   
   const weightClass = weight === 'solid' ? 'fa-solid' : weight === 'light' ? 'fa-light' : 'fa-regular'
@@ -5613,6 +5631,54 @@ const AURA_AGENTS = [
   { id: 'observability', name: 'Observability Agent', icon: 'chart-line' },
   { id: 'incident', name: 'Incident Agent', icon: 'warning' },
 ]
+
+function BillingChecklist({ recommendations, onAction }) {
+  const [activeIndex, setActiveIndex] = useState(null)
+
+  const handleCardClick = (index) => {
+    setActiveIndex(activeIndex === index ? null : index)
+  }
+
+  return (
+    <div className="billing-recs fade-in">
+      {recommendations.map((rec, i) => (
+        <div 
+          key={i} 
+          className={`billing-rec ${activeIndex === i ? 'active' : ''}`}
+          onClick={() => handleCardClick(i)}
+        >
+          <div className="billing-rec-content">
+            <span className="billing-rec-title">{rec.title}</span>
+            {rec.actionParts && (
+              <p className="billing-rec-action">
+                {rec.actionParts.map((part, j) => 
+                  part.bold ? <strong key={j}>{part.text}</strong> : <span key={j}>{part.text}</span>
+                )}
+              </p>
+            )}
+            {rec.description && <p className="billing-rec-desc">{rec.description}</p>}
+          </div>
+          <div className="billing-rec-buttons" onClick={(e) => e.stopPropagation()}>
+            {rec.cta && (
+              <button className="billing-rec-btn" onClick={() => onAction(rec.cta)}>
+                {rec.cta}
+              </button>
+            )}
+            {rec.ctas && rec.ctas.map((cta, j) => (
+              <button 
+                key={j} 
+                className="billing-rec-btn"
+                onClick={() => onAction(cta)}
+              >
+                {cta}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function InteractiveManualReview({ items: initialItems, onAllApproved }) {
   const [items, setItems] = useState(initialItems.map(item => ({ ...item, approved: false, expanded: false })))
