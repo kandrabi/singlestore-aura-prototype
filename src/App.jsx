@@ -3080,27 +3080,30 @@ function BillingPage({ onOpenAura }) {
         </div>
 
         {/* Alert Banner */}
-        <div className="billing-alert-banner">
-          <div className="billing-alert-content">
-            <div className="billing-alert-icon">
-              <IconFA name="triangle-exclamation" size={18} />
-            </div>
-            <div className="billing-alert-text">
-              <div className="billing-alert-title">
-                Strong growth detected — 124% increase projected through Q2
+        <div className="billing-toast">
+          <div className="billing-toast-border"></div>
+          <div className="billing-toast-content">
+            <div className="billing-toast-left">
+              <div className="billing-toast-icon">
+                <IconFA name="circle-info" size={16} />
               </div>
-              <div className="billing-alert-subtitle">
-                Your usage is trending upward. Scale infrastructure to handle seasonal demand and maintain performance.
+              <div className="billing-toast-text">
+                <div className="billing-toast-title">
+                  Strong growth detected — 124% increase projected through Q2
+                </div>
+                <div className="billing-toast-subtitle">
+                  Your usage is trending upward. Scale infrastructure to handle seasonal demand and maintain performance.
+                </div>
               </div>
             </div>
+            <button 
+              className="billing-toast-btn"
+              onClick={() => onOpenAura && onOpenAura({ agent: 'Billing Agent' })}
+            >
+              <IconFA name="sparkles" size={14} />
+              <span>View growth insights</span>
+            </button>
           </div>
-          <button 
-            className="billing-prevent-btn"
-            onClick={() => onOpenAura && onOpenAura({ agent: 'Billing Agent' })}
-          >
-            <IconFA name="sparkles" size={14} />
-            <span>View growth insights</span>
-          </button>
         </div>
 
         {/* Usage Cards */}
