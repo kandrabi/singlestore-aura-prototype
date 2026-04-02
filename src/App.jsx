@@ -2,83 +2,15 @@ import { useState, useRef, useEffect } from 'react'
 import Editor, { DiffEditor } from '@monaco-editor/react'
 import './index.css'
 
-// Database logo SVG components
-function LogoMongoDB() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16.62 3.02c-.46-.88-.77-1.75-1.05-2.18-.08-.13-.16-.26-.26-.4-.1.14-.18.27-.26.4-.28.43-.59 1.3-1.05 2.18-4.05 7.58-.58 12.35.98 14.04.15.17.31.32.47.47l.13 5.52s.09.28.48.38c.48.13 1.01.18 1.01.18s.53-.05 1.01-.18c.39-.1.48-.38.48-.38l.13-5.52c.16-.15.32-.3.47-.47 1.56-1.69 5.03-6.46.98-14.04zm-1.31 16.8s-.22-.08-.4-.27c-.7-.73-3.5-4.32-.25-11.33.48-.62.5-.68.65-1.1.15.42.17.48.65 1.1 3.25 7.01.45 10.6-.25 11.33-.18.19-.4.27-.4.27z" fill="#00684A"/>
-      <path d="M16.62 19.82s-.22-.08-.4-.27v3.88c.12.02.27.03.4.03.13 0 .28-.01.4-.03v-3.88c-.18.19-.4.27-.4.27z" fill="#B8C4C2"/>
-    </svg>
-  )
-}
-
-function LogoS3() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M10.5 18.5l5.5 2.5 5.5-2.5v-5l-5.5-2.5-5.5 2.5v5z" fill="#E25444"/>
-      <path d="M16 21l5.5-2.5v-5L16 16v5z" fill="#7B1D13"/>
-      <path d="M16 16l5.5-2.5-5.5-2.5-5.5 2.5L16 16z" fill="#F58534"/>
-      <path d="M10.5 13.5L16 16v5l-5.5-2.5v-5z" fill="#E25444"/>
-      <path d="M22.5 9l-6.5 3-6.5-3 6.5-3 6.5 3z" fill="#F58534"/>
-      <path d="M9 10v12l7 3.5 7-3.5V10l-7-3.5L9 10z" stroke="#252F3E" strokeWidth="0.5" fill="none"/>
-      <path d="M16 25.5v-12" stroke="#252F3E" strokeWidth="0.5"/>
-      <path d="M9 10l7 3.5 7-3.5" stroke="#252F3E" strokeWidth="0.5" fill="none"/>
-    </svg>
-  )
-}
-
-function LogoMySQL() {
-  return (
-    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M8 28.5c1.2-.8 2.5-1.2 4-1.2 2.2 0 3.8.9 4.8 2.7l1-1.5c-1.3-2.1-3.3-3.2-6-3.2-2 0-3.7.5-5.2 1.6l1.4 1.6zm16.5-3.2c-2.2 0-4 .6-5.3 1.9-1.3 1.2-2 2.9-2 4.8h2c0-1.4.5-2.5 1.4-3.4.9-.9 2.2-1.3 3.9-1.3 1.5 0 2.7.4 3.6 1.2.9.8 1.4 1.9 1.4 3.2 0 1.2-.4 2.2-1.1 3-.7.8-1.9 1.5-3.4 2.2-1.7.8-2.9 1.6-3.6 2.5-.7.9-1.1 2.1-1.1 3.5h10v-2h-7.6c.2-.6.5-1.1 1-1.5.5-.4 1.4-.9 2.6-1.5 1.8-.8 3.1-1.7 4-2.7.9-1 1.3-2.3 1.3-3.8 0-1.8-.6-3.2-1.9-4.3-1.2-1.1-2.9-1.8-5.2-1.8z" fill="#00546B"/>
-      <path d="M31 13c-.5-1.3-1.2-2.4-2.1-3.3-.9-.9-1.9-1.6-3-2.1-1.2-.5-2.4-.8-3.7-.9-1.3-.1-2.7 0-4 .2v2.2c1.2-.2 2.4-.3 3.5-.2 1 .1 2 .3 2.9.7.9.4 1.7.9 2.4 1.6.7.7 1.2 1.5 1.6 2.5.4 1 .6 2.2.6 3.5s-.2 2.4-.6 3.4c-.4 1-.9 1.8-1.6 2.5-.7.7-1.5 1.2-2.4 1.6-.9.4-1.9.6-2.9.7v2.2c1.4-.1 2.7-.4 3.9-.9 1.1-.5 2.1-1.2 3-2.1.9-.9 1.6-2 2.1-3.3.5-1.3.8-2.7.8-4.2 0-1.5-.3-2.9-.8-4.1h.3z" fill="#00546B"/>
-      <ellipse cx="20" cy="17" rx="8" ry="5" fill="#F29111"/>
-    </svg>
-  )
-}
-
-function LogoOracle() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M10.5 11C7.46 11 5 13.46 5 16.5S7.46 22 10.5 22h11c3.04 0 5.5-2.46 5.5-5.5S24.54 11 21.5 11h-11zm11 9h-11c-1.93 0-3.5-1.57-3.5-3.5S8.57 13 10.5 13h11c1.93 0 3.5 1.57 3.5 3.5S23.43 20 21.5 20z" fill="#C74634"/>
-    </svg>
-  )
-}
-
-function LogoPostgreSQL() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M23.56 14.32c-.42-.02-.8.02-1.13.1.12-.5.08-1.05-.24-1.76-.75-1.68-2.36-2.7-3.6-3.34.42-.82.67-1.79.67-2.82 0-1.1-.89-2-2-2s-2 .9-2 2c0 .14.02.28.04.42-.97.1-1.88.42-2.66.92-.33-.26-.72-.42-1.14-.42-.5 0-1 .2-1.36.56-.36.36-.56.86-.56 1.36 0 .82.52 1.56 1.3 1.84.12.04.24.08.36.1-.32.76-.5 1.6-.5 2.48v.5c-1.26.42-2.24 1.56-2.24 2.94 0 1.26.76 2.34 1.84 2.8.42 1.88 2.08 3.3 4.08 3.3.24 0 .46-.02.68-.06.5.86 1.42 1.46 2.5 1.46 1.16 0 2.14-.7 2.58-1.7.92.2 1.88.16 2.82-.18 2.36-.86 3.56-3.5 2.7-5.86-.34-.94-.98-1.68-1.74-2.14.24-.38.4-.82.46-1.3.14-1.08-.32-2.1-1.2-2.7l-.26-.2zm-6.3-7.82c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z" fill="#336791"/>
-    </svg>
-  )
-}
-
-function LogoSQLServer() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16 6c-5.52 0-10 2.24-10 5v10c0 2.76 4.48 5 10 5s10-2.24 10-5V11c0-2.76-4.48-5-10-5z" fill="#A91D22"/>
-      <ellipse cx="16" cy="11" rx="10" ry="5" fill="#E8E8E8"/>
-      <path d="M26 11v5c0 2.76-4.48 5-10 5s-10-2.24-10-5v-5c0 2.76 4.48 5 10 5s10-2.24 10-5z" fill="#7A1518"/>
-      <path d="M26 16v5c0 2.76-4.48 5-10 5s-10-2.24-10-5v-5c0 2.76 4.48 5 10 5s10-2.24 10-5z" fill="#7A1518"/>
-    </svg>
-  )
-}
-
-function LogoSnowflake() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16 4v24M4 16h24M7.76 7.76l16.48 16.48M24.24 7.76L7.76 24.24" stroke="#29B5E8" strokeWidth="2.5" strokeLinecap="round"/>
-      <circle cx="16" cy="4" r="2" fill="#29B5E8"/>
-      <circle cx="16" cy="28" r="2" fill="#29B5E8"/>
-      <circle cx="4" cy="16" r="2" fill="#29B5E8"/>
-      <circle cx="28" cy="16" r="2" fill="#29B5E8"/>
-      <circle cx="7.76" cy="7.76" r="2" fill="#29B5E8"/>
-      <circle cx="24.24" cy="24.24" r="2" fill="#29B5E8"/>
-      <circle cx="24.24" cy="7.76" r="2" fill="#29B5E8"/>
-      <circle cx="7.76" cy="24.24" r="2" fill="#29B5E8"/>
-    </svg>
-  )
-}
+// Database logo paths (stored in public/images/logos/)
+const LOGO_MONGODB = "/images/logos/mongodb.svg"
+const LOGO_S3 = "/images/logos/s3.svg"
+const LOGO_MYSQL_TEXT = "/images/logos/mysql-text.svg"
+const LOGO_MYSQL_DOLPHIN = "/images/logos/mysql-dolphin.svg"
+const LOGO_SQLSERVER = "/images/logos/sqlserver.png"
+const LOGO_SNOWFLAKE = "/images/logos/snowflake.png"
+const LOGO_ORACLE = "/images/logos/oracle.png"
+const LOGO_POSTGRESQL = "/images/logos/postgresql.png"
 
 const DATA_SOURCES = [
   { id: 'load-file', name: 'Load file', description: 'Load your local files into SingleStore', icon: 'file-arrow-up' },
@@ -2721,19 +2653,24 @@ function DataSourceLogo({ name }) {
         </div>
       )
     case 'mongodb':
-      return <LogoMongoDB />
+      return <img src={LOGO_MONGODB} alt="MongoDB" className="data-source-logo-img data-source-logo-mongodb" />
     case 's3':
-      return <LogoS3 />
+      return <img src={LOGO_S3} alt="Amazon S3" className="data-source-logo-img data-source-logo-s3" />
     case 'mysql':
-      return <LogoMySQL />
+      return (
+        <div className="data-source-logo-mysql">
+          <img src={LOGO_MYSQL_TEXT} alt="" className="mysql-text" />
+          <img src={LOGO_MYSQL_DOLPHIN} alt="" className="mysql-dolphin" />
+        </div>
+      )
     case 'oracle':
-      return <LogoOracle />
+      return <img src={LOGO_ORACLE} alt="Oracle" className="data-source-logo-img" />
     case 'postgresql':
-      return <LogoPostgreSQL />
+      return <img src={LOGO_POSTGRESQL} alt="PostgreSQL" className="data-source-logo-img" />
     case 'sqlserver':
-      return <LogoSQLServer />
+      return <img src={LOGO_SQLSERVER} alt="SQL Server" className="data-source-logo-img" />
     case 'snowflake':
-      return <LogoSnowflake />
+      return <img src={LOGO_SNOWFLAKE} alt="Snowflake" className="data-source-logo-img" />
     default:
       return <IconFA name="database" size={20} />
   }
