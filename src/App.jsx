@@ -1425,7 +1425,7 @@ GROUP BY YEAR(created_at);`,
       title: 'Resize complete',
       details: [
         { type: 'mixed', content: 'Workspace ', link: 'prod-analytics', after: ' is now running at S-224.' },
-        { type: 'mixed', content: 'This change may result in up to ', bold: '~18%', after: ' latency improvement.' }
+        { type: 'text', content: 'This will reduce memory usage to ~51% and CPU usage to ~28%.' }
       ]
     }
   }
@@ -1471,6 +1471,8 @@ function App() {
   const applyQueryRef = useRef(null) // Callback to apply query to editor
   // Editor tab management - for opening queries from Aura
   const [pendingEditorQuery, setPendingEditorQuery] = useState(null)
+  // Workspaces state - shared across components
+  const [workspacesData, setWorkspacesData] = useState(WORKSPACES_DATA_INITIAL)
   const chatEndRef = useRef(null)
   const auraChatEndRef = useRef(null)
 
@@ -1484,6 +1486,32 @@ function App() {
   // Mark all notifications as read
   const markAllNotificationsAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })))
+  }
+
+  // Update workspace data (e.g., after resize)
+  const updateWorkspace = (workspaceName, updates) => {
+    setWorkspacesData(prev => prev.map(ws => 
+      ws.name === workspaceName 
+        ? { ...ws, ...updates, justUpdated: true, loading: false }
+        : ws
+    ))
+    // Clear the justUpdated flag after animation
+    setTimeout(() => {
+      setWorkspacesData(prev => prev.map(ws => 
+        ws.name === workspaceName 
+          ? { ...ws, justUpdated: false }
+          : ws
+      ))
+    }, 2000)
+  }
+
+  // Set workspace loading state (e.g., during resize)
+  const setWorkspaceLoading = (workspaceName, isLoading) => {
+    setWorkspacesData(prev => prev.map(ws => 
+      ws.name === workspaceName 
+        ? { ...ws, loading: isLoading }
+        : ws
+    ))
   }
 
   // Auto-collapse sidebar on smaller screens
@@ -2022,6 +2050,8 @@ function App() {
       } else if (actionText === 'Apply resize' || actionText === 'Resize anyway') {
         setTimeout(() => addNextPanelMessage(3), 500)
       } else if (actionText === 'Confirm') {
+        // Set workspace to loading state immediately
+        setWorkspaceLoading('prod-analytics', true)
         // Add progress message
         const progressMessageId = Date.now() + 1
         setTimeout(() => {
@@ -2035,6 +2065,14 @@ function App() {
             return [...filtered, { ...CHAT_FLOW[5], id: Date.now(), timestamp: new Date(), typingComplete: true }]
           })
           setAuraPanelFlowIndex(6)
+          // Update workspace data after successful resize (also clears loading state)
+          updateWorkspace('prod-analytics', {
+            size: 'S-224',
+            sizeDetail: '1792 vCPUs • 14 TB',
+            vCPU: 28,
+            memory: 51,
+            cache: 33
+          })
         }, 5500)
       } else {
         // Fallback for unhandled actions
@@ -2224,6 +2262,8 @@ function App() {
         setUserMsgIndex(prev => prev + 1)
         setTimeout(() => addNextMessage(3), 500)
       } else if (actionText === 'Confirm') {
+        // Set workspace to loading state immediately
+        setWorkspaceLoading('prod-analytics', true)
         setChatMessages(prev => [...prev, { type: 'user', id: Date.now(), text: 'Confirm', timestamp: new Date() }])
         setUserMsgIndex(prev => prev + 1)
         // Add progress message (mark as typingComplete since there's no text to type)
@@ -2240,6 +2280,14 @@ function App() {
             return [...filtered, { ...CHAT_FLOW[5], id: Date.now(), timestamp: new Date(), typingComplete: true }]
           })
           setCurrentFlowIndex(6)
+          // Update workspace data after successful resize (also clears loading state)
+          updateWorkspace('prod-analytics', {
+            size: 'S-224',
+            sizeDetail: '1792 vCPUs • 14 TB',
+            vCPU: 28,
+            memory: 51,
+            cache: 33
+          })
         }, 5500)
       }
     }
@@ -2269,6 +2317,7 @@ function App() {
             onSend={handleAuraPanelSend}
             agentName={auraPanelAgentName}
             onAgentChange={handleAgentChange}
+            onNavigate={setView}
           />
         )
       case 'chat':
@@ -2285,10 +2334,11 @@ function App() {
             setExpandedOptions={setExpandedOptions}
             chatEndRef={chatEndRef}
             activeChatFlow={activeChatFlow}
+            onNavigate={setView}
           />
         )
       case 'workspaces':
-        return <WorkspacesView />
+        return <WorkspacesView workspacesData={workspacesData} />
       case 'editor':
         return <EditorView onOpenAura={handleOpenAuraPanel} pendingEditorQuery={pendingEditorQuery} onClearPendingQuery={() => setPendingEditorQuery(null)} />
       case 'billing':
@@ -2344,6 +2394,7 @@ function App() {
             queryTuningContext={queryTuningContext}
             pageContext={view}
             onApplyQuery={handleApplyQueryToEditor}
+            onNavigate={setView}
           />
         )}
       </div>
@@ -2814,7 +2865,7 @@ function Header({ onLogoClick, onAskAura, onNotificationClick, notifications = [
   )
 }
 
-const WORKSPACES_DATA = [
+const WORKSPACES_DATA_INITIAL = [
   {
     id: 0,
     name: 'prod-analytics',
@@ -2823,8 +2874,8 @@ const WORKSPACES_DATA = [
     project: 'Acme',
     edition: 'Standard',
     cloudRegion: 'AWS • US East',
-    size: 'S-164',
-    sizeDetail: '1312 vCPUs • 10 TB',
+    size: 'S-160',
+    sizeDetail: '1280 vCPUs • 10 TB',
     vCPU: 45.2,
     memory: 88,
     cache: 52.3,
@@ -3450,7 +3501,7 @@ function BillingPage({ onOpenAura }) {
   )
 }
 
-function WorkspacesView() {
+function WorkspacesView({ workspacesData }) {
   const [searchQuery, setSearchQuery] = useState('')
 
   return (
@@ -3515,12 +3566,23 @@ function WorkspacesView() {
             </tr>
           </thead>
           <tbody>
-            {WORKSPACES_DATA.map((workspace) => (
-              <tr key={workspace.id}>
+            {workspacesData.map((workspace) => (
+              <tr key={workspace.id} className={workspace.justUpdated ? 'workspace-updated' : ''}>
                 <td>
                   <div className="workspace-name-cell">
-                    <div className="workspace-icon">
-                      {workspace.status === 'active' ? <WorkspaceIconActive /> : <WorkspaceIconSuspended />}
+                    <div className={`workspace-icon ${workspace.loading ? 'workspace-icon-loading' : ''}`}>
+                      {workspace.loading ? (
+                        <>
+                          <CloudIconCustom size={40} />
+                          <div className="workspace-spinner-overlay">
+                            <PurpleSpinner size={16} />
+                          </div>
+                        </>
+                      ) : workspace.status === 'active' ? (
+                        <WorkspaceIconActive />
+                      ) : (
+                        <WorkspaceIconSuspended />
+                      )}
                     </div>
                     <div className="workspace-name-info">
                       <span className="workspace-name">{workspace.name}</span>
@@ -3546,6 +3608,10 @@ function WorkspacesView() {
                 <td>
                   {workspace.status === 'suspended' ? (
                     <span className="workspace-suspended">Suspended</span>
+                  ) : workspace.loading ? (
+                    <div className="workspace-metric workspace-metric-loading">
+                      <span>-</span>
+                    </div>
                   ) : (
                     <div className="workspace-metric">
                       <span>{workspace.vCPU}%</span>
@@ -3558,6 +3624,10 @@ function WorkspacesView() {
                 <td>
                   {workspace.status === 'suspended' ? (
                     <span className="workspace-suspended">Suspended</span>
+                  ) : workspace.loading ? (
+                    <div className="workspace-metric workspace-metric-loading">
+                      <span>-</span>
+                    </div>
                   ) : (
                     <div className="workspace-metric">
                       <span>{workspace.memory}%</span>
@@ -3570,6 +3640,10 @@ function WorkspacesView() {
                 <td>
                   {workspace.status === 'suspended' ? (
                     <span className="workspace-suspended">Suspended</span>
+                  ) : workspace.loading ? (
+                    <div className="workspace-metric workspace-metric-loading">
+                      <span>-</span>
+                    </div>
                   ) : (
                     <div className="workspace-metric">
                       <span>{workspace.cache}%</span>
@@ -3616,7 +3690,8 @@ function PortalView({
   setAuraPanelInput,
   onSend,
   agentName,
-  onAgentChange
+  onAgentChange,
+  onNavigate
 }) {
   const selectedAgent = AURA_AGENTS.find(a => a.name === agentName) || AURA_AGENTS[0]
 
@@ -3650,6 +3725,7 @@ function PortalView({
                 }}
                 agentName="Aura Agent"
                 compact={true}
+                onNavigate={onNavigate}
               />
             ))}
             {isAuraTyping && (
@@ -3766,7 +3842,7 @@ function PortalView({
   )
 }
 
-function ChatView({ messages, inputValue, setInputValue, isTyping, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, chatEndRef, activeChatFlow }) {
+function ChatView({ messages, inputValue, setInputValue, isTyping, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, chatEndRef, activeChatFlow, onNavigate }) {
   // All home page conversations use Aura Agent (CPU spike, workspace capacity, etc.)
   const agentName = 'Aura Agent'
   
@@ -3787,6 +3863,7 @@ function ChatView({ messages, inputValue, setInputValue, isTyping, onAction, exp
               message.typingComplete = true
             }}
             agentName={agentName}
+            onNavigate={onNavigate}
           />
         ))}
         {isTyping && (
@@ -3902,7 +3979,7 @@ function AnimatedResizeProgress({ resizeProgress }) {
   )
 }
 
-function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete, agentName = 'Aura Agent', compact = false, onAdvanceSilently }) {
+function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete, agentName = 'Aura Agent', compact = false, onAdvanceSilently, onNavigate }) {
   // Only treat text as items if it's an array (not a string)
   const textItems = message.type === 'agent' && Array.isArray(message.content?.text) ? message.content.text : []
   const analysisTextItems = message.type === 'agent' && Array.isArray(message.content?.analysisText) ? message.content.analysisText : []
@@ -4283,7 +4360,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                 {d.type === 'mixed' && (
                   <>
                     {d.content}
-                    {d.link && <span className="text-link">{d.link}</span>}
+                    {d.link && <span className="text-link" onClick={() => onNavigate && onNavigate('workspaces')}>{d.link}</span>}
                     {d.bold && <strong>{d.bold}</strong>}
                     {d.after}
                   </>
@@ -6153,7 +6230,7 @@ function AgentInput({
   )
 }
 
-function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange, onNewChat, queryTuningResult, queryTuningContext, onApplyQuery, pageContext }) {
+function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, onToggleFullscreen, onWidthChange, messages, inputValue, setInputValue, onSend, onAction, onAdvanceSilently, isTyping, chatEndRef, agentName = 'Aura Agent', onAgentChange, onNewChat, queryTuningResult, queryTuningContext, onApplyQuery, pageContext, onNavigate }) {
   const [isResizing, setIsResizing] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState(() => 
     AURA_AGENTS.find(a => a.name === agentName) || AURA_AGENTS[0]
@@ -6992,6 +7069,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                 agentName={agentName}
                 compact={true}
                 onAdvanceSilently={onAdvanceSilently}
+                onNavigate={onNavigate}
               />
             ))}
             {isTyping && (
