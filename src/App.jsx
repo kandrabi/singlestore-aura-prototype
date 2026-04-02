@@ -1568,13 +1568,21 @@ function App() {
   }
 
   const handleOpenAuraPanel = (options = {}) => {
-    const { agent, context, onApplyQuery } = options
+    const { agent, context, onApplyQuery, flow } = options
     
     // DEBUG LOGS - Remove after fixing
     console.log('[OPEN_PANEL] called with options:', options)
     console.log('[OPEN_PANEL] hasActiveConversation():', hasActiveConversation())
     console.log('[OPEN_PANEL] currentAgent:', auraPanelAgentName)
     console.log('[OPEN_PANEL] currentView:', view)
+    
+    // Priority 0: If specific flow is requested (e.g., billing-credit-burn)
+    if (flow === 'billing-credit-burn') {
+      setAuraPanelAgentName('Aura Agent')
+      setAuraPanelOpen(true)
+      handleBillingCreditBurnFlow('Diagnose credit burn in last 3 months')
+      return
+    }
     
     // Priority 1: If specific agent is requested with context (e.g., Query Tuning)
     if (agent === 'Query Tuning Agent' && context?.query) {
@@ -3132,7 +3140,7 @@ function BillingPage({ onOpenAura }) {
             </div>
             <button 
               className="billing-toast-btn"
-              onClick={() => onOpenAura && onOpenAura({ agent: 'Aura Agent' })}
+              onClick={() => onOpenAura && onOpenAura({ flow: 'billing-credit-burn' })}
             >
               <IconFA name="sparkles" size={14} />
               <span>View insights</span>
