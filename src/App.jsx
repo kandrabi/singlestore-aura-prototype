@@ -2505,12 +2505,12 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
         <div className="unified-user-container" ref={userMenuRef}>
           <div 
             className="unified-user" 
-            title={!isExpanded ? "Syed Kabeer Andrabi" : undefined}
+            title={!isExpanded ? "Kabeer Andrabi" : undefined}
             onClick={() => isExpanded && setUserMenuOpen(!userMenuOpen)}
           >
-            <div className="unified-user-avatar">SA</div>
+            <div className="unified-user-avatar">KA</div>
             <div className="unified-user-info">
-              <span className="unified-user-name">Syed Kabeer Andrabi</span>
+              <span className="unified-user-name">Kabeer Andrabi</span>
               <span className="unified-user-org">S2DB DPS - CLAUDE AI EVALU...</span>
             </div>
             {isExpanded && (
