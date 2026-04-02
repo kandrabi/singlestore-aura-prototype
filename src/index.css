@@ -7979,30 +7979,30 @@ body {
 }
 
 .billing-legend-contracted {
-  background: #3B82F6;
+  background: #586BFF;
 }
 
 .billing-legend-ondemand {
-  background: #F97316;
+  background: #E08F4E;
 }
 
 .billing-legend-forecast-contracted {
   background: repeating-linear-gradient(
     90deg,
-    #BFDBFE,
-    #BFDBFE 2px,
-    #93C5FD 2px,
-    #93C5FD 4px
+    #B8C0FF,
+    #B8C0FF 2px,
+    #9AA5FF 2px,
+    #9AA5FF 4px
   );
 }
 
 .billing-legend-forecast-ondemand {
   background: repeating-linear-gradient(
     90deg,
-    #FED7AA,
-    #FED7AA 2px,
-    #FDBA74 2px,
-    #FDBA74 4px
+    #F5CEB3,
+    #F5CEB3 2px,
+    #EBB896 2px,
+    #EBB896 4px
   );
 }
 
@@ -8070,6 +8070,27 @@ body {
   border-bottom: 1px dashed #F0F0F0;
 }
 
+/* Capacity ceiling line */
+.billing-capacity-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dashed #D0D0D0;
+  z-index: 1;
+}
+
+.billing-capacity-label {
+  position: absolute;
+  right: 0;
+  top: -18px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #999999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .billing-chart-today {
   position: absolute;
   top: -20px;
@@ -8121,11 +8142,21 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  position: relative;
+  cursor: pointer;
+}
+
+.billing-chart-bar-group:hover .billing-bar {
+  opacity: 0.85;
+}
+
+.billing-chart-bar-group.today {
+  z-index: 2;
 }
 
 .billing-chart-bar-stack {
   position: relative;
-  width: 24px;
+  width: 16px;
   display: flex;
   flex-direction: column-reverse;
 }
@@ -8136,11 +8167,11 @@ body {
 }
 
 .billing-bar-contracted {
-  background: #3B82F6;
+  background: #586BFF;
 }
 
 .billing-bar-ondemand {
-  background: #F97316;
+  background: #E08F4E;
   position: absolute;
   width: 100%;
 }
@@ -8148,20 +8179,20 @@ body {
 .billing-bar-forecast-contracted {
   background: repeating-linear-gradient(
     135deg,
-    #BFDBFE,
-    #BFDBFE 3px,
-    #93C5FD 3px,
-    #93C5FD 6px
+    #B8C0FF,
+    #B8C0FF 3px,
+    #9AA5FF 3px,
+    #9AA5FF 6px
   );
 }
 
 .billing-bar-forecast-ondemand {
   background: repeating-linear-gradient(
     135deg,
-    #FED7AA,
-    #FED7AA 3px,
-    #FDBA74 3px,
-    #FDBA74 6px
+    #F5CEB3,
+    #F5CEB3 3px,
+    #EBB896 3px,
+    #EBB896 6px
   );
   position: absolute;
   width: 100%;
@@ -8180,6 +8211,92 @@ body {
   transform: translateX(-50%);
   font-size: 12px;
   color: #9CA3AF;
+}
+
+/* Chart Tooltip */
+.billing-chart-tooltip {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #FFFFFF;
+  border: 1px solid #E6E5EA;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  white-space: nowrap;
+  min-width: 160px;
+}
+
+.billing-chart-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #FFFFFF;
+}
+
+.billing-chart-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: #E6E5EA;
+}
+
+.billing-tooltip-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #191919;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F0F0F0;
+}
+
+.billing-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #666666;
+  margin-bottom: 4px;
+}
+
+.billing-tooltip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.billing-tooltip-dot.contracted {
+  background: #586BFF;
+}
+
+.billing-tooltip-dot.ondemand {
+  background: #E08F4E;
+}
+
+.billing-tooltip-value {
+  margin-left: auto;
+  font-weight: 500;
+  color: #191919;
+}
+
+.billing-tooltip-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #191919;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #F0F0F0;
 }
 
 /* Resources Section */

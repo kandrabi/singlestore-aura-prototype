@@ -2948,16 +2948,47 @@ function WorkspaceIconSuspended() {
 // BILLING PAGE COMPONENT
 // ============================================
 
+// Capacity ceiling for contracted usage
+const BILLING_CAPACITY_LIMIT = 4500
+
 const BILLING_CHART_DATA = [
-  { month: "Aug'25", contracted: 25, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
-  { month: "Sep'25", contracted: 50, onDemand: 5, forecastContracted: 0, forecastOnDemand: 0 },
-  { month: "Oct'25", contracted: 45, onDemand: 3, forecastContracted: 0, forecastOnDemand: 0 },
-  { month: "Nov'25", contracted: 60, onDemand: 8, forecastContracted: 0, forecastOnDemand: 0 },
-  { month: "Dec'25", contracted: 25, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
-  { month: "Jan'26", contracted: 30, onDemand: 0, forecastContracted: 10, forecastOnDemand: 5 },
-  { month: "Feb'26", contracted: 0, onDemand: 0, forecastContracted: 25, forecastOnDemand: 12 },
-  { month: "Mar'26", contracted: 0, onDemand: 0, forecastContracted: 20, forecastOnDemand: 8 },
-  { month: "Apr'26", contracted: 0, onDemand: 0, forecastContracted: 18, forecastOnDemand: 6 },
+  // Past data (Days 1-21) - Gradual rise pattern with smooth variation
+  // Week 1: Steady start, slight rise
+  { day: 1, label: 'Mar 1', contracted: 2800, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 2, label: 'Mar 2', contracted: 2900, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 3, label: 'Mar 3', contracted: 3000, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 4, label: 'Mar 4', contracted: 3050, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 5, label: 'Mar 5', contracted: 3100, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 6, label: 'Mar 6', contracted: 3000, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 7, label: 'Mar 7', contracted: 2850, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  // Week 2: Slight dip then recovery
+  { day: 8, label: 'Mar 8', contracted: 3000, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 9, label: 'Mar 9', contracted: 3150, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 10, label: 'Mar 10', contracted: 3250, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 11, label: 'Mar 11', contracted: 3350, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 12, label: 'Mar 12', contracted: 3400, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 13, label: 'Mar 13', contracted: 3350, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 14, label: 'Mar 14', contracted: 3200, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  // Week 3: Steady growth toward capacity
+  { day: 15, label: 'Mar 15', contracted: 3400, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 16, label: 'Mar 16', contracted: 3600, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 17, label: 'Mar 17', contracted: 3850, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 18, label: 'Mar 18', contracted: 4100, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 19, label: 'Mar 19', contracted: 4350, onDemand: 0, forecastContracted: 0, forecastOnDemand: 0 },
+  // Hitting capacity - On-demand kicks in
+  { day: 20, label: 'Mar 20', contracted: 4500, onDemand: 350, forecastContracted: 0, forecastOnDemand: 0 },
+  { day: 21, label: 'Mar 21', contracted: 4500, onDemand: 650, forecastContracted: 0, forecastOnDemand: 0, isToday: true },
+  // Forecast (Days 22-31) - Rise, stabilize, rise pattern
+  { day: 22, label: 'Mar 22', contracted: 0, onDemand: 0, forecastContracted: 4500, forecastOnDemand: 800 },
+  { day: 23, label: 'Mar 23', contracted: 0, onDemand: 0, forecastContracted: 4500, forecastOnDemand: 950 },
+  { day: 24, label: 'Mar 24', contracted: 0, onDemand: 0, forecastContracted: 4500, forecastOnDemand: 1050 },
+  { day: 25, label: 'Mar 25', contracted: 0, onDemand: 0, forecastContracted: 4500, forecastOnDemand: 1100 },
+  { day: 26, label: 'Mar 26', contracted: 0, onDemand: 0, forecastContracted: 4500, forecastOnDemand: 1050 },
+  { day: 27, label: 'Mar 27', contracted: 0, onDemand: 0, forecastContracted: 4500, forecastOnDemand: 1100 },
+  { day: 28, label: 'Mar 28', contracted: 0, onDemand: 0, forecastContracted: 4500, forecastOnDemand: 1250 },
+  { day: 29, label: 'Mar 29', contracted: 0, onDemand: 0, forecastContracted: 4500, forecastOnDemand: 1400 },
+  { day: 30, label: 'Mar 30', contracted: 0, onDemand: 0, forecastContracted: 4500, forecastOnDemand: 1550 },
+  { day: 31, label: 'Mar 31', contracted: 0, onDemand: 0, forecastContracted: 4500, forecastOnDemand: 1700 },
 ]
 
 const BILLING_RESOURCES_DATA = [
@@ -2969,9 +3000,9 @@ const BILLING_RESOURCES_DATA = [
     edition: 'Standard',
     cloud: 'AWS',
     region: 'US West 2 (Oregon)',
-    size: 'S-2',
+    size: 'S-224',
     status: 'Active',
-    creditUsage: '500 CR'
+    creditUsage: '70,000 CR'
   },
   { 
     id: 2,
@@ -2981,9 +3012,9 @@ const BILLING_RESOURCES_DATA = [
     edition: 'Standard',
     cloud: 'AWS',
     region: 'US West 2 (Oregon)',
-    size: 'S-2',
+    size: 'S-160',
     status: 'Active',
-    creditUsage: '500 CR'
+    creditUsage: '30,000 CR'
   },
   { 
     id: 3,
@@ -2993,9 +3024,9 @@ const BILLING_RESOURCES_DATA = [
     edition: 'Standard',
     cloud: 'AWS',
     region: 'US West 2 (Oregon)',
-    size: 'S-2',
+    size: 'S-80',
     status: 'Suspended',
-    creditUsage: '500 CR'
+    creditUsage: '10,000 CR'
   },
 ]
 
@@ -3005,10 +3036,11 @@ function BillingPage({ onOpenAura }) {
   const [chartType, setChartType] = useState('chart')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const maxChartValue = 75
+  const maxChartValue = 7500
   const barWidth = 24
   const chartHeight = 200
-  const todayIndex = 5 // Jan'26 is the "today" marker
+  const todayIndex = 21 // Day 21 (Mar 21) is "today"
+  const [hoveredBar, setHoveredBar] = useState(null)
 
   return (
     <div className="billing-page">
@@ -3239,11 +3271,11 @@ function BillingPage({ onOpenAura }) {
           {/* Chart */}
           <div className="billing-chart-container">
             <div className="billing-chart-y-axis">
-              <span>75</span>
-              <span>60</span>
-              <span>45</span>
-              <span>30</span>
-              <span>15</span>
+              <span>7.5K</span>
+              <span>6K</span>
+              <span>4.5K</span>
+              <span>3K</span>
+              <span>1.5K</span>
               <span>0</span>
             </div>
             <div className="billing-chart-y-label">Credits</div>
@@ -3253,6 +3285,14 @@ function BillingPage({ onOpenAura }) {
                 {[0, 1, 2, 3, 4, 5].map(i => (
                   <div key={i} className="billing-chart-gridline"></div>
                 ))}
+              </div>
+
+              {/* Capacity ceiling line */}
+              <div 
+                className="billing-capacity-line"
+                style={{ bottom: `${(BILLING_CAPACITY_LIMIT / maxChartValue) * 100}%` }}
+              >
+                <span className="billing-capacity-label">Capacity</span>
               </div>
               
               {/* Today marker */}
@@ -3267,15 +3307,22 @@ function BillingPage({ onOpenAura }) {
               {/* Bars */}
               <div className="billing-chart-bars">
                 {BILLING_CHART_DATA.map((data, index) => {
-                  const isForecast = index >= todayIndex
-                  const total = data.contracted + data.onDemand + data.forecastContracted + data.forecastOnDemand
                   const contractedHeight = (data.contracted / maxChartValue) * chartHeight
                   const onDemandHeight = (data.onDemand / maxChartValue) * chartHeight
                   const forecastContractedHeight = (data.forecastContracted / maxChartValue) * chartHeight
                   const forecastOnDemandHeight = (data.forecastOnDemand / maxChartValue) * chartHeight
+                  const totalContracted = data.contracted + data.forecastContracted
+                  const totalOnDemand = data.onDemand + data.forecastOnDemand
+                  const total = totalContracted + totalOnDemand
+                  const showLabel = data.day === 1 || data.day % 5 === 0 || data.day === 31
                   
                   return (
-                    <div key={data.month} className="billing-chart-bar-group">
+                    <div 
+                      key={data.day} 
+                      className={`billing-chart-bar-group ${data.isToday ? 'today' : ''}`}
+                      onMouseEnter={() => setHoveredBar(index)}
+                      onMouseLeave={() => setHoveredBar(null)}
+                    >
                       <div className="billing-chart-bar-stack" style={{ height: chartHeight }}>
                         {/* Contracted (solid blue) */}
                         {data.contracted > 0 && (
@@ -3306,13 +3353,33 @@ function BillingPage({ onOpenAura }) {
                           ></div>
                         )}
                       </div>
-                      <span className="billing-chart-bar-label">{data.month}</span>
+                      {showLabel && <span className="billing-chart-bar-label">{data.day}</span>}
+                      {/* Tooltip */}
+                      {hoveredBar === index && (
+                        <div className="billing-chart-tooltip">
+                          <div className="billing-tooltip-date">{data.label}, 2026</div>
+                          <div className="billing-tooltip-row">
+                            <span className="billing-tooltip-dot contracted"></span>
+                            <span>Contracted:</span>
+                            <span className="billing-tooltip-value">{totalContracted.toLocaleString()} CR</span>
+                          </div>
+                          <div className="billing-tooltip-row">
+                            <span className="billing-tooltip-dot ondemand"></span>
+                            <span>On-demand:</span>
+                            <span className="billing-tooltip-value">{totalOnDemand.toLocaleString()} CR</span>
+                          </div>
+                          <div className="billing-tooltip-total">
+                            <span>Total:</span>
+                            <span>{total.toLocaleString()} CR</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
               </div>
             </div>
-            <div className="billing-chart-x-label">July month</div>
+            <div className="billing-chart-x-label">March 2026</div>
           </div>
         </div>
 
