@@ -9,6 +9,7 @@ const LOGO_MYSQL_TEXT = "/images/logos/mysql-text.svg"
 const LOGO_MYSQL_DOLPHIN = "/images/logos/mysql-dolphin.svg"
 const LOGO_SQLSERVER = "/images/logos/sqlserver.png"
 const LOGO_SNOWFLAKE = "/images/logos/snowflake.png"
+const LOGO_DATABRICKS = "/images/logos/databricks.svg"
 const LOGO_ORACLE = "/images/logos/oracle.png"
 const LOGO_POSTGRESQL = "/images/logos/postgresql.png"
 
@@ -163,6 +164,7 @@ const SIDEBAR_NAV_ITEMS = [
     children: [
       { id: 'load-data', label: 'Load Data', active: true },
       { id: 'pipelines', label: 'Pipelines' },
+      { id: 'lakehouse', label: 'Lakehouse' },
     ]
   },
   { id: 'editor', icon: 'rectangle-terminal', label: 'Editor' },
@@ -286,7 +288,7 @@ const ALERTS = [
 const SUGGESTED_PROMPTS = [
   'How do I connect to my database?',
   'Migrate my data from Postgress',
-  'Show workspaces at risk on CPU / memory / disk.',
+  'Set up speed layer for lakehouse',
   'Where am I spending the most compute and credits?'
 ]
 
@@ -795,6 +797,12 @@ const QUERY_TUNING_PROMPTS = [
   'Review query performance metrics'
 ]
 
+const LAKEHOUSE_PROMPTS = [
+  'Set up real-time speed layer for your data',
+  'Check status on speed layer Customer Events',
+  'Monitor and manage your real-time data system'
+]
+
 const BILLING_PROMPTS = [
   'Diagnose credit burn in last 3 months',
   'Why am I exceeding my credits?',
@@ -898,6 +906,12 @@ const AGENT_CONFIG = {
     description: 'I can help you optimize queries, analyze execution plans, and improve database performance.',
     prompts: QUERY_TUNING_PROMPTS,
     placeholder: 'Ask about query optimization...'
+  },
+  'Lakehouse Agent': {
+    title: 'Lakehouse Agent',
+    description: 'I can help you set up real-time speed layers for your lakehouse, connect to Snowflake, Databricks, and S3.',
+    prompts: LAKEHOUSE_PROMPTS,
+    placeholder: 'Ask about lakehouse speed layers...'
   },
   'Support Agent': {
     title: 'Support Agent — Billing & Usage',
@@ -1258,6 +1272,247 @@ const MIGRATION_CHAT_FLOW = [
   }
 ]
 
+const LAKEHOUSE_CHAT_FLOW = [
+  // Scene 1: Initial greeting & source selection
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: "Great — let's set up a real-time speed layer for your lakehouse." }
+      ],
+      sourceSelector: {
+        label: 'Step 1: Select source system',
+        options: [
+          { id: 'snowflake', label: 'Snowflake', icon: 'snowflake' },
+          { id: 'databricks', label: 'Databricks', icon: 'databricks' },
+          { id: 's3', label: 'S3 / Data Lake', icon: 's3' }
+        ]
+      }
+    }
+  },
+  // Scene 2: Connection type selection (after Snowflake selected)
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'How would you like to connect?' }
+      ],
+      connectionTypeSelector: {
+        options: [
+          { id: 'existing', label: 'Use existing connection' },
+          { id: 'new', label: 'Create new connection' }
+        ]
+      }
+    }
+  },
+  // Scene 3: Snowflake connections list
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Select a Snowflake connection:' }
+      ],
+      savedConnectionSelector: {
+        options: [
+          { id: 'snowflake-acme', label: 'Snowflake Acme' },
+          { id: 'snowflake-kixo', label: 'Snowflake Kixo' }
+        ]
+      }
+    }
+  },
+  // Scene 4: Connecting and discovering catalogs progress
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Connecting to Snowflake...',
+      steps: [
+        '✓ Connecting to Snowflake...',
+        '→ Discovering available Iceberg catalogs...'
+      ],
+      completedState: {
+        text: 'Connected successfully.',
+        subtext: ''
+      }
+    }
+  },
+  // Scene 5: Iceberg catalogs list (split into Available and External)
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'I discovered the following Iceberg catalogs from your connection:' }
+      ],
+      catalogSelector: {
+        availableCatalogs: [
+          { id: 'horizon-catalog', label: 'Horizon Catalog' },
+          { id: 'polaris-catalog', label: 'Polaris Catalog' }
+        ],
+        externalCatalogs: [
+          { id: 'glue-catalog', label: 'Glue Catalog' }
+        ]
+      }
+    }
+  },
+  // Scene 6: Discovery progress (after catalog selection)
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Analyzing datasets...',
+      steps: [
+        '✓ Connecting to Horizon Catalog',
+        '✓ Analyzing datasets...',
+        '→ Discovering tables...'
+      ],
+      completedState: {
+        text: 'Discovered 50 tables',
+        subtext: ''
+      }
+    }
+  },
+  // Scene 5: Discovery result with table preview and proceed options
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Discovered 50 tables.' }
+      ],
+      tablePreview: {
+        title: 'Preview:',
+        tables: [
+          { name: 'customer' },
+          { name: 'orders' },
+          { name: 'transactions' }
+        ]
+      },
+      followUp: 'How would you like to proceed?',
+      actions: ['Set up speed layer for all tables', 'Select specific tables', 'Explore data']
+    }
+  },
+  // Scene 6: Workspace selection
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Which workspace should this be set up in?' }
+      ],
+      workspaceSelector: {
+        options: [
+          { 
+            id: 'existing', 
+            label: 'Existing workspace', 
+            subOptions: [
+              { id: 'prod-analytics', name: 'prod-analytics', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active' },
+              { id: 'workspace-2', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active' },
+              { id: 'workspace-1a', name: 'Workspace-1', group: 'Group 1', env: 'Non-Prod', project: 'Acme', projectType: 'Shared', cloudRegion: 'AWS • US East', status: 'paused' },
+              { id: 'workspace-1b', name: 'Workspace-1', group: 'Group 1', env: 'Non-Prod', project: 'Kixo', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'paused' },
+              { id: 'workspace-2b', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Kixo', projectType: 'Enterprise', cloudRegion: 'GCP • US East', status: 'active' },
+              { id: 'workspace-2c', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active' }
+            ]
+          },
+          { id: 'new', label: 'Create new workspace' }
+        ]
+      }
+    }
+  },
+  // Scene 7: Execution progress
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Setting up speed layer...',
+      steps: [
+        '✓ Optimizing data layout...',
+        '✓ Creating speed layer...',
+        '→ Enabling real-time sync...'
+      ]
+    }
+  },
+  // Scene 8: Success with summary
+  {
+    type: 'agent',
+    content: {
+      success: true,
+      title: 'Speed layer successfully created! ✅',
+      text: 'You can now query your data or monitor performance.',
+      speedLayerStats: {
+        stats: [
+          { label: 'Tables enabled:', value: '50', success: true },
+          { label: 'Latency reduced:', value: '~85%', success: true },
+          { label: 'Real-time sync:', value: 'Active', success: true }
+        ]
+      },
+      actions: ['Open in SQL Editor', 'View status']
+    }
+  },
+  // Scene 9: Status display with issue warning
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: "Here's the current status:" }
+      ],
+      speedLayerStatus: {
+        stats: [
+          { label: 'Tables active:', value: '50' },
+          { label: 'Avg latency:', value: '120ms' },
+          { label: 'Status:', value: '1 table degraded ⚠️', warning: true }
+        ]
+      },
+      followUp: 'Would you like to debug this issue?',
+      actions: ['Debug', 'Ignore for now']
+    }
+  },
+  // Scene 10: Handoff to Observability Agent
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Switching to Observability Agent...',
+      steps: [
+        '→ Handing off to Observability Agent...'
+      ],
+      autoAdvance: true
+    }
+  },
+  // Scene 11: Observability Agent findings
+  {
+    type: 'agent',
+    agentName: 'Observability Agent',
+    content: {
+      text: [
+        { type: 'bold', content: 'Issue detected: pipeline imbalance' }
+      ],
+      debugResult: {
+        title: 'Suggested fix:',
+        items: [
+          'Rebalance ingestion pipeline',
+          'Optimize partitioning'
+        ]
+      },
+      actions: ['Resolve automatically']
+    }
+  },
+  // Scene 12: Resolution success
+  {
+    type: 'agent',
+    agentName: 'Observability Agent',
+    content: {
+      success: true,
+      title: 'Issue resolved! ✅',
+      text: 'All tables are now healthy.',
+      speedLayerStats: {
+        stats: [
+          { label: 'Tables healthy:', value: '50 / 50', success: true },
+          { label: 'Sync status:', value: 'Real-time', success: true },
+          { label: 'Avg latency:', value: '95ms' }
+        ]
+      }
+    }
+  }
+]
+
 const CHAT_FLOW = [
   {
     type: 'agent',
@@ -1456,11 +1711,12 @@ function App() {
   const [auraPanelMessages, setAuraPanelMessages] = useState([])
   const [auraPanelInput, setAuraPanelInput] = useState('')
   const [auraPanelAgentName, setAuraPanelAgentName] = useState('Aura Agent')
-  const [auraPanelFlow, setAuraPanelFlow] = useState('none') // 'none', 'default', 'cpu-spike', 'migration', 'cpu-spike-v2'
+  const [auraPanelFlow, setAuraPanelFlow] = useState('none') // 'none', 'default', 'cpu-spike', 'migration', 'cpu-spike-v2', 'lakehouse'
   const [auraPanelFlowIndex, setAuraPanelFlowIndex] = useState(0)
   const [migrationFlowIndex, setMigrationFlowIndex] = useState(0)
   const [cpuSpikeV2FlowIndex, setCpuSpikeV2FlowIndex] = useState(0)
   const [billingFlowIndex, setBillingFlowIndex] = useState(0)
+  const [lakehouseFlowIndex, setLakehouseFlowIndex] = useState(0)
   const [billingFlowBranch, setBillingFlowBranch] = useState(null) // 'drivers' or 'recommendations'
   const [billingFlowStarted, setBillingFlowStarted] = useState(false) // Guard against double execution
   const [isAuraTyping, setIsAuraTyping] = useState(false)
@@ -1554,6 +1810,8 @@ function App() {
         return 'Data Migration Agent'
       case 'editor':
         return 'Query Tuning Agent'
+      case 'lakehouse':
+        return 'Lakehouse Agent'
       case 'billing':
         return 'Aura Agent'
       default:
@@ -1676,6 +1934,28 @@ function App() {
       }
     }
     
+    // Lakehouse flow: Reset conversation when navigating to Home
+    const hasLakehouseConversation = auraPanelFlow === 'lakehouse' && auraPanelMessages.length > 0
+    
+    if (hasLakehouseConversation) {
+      if (view === 'portal' && newView === 'portal') {
+        // Clicking Home/Logo while already on portal → reset conversation and show default home
+        setAuraPanelFlow('none')
+        setAuraPanelMessages([])
+        setLakehouseFlowIndex(0)
+        setAuraPanelOpen(false)
+      } else if (view === 'portal' && newView !== 'portal') {
+        // Navigating AWAY from Home → move conversation to side panel
+        setAuraPanelOpen(true)
+      } else if (view !== 'portal' && newView === 'portal') {
+        // Navigating BACK to Home → reset conversation and show default home
+        setAuraPanelFlow('none')
+        setAuraPanelMessages([])
+        setLakehouseFlowIndex(0)
+        setAuraPanelOpen(false)
+      }
+    }
+    
     // Priority 1: If navigating away from chat view, transfer conversation to side panel
     // The conversation continues with the SAME agent - do NOT change agent
     const isTransferringChat = view === 'chat' && newView !== 'chat' && newView !== 'portal' && chatMessages.length > 0
@@ -1791,6 +2071,53 @@ function App() {
     }, 1000)
   }
 
+  const addNextLakehouseMessage = (index) => {
+    if (index >= LAKEHOUSE_CHAT_FLOW.length) return
+    setIsAuraTyping(true)
+    setTimeout(() => {
+      setIsAuraTyping(false)
+      const message = LAKEHOUSE_CHAT_FLOW[index]
+      
+      // Mark previous progress messages as completed (without completedState)
+      setAuraPanelMessages(prev => {
+        const updated = prev.map(msg => 
+          (msg.content?.progress && !msg.content?.completedState) 
+            ? { ...msg, content: { ...msg.content, completed: true } } 
+            : msg
+        )
+        return [...updated, { ...message, id: Date.now(), timestamp: new Date() }]
+      })
+      setLakehouseFlowIndex(index + 1)
+      
+      // Auto-advance progress messages after a delay
+      if (message.content?.progress) {
+        const hasSteps = message.content?.steps?.length > 0
+        const stepsCount = message.content?.steps?.length || 0
+        const stepsDelay = hasSteps ? (800 + (stepsCount * 700) + 400 + 500) : 2500
+        
+        setTimeout(() => {
+          if (message.content?.completedState) {
+            setAuraPanelMessages(prev => 
+              prev.map(msg => 
+                msg.content?.progress && msg.content?.completedState && !msg.content?.completed
+                  ? { ...msg, content: { ...msg.content, completed: true } }
+                  : msg
+              )
+            )
+            setTimeout(() => addNextLakehouseMessage(index + 1), 2000)
+          } else {
+            addNextLakehouseMessage(index + 1)
+          }
+        }, stepsDelay)
+      }
+      
+      // Auto-advance autoAdvance messages
+      if (message.content?.autoAdvance && !message.content?.progress) {
+        setTimeout(() => addNextLakehouseMessage(index + 1), 2500)
+      }
+    }, 1000)
+  }
+
   // Billing flow message handler (Aura Agent on billing page or Support Agent)
   const addNextBillingMessage = (messageIndex, branch = null) => {
     let message
@@ -1873,10 +2200,22 @@ function App() {
     setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text, timestamp: new Date() }])
     setAuraPanelInput('')
     
+    // Check for lakehouse flow trigger
+    if (text.toLowerCase().includes('speed layer') || text.toLowerCase().includes('lakehouse')) {
+      setAuraPanelFlow('lakehouse')
+      setLakehouseFlowIndex(1)
+      setAuraPanelAgentName('Lakehouse Agent')
+      setTimeout(() => addNextLakehouseMessage(0), 500)
+      return
+    }
+    
     // Route to correct flow based on active agent
     if (auraPanelAgentName === 'Data Migration Agent') {
       const nextIndex = auraPanelMessages.length === 0 ? 0 : migrationFlowIndex
       setTimeout(() => addNextMigrationMessage(nextIndex), 500)
+    } else if (auraPanelAgentName === 'Lakehouse Agent' || auraPanelFlow === 'lakehouse') {
+      const nextIndex = auraPanelMessages.length === 0 ? 0 : lakehouseFlowIndex
+      setTimeout(() => addNextLakehouseMessage(nextIndex), 500)
     } else {
       // Generic AI response for other agents when no active flow
       setIsAuraTyping(true)
@@ -1891,7 +2230,7 @@ function App() {
               { type: 'text', content: "I understand you're asking about: \"" + text.substring(0, 50) + (text.length > 50 ? '...' : '') + "\"" },
               { type: 'text', content: "I can help you with any of these tasks:" }
             ],
-            actions: ['Analyze workspace capacity', 'Load data from PostgreSQL', 'Diagnose high CPU usage']
+            actions: ['Analyze workspace capacity', 'Load data from PostgreSQL', 'Set up speed layer for lakehouse', 'Diagnose high CPU usage']
           }
         }
         setAuraPanelMessages(prev => [...prev, response])
@@ -1976,6 +2315,8 @@ function App() {
     // Route to correct flow based on active flow type
     if (auraPanelAgentName === 'Data Migration Agent' || auraPanelFlow === 'migration') {
       setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
+    } else if (auraPanelAgentName === 'Lakehouse Agent' || auraPanelFlow === 'lakehouse') {
+      setTimeout(() => addNextLakehouseMessage(lakehouseFlowIndex), 500)
     } else if (auraPanelFlow === 'cpu-spike') {
       // Handle CPU spike flow actions
       if (['Investigate spike', 'Show affected queries'].includes(actionText)) {
@@ -2114,6 +2455,16 @@ function App() {
         setIsAuraTyping(false)
         setAuraPanelMessages(prev => [...prev, { ...MIGRATION_CHAT_FLOW[0], id: Date.now(), timestamp: new Date() }])
       }, 500)
+    } else if (actionText === 'Set up speed layer for lakehouse') {
+      // Start lakehouse flow
+      setAuraPanelFlow('lakehouse')
+      setLakehouseFlowIndex(1)
+      setAuraPanelAgentName('Lakehouse Agent')
+      setIsAuraTyping(true)
+      setTimeout(() => {
+        setIsAuraTyping(false)
+        setAuraPanelMessages(prev => [...prev, { ...LAKEHOUSE_CHAT_FLOW[0], id: Date.now(), timestamp: new Date() }])
+      }, 500)
     } else if (actionText === 'Diagnose high CPU usage') {
       // Start CPU spike flow (Use Case 2)
       setAuraPanelFlow('cpu-spike')
@@ -2138,7 +2489,7 @@ function App() {
               { type: 'text', content: `I'd be happy to help you with "${actionText}".` },
               { type: 'text', content: 'Select one of the options below to get started:' }
             ],
-            actions: ['Analyze workspace capacity', 'Load data from PostgreSQL', 'Diagnose high CPU usage']
+            actions: ['Analyze workspace capacity', 'Load data from PostgreSQL', 'Set up speed layer for lakehouse', 'Diagnose high CPU usage']
           }
         }
         setAuraPanelMessages(prev => [...prev, response])
@@ -2351,6 +2702,8 @@ function App() {
         return <EditorView onOpenAura={handleOpenAuraPanel} pendingEditorQuery={pendingEditorQuery} onClearPendingQuery={() => setPendingEditorQuery(null)} />
       case 'billing':
         return <BillingPage onOpenAura={handleOpenAuraPanel} />
+      case 'lakehouse':
+        return <LakehouseView onOpenAura={handleOpenAuraPanel} />
       default:
         return null
     }
@@ -2437,6 +2790,7 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
     if (item.id === 'workspaces' && currentView === 'workspaces') return true
     if (item.id === 'load-data' && currentView === 'load-data') return true
     if (item.id === 'editor' && currentView === 'editor') return true
+    if (item.id === 'lakehouse' && currentView === 'lakehouse') return true
     return false
   }
 
@@ -2457,6 +2811,8 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
   const handleChildClick = (child) => {
     if (child.id === 'load-data') {
       onNavigate('load-data')
+    } else if (child.id === 'lakehouse') {
+      onNavigate('lakehouse')
     }
   }
 
@@ -2495,7 +2851,7 @@ function Sidebar({ onNavigate, currentView, isExpanded, onToggleExpand }) {
                   {item.children.map((child) => (
                     <button 
                       key={child.id} 
-                      className={`unified-child-item ${child.id === 'load-data' && currentView === 'load-data' ? 'active' : ''}`}
+                      className={`unified-child-item ${(child.id === 'load-data' && currentView === 'load-data') || (child.id === 'lakehouse' && currentView === 'lakehouse') ? 'active' : ''}`}
                       onClick={() => handleChildClick(child)}
                     >
                       <span className="unified-label">{child.label}</span>
@@ -2652,7 +3008,7 @@ function DataSourceCard({ source }) {
   )
 }
 
-function DataSourceLogo({ name }) {
+function DataSourceLogo({ name, size = 24 }) {
   switch (name) {
     case 'file-arrow-up':
       return (
@@ -2663,7 +3019,21 @@ function DataSourceLogo({ name }) {
     case 'mongodb':
       return <img src={LOGO_MONGODB} alt="MongoDB" className="data-source-logo-img data-source-logo-mongodb" />
     case 's3':
-      return <img src={LOGO_S3} alt="Amazon S3" className="data-source-logo-img data-source-logo-s3" />
+      return (
+        <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.686 3.62949C15.135 2.41824 17.5754 1.19215 20.033 0C20.0544 4.0304 20.033 8.07778 20.033 12.1167C17.6396 12.6427 15.2763 13.3046 12.8829 13.8285L13.2126 14.0407L12.7117 13.9834C12.656 12.857 12.7117 11.7285 12.6817 10.6021C12.6817 8.27294 12.686 5.95015 12.686 3.62949V3.62949Z" fill="#8C3223"/>
+          <path d="M20.033 0C22.4834 1.21619 24.9353 2.43026 27.3886 3.64221V10.5936C27.3757 11.6712 27.3886 12.7509 27.3886 13.8285L27.2302 13.871C24.839 13.2749 22.4499 12.6618 20.0459 12.1167C20.0309 8.07778 20.0544 4.0304 20.033 0V0Z" fill="#E15343"/>
+          <path d="M0 9.90842C1.08749 9.38235 2.16 8.82234 3.25606 8.30899C3.24749 18.7414 3.24749 29.1738 3.25606 39.6061C2.16 39.1076 1.09606 38.5455 0.00856294 38.0194C0.00285431 28.6533 0 19.283 0 9.90842Z" fill="#8C3223"/>
+          <path d="M3.25606 8.30899C6.39223 9.10447 9.54982 9.81085 12.6881 10.6063C12.7095 11.7327 12.6624 12.8612 12.7181 13.9876L13.219 14.0449C15.4925 14.4098 17.7424 14.8934 20.018 15.2349C20.0437 16.1449 20.0394 17.0528 20.018 17.9629C17.5819 18.2429 15.135 18.5377 12.6924 18.8793C12.6924 22.2924 12.7053 25.7076 12.6924 29.1207C15.1286 29.4962 17.5819 29.7571 20.0266 30.0626C20.0758 30.9599 20.0437 31.8593 20.0416 32.7587C17.5883 33.1681 15.1436 33.6242 12.701 34.0866V37.33C9.54554 38.1085 6.39223 38.8192 3.24963 39.604C3.26105 29.1731 3.26319 18.7414 3.25606 8.30899V8.30899Z" fill="#E15343"/>
+          <path d="M27.3843 10.5936C30.5311 9.81934 33.6845 9.07266 36.8356 8.31961C36.8242 18.4522 36.8242 28.5848 36.8356 38.7173C36.8356 39.0058 36.8056 39.2943 36.78 39.5828C33.6459 38.8467 30.5183 38.0979 27.3864 37.3364C27.3736 36.2546 27.3864 35.1706 27.3864 34.0866C24.9395 33.6242 22.4884 33.1681 20.0308 32.7545C20.0308 31.8551 20.0651 30.9556 20.0159 30.0583C17.5711 29.7592 15.1179 29.492 12.6817 29.1165C12.7052 25.7034 12.6817 22.2881 12.6817 18.875C15.135 18.5377 17.5818 18.2429 20.0287 17.9523C20.0394 17.0423 20.0437 16.1344 20.0287 15.2243C22.0859 14.9337 24.1196 14.4776 26.1769 14.1637C26.5388 14.1052 26.8933 14.0085 27.2344 13.8752L27.3928 13.8328C27.3778 12.7488 27.3714 11.667 27.3843 10.5936V10.5936Z" fill="#8C3223"/>
+          <path d="M36.8378 8.31961C37.9081 8.86478 39.0042 9.38024 40.081 9.93389C40.071 19.2943 40.071 28.6548 40.081 38.0152C38.9807 38.5646 37.8675 39.0928 36.7757 39.6634V39.5849C36.8014 39.2965 36.8228 39.008 36.8314 38.7195C36.8328 28.5855 36.8349 18.4522 36.8378 8.31961V8.31961Z" fill="#E15343"/>
+          <path d="M12.8893 13.8285C15.2848 13.3046 17.6461 12.6427 20.0394 12.1167C22.4434 12.6618 24.8325 13.2749 27.2237 13.871C26.8826 14.0042 26.5281 14.101 26.1662 14.1594C24.1111 14.4776 22.0774 14.9337 20.018 15.2201C17.7402 14.8807 15.4903 14.3949 13.219 14.0301C13.1098 13.9685 12.9985 13.9007 12.8893 13.8285Z" fill="#5E1F19"/>
+          <path d="M20.0565 17.9565C22.497 18.2577 24.9417 18.5462 27.38 18.8793V29.1186C24.9353 29.4707 22.482 29.7762 20.0287 30.0477C20.0629 26.0152 20.0094 21.9848 20.0565 17.9565Z" fill="#E15343"/>
+          <path d="M12.6924 34.0824C15.1329 33.6199 17.5797 33.1639 20.033 32.7545C22.4884 33.1681 24.9396 33.6242 27.3886 34.0866C24.9374 34.6848 22.4927 35.3233 20.0309 35.8833C17.5776 35.3042 15.135 34.6933 12.6924 34.0824V34.0824Z" fill="#F2B0A9"/>
+          <path d="M12.686 37.3343C12.6967 36.2524 12.686 35.1727 12.686 34.0909C15.1286 34.6997 17.5733 35.3127 20.0223 35.8918C20.048 39.9222 20.033 43.9653 20.0223 48C17.5626 46.81 15.1222 45.5817 12.671 44.3705C12.681 42.0216 12.686 39.6761 12.686 37.3343Z" fill="#8C3223"/>
+          <path d="M20.0287 35.8855C22.4905 35.3254 24.9352 34.6869 27.3864 34.0887C27.3757 35.1706 27.3714 36.2546 27.3864 37.3385C27.3971 39.6719 27.3864 42.0053 27.3864 44.3536C24.9345 45.5655 22.4841 46.7796 20.0351 47.9958C20.0394 43.9569 20.0544 39.9201 20.0287 35.8855Z" fill="#E15343"/>
+        </svg>
+      )
     case 'mysql':
       return (
         <div className="data-source-logo-mysql">
@@ -2678,7 +3048,17 @@ function DataSourceLogo({ name }) {
     case 'sqlserver':
       return <img src={LOGO_SQLSERVER} alt="SQL Server" className="data-source-logo-img" />
     case 'snowflake':
-      return <img src={LOGO_SNOWFLAKE} alt="Snowflake" className="data-source-logo-img" />
+      return (
+        <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fillRule="evenodd" clipRule="evenodd" d="M16.03 24.8773C16.1315 24.5586 16.1738 24.2306 16.1662 23.9064C16.1544 23.6718 16.1239 23.4372 16.057 23.2027C15.8557 22.4739 15.3785 21.8233 14.6635 21.4132L4.49464 15.5687C3.05915 14.7464 1.22906 15.2352 0.404944 16.6618C-0.426794 18.0867 0.0639464 19.9062 1.49936 20.7306L7.18176 24.0019L1.49936 27.2635C0.0639464 28.0896 -0.425092 29.9092 0.404944 31.3399C1.22906 32.7627 3.05915 33.2494 4.49464 32.4271L14.6635 26.5789C15.3497 26.186 15.8155 25.5696 16.03 24.8773ZM18.7896 30.3538C18.2053 30.3041 17.5978 30.4262 17.0516 30.7428L6.87506 36.5835C5.44345 37.4076 4.9545 39.2367 5.78064 40.6637C6.61068 42.0868 8.43906 42.577 9.86864 41.7492L15.5702 38.4758V45.0167C15.5702 46.6648 16.9096 48 18.5675 48C20.2174 48 21.5611 46.6648 21.5611 45.0167V33.3236C21.5611 31.7538 20.3384 30.4641 18.7896 30.3538ZM29.2115 17.6459C29.7941 17.6935 30.3999 17.5696 30.946 17.2568L41.1206 11.4106C42.5542 10.5862 43.0408 8.76464 42.2167 7.33426C41.3909 5.90929 39.5607 5.42093 38.1288 6.24498L32.4314 9.52211V2.97913C32.4314 1.33524 31.0916 0 29.4341 0C27.7761 0 26.4402 1.33524 26.4402 2.97913V14.6722C26.4402 16.2403 27.6594 17.5317 29.2115 17.6459ZM6.87506 11.4106L17.0516 17.2568C17.5978 17.5696 18.2053 17.6935 18.7896 17.6459C20.3384 17.5317 21.5611 16.2403 21.5611 14.6722V2.97913C21.5611 1.33524 20.2174 0 18.5675 0C16.9096 0 15.5702 1.33524 15.5702 2.97913V9.52211L9.86864 6.24498C8.43906 5.42093 6.61068 5.90929 5.78064 7.33426C4.9545 8.76464 5.44345 10.5862 6.87506 11.4106ZM25.9994 23.977C25.9994 23.8073 25.8961 23.5707 25.7754 23.4449L24.5507 22.2317C24.4302 22.1116 24.1924 22.0123 24.0216 22.0123H23.9737C23.8032 22.0123 23.5659 22.1116 23.447 22.2317L22.2222 23.4449C22.0996 23.5707 22.0057 23.8073 22.0057 23.977V24.0247C22.0057 24.1927 22.0996 24.4272 22.2222 24.5493L23.447 25.7662C23.5676 25.8863 23.8032 25.9856 23.9737 25.9856H24.0216C24.1924 25.9856 24.4302 25.8863 24.5507 25.7662L25.7754 24.5493C25.8961 24.4272 25.9994 24.1927 25.9994 24.0247V23.977ZM29.3803 25.1443L25.1506 29.3487C25.0297 29.4725 24.7961 29.5736 24.6197 29.5736H24.313H23.6882H23.3759C23.2051 29.5736 22.9677 29.4725 22.845 29.3487L18.6174 25.1443C18.4965 25.026 18.3987 24.7876 18.3987 24.62V24.3089V23.687V23.38C18.3987 23.2082 18.4965 22.9698 18.6174 22.8498L22.845 18.6455C22.9677 18.5217 23.2051 18.4244 23.3759 18.4244H23.6882H24.313H24.6197C24.7923 18.4244 25.0297 18.5217 25.1506 18.6455L29.3803 22.8498C29.501 22.9698 29.5987 23.2082 29.5987 23.38V23.687V24.3089V24.62C29.5987 24.7876 29.501 25.026 29.3803 25.1443ZM41.1206 36.5835L30.946 30.7428C30.3999 30.4262 29.7941 30.3041 29.2115 30.3538C27.6594 30.4641 26.4402 31.7538 26.4402 33.3236V45.0167C26.4402 46.6648 27.7761 48 29.4341 48C31.0916 48 32.4314 46.6648 32.4314 45.0167V38.4758L38.1288 41.7492C39.5604 42.577 41.3909 42.0868 42.2167 40.6637C43.0408 39.2367 42.5542 37.4076 41.1206 36.5835ZM46.5001 20.7306L40.8177 24.0019L46.5001 27.2635C47.9356 28.0896 48.4262 29.9092 47.5963 31.3399C46.7684 32.7627 44.9365 33.2494 43.5066 32.4271L33.33 26.5789C32.6514 26.186 32.1801 25.5696 31.9712 24.8773C31.8717 24.5586 31.8256 24.2306 31.837 23.9064C31.8429 23.6718 31.8772 23.4372 31.9424 23.2027C32.1458 22.4739 32.623 21.8236 33.33 21.4132L43.5066 15.5687C44.9365 14.7464 46.7684 15.2352 47.5963 16.6618C48.4262 18.0867 47.9356 19.9062 46.5001 20.7306Z" fill="#29B5E8"/>
+        </svg>
+      )
+    case 'databricks':
+      return (
+        <svg width={size} height={size} viewBox="0 0 46 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M0 13.7702V12.4292L5.30454 9.44924C10.9112 6.36995 16.5212 3.28735 22.1346 0.201435C22.3216 0.0704546 22.5459 0 22.7761 0C23.0062 0 23.2306 0.0704546 23.4175 0.201435C28.6712 3.1218 33.9418 6.01898 39.2294 8.89299C39.9218 9.27045 40.2476 9.66776 40.0032 10.4922L38.6592 11.2273L22.7761 2.496L3.58386 13.055C3.81803 13.2139 3.97075 13.343 4.15402 13.4424C10.1815 16.7534 16.2022 20.0645 22.216 23.3756C22.3844 23.4866 22.5831 23.5459 22.7863 23.5459C22.9895 23.5459 23.1881 23.4866 23.3564 23.3756L39.8912 14.2768C41.1334 13.5914 42.3958 12.9556 43.5973 12.2206C43.8272 12.025 44.122 11.9172 44.4271 11.9172C44.7322 11.9172 45.0269 12.025 45.2569 12.2206L45.5522 12.4093V21.0115L39.1479 24.5576C33.9757 27.4085 28.7933 30.2394 23.6415 33.1201C23.3827 33.29 23.0778 33.3808 22.7659 33.3808C22.4539 33.3808 22.1491 33.29 21.8903 33.1201C15.6388 29.6501 9.37377 26.2032 3.09516 22.7796L2.525 22.4816C2.48246 22.678 2.45521 22.8772 2.44353 23.0776C2.44353 24.1901 2.44353 25.3126 2.44353 26.4251C2.42312 26.5981 2.45945 26.7731 2.54725 26.9247C2.63505 27.0764 2.76984 27.1971 2.93229 27.2694C9.38059 30.7924 15.8289 34.3286 22.2772 37.8781C22.4297 37.9715 22.6062 38.0211 22.7863 38.0211C22.9664 38.0211 23.1428 37.9715 23.2953 37.8781L43.1188 26.9515C43.3231 26.8617 43.5175 26.7519 43.6991 26.6237C43.8279 26.5085 43.9803 26.4211 44.1461 26.3672C44.312 26.3133 44.4876 26.2942 44.6615 26.311C44.8355 26.3279 45.0038 26.3804 45.1556 26.4651C45.3073 26.5498 45.4389 26.6648 45.542 26.8025V35.4842L22.7557 48L0.0305123 35.4842V33.9743C0.20597 33.8827 0.372892 33.7764 0.529397 33.6565C0.670391 33.5363 0.851258 33.4701 1.03847 33.4701C1.22569 33.4701 1.40656 33.5363 1.54755 33.6565L10.9451 38.8316C14.6818 40.8878 18.4286 42.944 22.1448 45.0101C22.3272 45.1288 22.5415 45.1922 22.7608 45.1922C22.9801 45.1922 23.1944 45.1288 23.3768 45.0101C29.9201 41.3944 36.4906 37.7787 43.0882 34.1631V29.6335C42.8438 29.7428 42.6504 29.8222 42.4773 29.9216L23.9673 40.0932C22.8066 40.7289 22.8066 40.7388 21.6459 40.0932C14.6546 36.2457 7.66327 32.3982 0.671954 28.5508L0.0203208 28.1832V19.4818L0.44799 19.2235C0.610921 19.0953 0.813932 19.0254 1.02325 19.0254C1.23257 19.0254 1.43551 19.0953 1.59845 19.2235C3.23767 20.1473 4.89731 21.0413 6.54672 21.9551C11.78 24.8159 17.0031 27.6866 22.216 30.5672C22.3844 30.6782 22.5831 30.7376 22.7863 30.7376C22.9895 30.7376 23.1881 30.6782 23.3564 30.5672C29.7572 27.031 36.1716 23.5114 42.5995 20.0082C42.7753 19.9319 42.9221 19.8035 43.019 19.6413C43.1158 19.479 43.1579 19.2912 43.1391 19.1043C43.1391 17.8329 43.1391 16.5515 43.1391 15.131L42.121 15.6774L23.4073 25.988C23.2455 26.0867 23.0585 26.139 22.8677 26.139C22.6769 26.139 22.4899 26.0867 22.3281 25.988C15.011 21.9419 7.68022 17.9057 0.335946 13.8794L0 13.7702Z" fill="#E8372A"/>
+        </svg>
+      )
     default:
       return <IconFA name="database" size={20} />
   }
@@ -3473,6 +3853,244 @@ function BillingPage({ onOpenAura }) {
   )
 }
 
+// Lakehouse speed layers data
+const LAKEHOUSE_SPEED_LAYERS = [
+  {
+    id: 1,
+    name: 'Customer Events',
+    source: 'Snowflake',
+    dataset: 'analytics.customer_events',
+    syncType: 'Streaming',
+    lastUpdated: '2 min ago',
+    status: 'Active',
+    performanceGain: '12x faster'
+  },
+  {
+    id: 2,
+    name: 'Product Catalog',
+    source: 'Amazon S3',
+    dataset: 's3://data-lake/products/',
+    syncType: 'Incremental',
+    lastUpdated: '5 min ago',
+    status: 'Active',
+    performanceGain: '8x faster'
+  },
+  {
+    id: 3,
+    name: 'User Activity',
+    source: 'Databricks',
+    dataset: 'delta.user_activity_log',
+    syncType: 'Batch',
+    lastUpdated: '15 min ago',
+    status: 'Syncing',
+    performanceGain: '15x faster'
+  }
+]
+
+const LAKEHOUSE_SOURCES = [
+  {
+    id: 'snowflake',
+    name: 'Snowflake',
+    logo: 'snowflake',
+    connected: true,
+    description: 'Accelerate data directly from your Snowflake warehouse',
+    action: 'Use existing connection'
+  },
+  {
+    id: 'databricks',
+    name: 'Databricks',
+    logo: 'databricks',
+    connected: false,
+    description: 'Use Delta Lake data for real-time analytics',
+    action: 'Connect source'
+  },
+  {
+    id: 's3',
+    name: 'Amazon S3',
+    logo: 's3',
+    connected: false,
+    description: 'Query and accelerate data from your data lake',
+    action: 'Connect source'
+  }
+]
+
+function LakehouseView({ onOpenAura }) {
+  return (
+    <div className="lakehouse-view">
+      <div className="lakehouse-main">
+        <div className="lakehouse-header">
+          <div className="lakehouse-icon">
+            <IconFA name="database" size={20} />
+          </div>
+          <h1>Lakehouse</h1>
+          <button className="lakehouse-new-btn" onClick={() => onOpenAura && onOpenAura({ agent: 'Lakehouse Agent' })}>
+            <IconFA name="plus" size={12} />
+            <span>New Speed Layer</span>
+          </button>
+        </div>
+
+        <div className="ai-migration-banner">
+          <div className="ai-migration-content">
+            <div className="ai-migration-label">
+              <IconFA name="sparkles" size={12} />
+              <span>NEW: AI-POWERED</span>
+            </div>
+            <h2 className="ai-migration-title">Intelligent Lakehouse Agent</h2>
+            <p className="ai-migration-description">
+              <strong>Accelerate your data with Lakehouse.</strong> Keep your data where it is. Create a speed layer for real-time analytics and applications.
+            </p>
+            <button className="ai-migration-btn" onClick={() => onOpenAura && onOpenAura({ agent: 'Lakehouse Agent' })}>
+              <IconFA name="sparkles" size={14} />
+              <span>Create Speed Layer with AI</span>
+            </button>
+          </div>
+          <div className="ai-migration-image">
+            <img src="/images/lakehouse-banner.png" alt="Lakehouse Illustration" />
+          </div>
+        </div>
+
+        <div className="lakehouse-sources-section">
+          <h3 className="lakehouse-section-title">Select Source</h3>
+          <div className="lakehouse-sources-grid">
+            {LAKEHOUSE_SOURCES.map((source) => (
+              <div key={source.id} className="lakehouse-source-card">
+                <div className="lakehouse-source-header">
+                  <div className="lakehouse-source-logo">
+                    {source.id === 'snowflake' && <SnowflakeLogo />}
+                    {source.id === 'databricks' && <DatabricksLogo />}
+                    {source.id === 's3' && <S3Logo />}
+                  </div>
+                  <div className="lakehouse-source-info">
+                    <span className="lakehouse-source-name">{source.name}</span>
+                    <span className={`lakehouse-source-status ${source.connected ? 'connected' : 'not-connected'}`}>
+                      {source.connected ? 'Connected' : 'Not connected'}
+                    </span>
+                  </div>
+                </div>
+                <p className="lakehouse-source-description">{source.description}</p>
+                <div className="lakehouse-source-action">
+                  <span className={source.connected ? 'connected' : ''}>{source.action} →</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="lakehouse-layers-section">
+          <h3 className="lakehouse-section-title">Your Speed Layers</h3>
+          <div className="workspaces-table-container">
+            <table className="workspaces-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Source</th>
+                  <th>Dataset / Table</th>
+                  <th>Sync Type</th>
+                  <th>Last Updated</th>
+                  <th>Status</th>
+                  <th>Performance Gain</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {LAKEHOUSE_SPEED_LAYERS.map((layer) => (
+                  <tr key={layer.id}>
+                    <td>
+                      <div className="workspace-name-cell">
+                        <div className="workspace-icon">
+                          <SpeedLayerIcon />
+                        </div>
+                        <div className="workspace-name-info">
+                          <span className="workspace-name">{layer.name}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{layer.source}</td>
+                    <td><code className="lakehouse-dataset-code">{layer.dataset}</code></td>
+                    <td>
+                      <span className="lakehouse-sync-badge">{layer.syncType}</span>
+                    </td>
+                    <td>{layer.lastUpdated}</td>
+                    <td>
+                      <span className={`lakehouse-status-badge ${layer.status === 'Active' ? 'active' : 'syncing'}`}>
+                        {layer.status}
+                      </span>
+                    </td>
+                    <td className="lakehouse-cell-performance">
+                      <IconFA name="bolt" size={14} />
+                      <span>{layer.performanceGain}</span>
+                    </td>
+                    <td>
+                      <div className="workspace-actions">
+                        <button className="workspace-action-btn tertiary" title="View">
+                          <IconFA name="eye" size={14} />
+                        </button>
+                        <button className="workspace-action-btn tertiary" title="Edit">
+                          <IconFA name="pen-to-square" size={14} />
+                        </button>
+                        <button className="workspace-action-btn tertiary" title="Delete">
+                          <IconFA name="trash" size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+function SpeedLayerIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" rx="8" fill="#F3E8FF"/>
+      <path d="M20 10L28 14.5V23.5L20 28L12 23.5V14.5L20 10Z" stroke="#9810FA" strokeWidth="1.5" fill="none"/>
+      <path d="M20 10V28" stroke="#9810FA" strokeWidth="1.5"/>
+      <path d="M12 14.5L20 19L28 14.5" stroke="#9810FA" strokeWidth="1.5"/>
+      <circle cx="20" cy="19" r="3" fill="#9810FA"/>
+    </svg>
+  )
+}
+
+function SnowflakeLogo() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fillRule="evenodd" clipRule="evenodd" d="M16.03 24.8773C16.1315 24.5586 16.1738 24.2306 16.1662 23.9064C16.1544 23.6718 16.1239 23.4372 16.057 23.2027C15.8557 22.4739 15.3785 21.8233 14.6635 21.4132L4.49464 15.5687C3.05915 14.7464 1.22906 15.2352 0.404944 16.6618C-0.426794 18.0867 0.0639464 19.9062 1.49936 20.7306L7.18176 24.0019L1.49936 27.2635C0.0639464 28.0896 -0.425092 29.9092 0.404944 31.3399C1.22906 32.7627 3.05915 33.2494 4.49464 32.4271L14.6635 26.5789C15.3497 26.186 15.8155 25.5696 16.03 24.8773ZM18.7896 30.3538C18.2053 30.3041 17.5978 30.4262 17.0516 30.7428L6.87506 36.5835C5.44345 37.4076 4.9545 39.2367 5.78064 40.6637C6.61068 42.0868 8.43906 42.577 9.86864 41.7492L15.5702 38.4758V45.0167C15.5702 46.6648 16.9096 48 18.5675 48C20.2174 48 21.5611 46.6648 21.5611 45.0167V33.3236C21.5611 31.7538 20.3384 30.4641 18.7896 30.3538ZM29.2115 17.6459C29.7941 17.6935 30.3999 17.5696 30.946 17.2568L41.1206 11.4106C42.5542 10.5862 43.0408 8.76464 42.2167 7.33426C41.3909 5.90929 39.5607 5.42093 38.1288 6.24498L32.4314 9.52211V2.97913C32.4314 1.33524 31.0916 0 29.4341 0C27.7761 0 26.4402 1.33524 26.4402 2.97913V14.6722C26.4402 16.2403 27.6594 17.5317 29.2115 17.6459ZM6.87506 11.4106L17.0516 17.2568C17.5978 17.5696 18.2053 17.6935 18.7896 17.6459C20.3384 17.5317 21.5611 16.2403 21.5611 14.6722V2.97913C21.5611 1.33524 20.2174 0 18.5675 0C16.9096 0 15.5702 1.33524 15.5702 2.97913V9.52211L9.86864 6.24498C8.43906 5.42093 6.61068 5.90929 5.78064 7.33426C4.9545 8.76464 5.44345 10.5862 6.87506 11.4106ZM25.9994 23.977C25.9994 23.8073 25.8961 23.5707 25.7754 23.4449L24.5507 22.2317C24.4302 22.1116 24.1924 22.0123 24.0216 22.0123H23.9737C23.8032 22.0123 23.5659 22.1116 23.447 22.2317L22.2222 23.4449C22.0996 23.5707 22.0057 23.8073 22.0057 23.977V24.0247C22.0057 24.1927 22.0996 24.4272 22.2222 24.5493L23.447 25.7662C23.5676 25.8863 23.8032 25.9856 23.9737 25.9856H24.0216C24.1924 25.9856 24.4302 25.8863 24.5507 25.7662L25.7754 24.5493C25.8961 24.4272 25.9994 24.1927 25.9994 24.0247V23.977ZM29.3803 25.1443L25.1506 29.3487C25.0297 29.4725 24.7961 29.5736 24.6197 29.5736H24.313H23.6882H23.3759C23.2051 29.5736 22.9677 29.4725 22.845 29.3487L18.6174 25.1443C18.4965 25.026 18.3987 24.7876 18.3987 24.62V24.3089V23.687V23.38C18.3987 23.2082 18.4965 22.9698 18.6174 22.8498L22.845 18.6455C22.9677 18.5217 23.2051 18.4244 23.3759 18.4244H23.6882H24.313H24.6197C24.7923 18.4244 25.0297 18.5217 25.1506 18.6455L29.3803 22.8498C29.501 22.9698 29.5987 23.2082 29.5987 23.38V23.687V24.3089V24.62C29.5987 24.7876 29.501 25.026 29.3803 25.1443ZM41.1206 36.5835L30.946 30.7428C30.3999 30.4262 29.7941 30.3041 29.2115 30.3538C27.6594 30.4641 26.4402 31.7538 26.4402 33.3236V45.0167C26.4402 46.6648 27.7761 48 29.4341 48C31.0916 48 32.4314 46.6648 32.4314 45.0167V38.4758L38.1288 41.7492C39.5604 42.577 41.3909 42.0868 42.2167 40.6637C43.0408 39.2367 42.5542 37.4076 41.1206 36.5835ZM46.5001 20.7306L40.8177 24.0019L46.5001 27.2635C47.9356 28.0896 48.4262 29.9092 47.5963 31.3399C46.7684 32.7627 44.9365 33.2494 43.5066 32.4271L33.33 26.5789C32.6514 26.186 32.1801 25.5696 31.9712 24.8773C31.8717 24.5586 31.8256 24.2306 31.837 23.9064C31.8429 23.6718 31.8772 23.4372 31.9424 23.2027C32.1458 22.4739 32.623 21.8236 33.33 21.4132L43.5066 15.5687C44.9365 14.7464 46.7684 15.2352 47.5963 16.6618C48.4262 18.0867 47.9356 19.9062 46.5001 20.7306Z" fill="#29B5E8"/>
+    </svg>
+  )
+}
+
+function DatabricksLogo() {
+  return (
+    <svg width="46" height="48" viewBox="0 0 46 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 13.7702V12.4292L5.30454 9.44924C10.9112 6.36995 16.5212 3.28735 22.1346 0.201435C22.3216 0.0704546 22.5459 0 22.7761 0C23.0062 0 23.2306 0.0704546 23.4175 0.201435C28.6712 3.1218 33.9418 6.01898 39.2294 8.89299C39.9218 9.27045 40.2476 9.66776 40.0032 10.4922L38.6592 11.2273L22.7761 2.496L3.58386 13.055C3.81803 13.2139 3.97075 13.343 4.15402 13.4424C10.1815 16.7534 16.2022 20.0645 22.216 23.3756C22.3844 23.4866 22.5831 23.5459 22.7863 23.5459C22.9895 23.5459 23.1881 23.4866 23.3564 23.3756L39.8912 14.2768C41.1334 13.5914 42.3958 12.9556 43.5973 12.2206C43.8272 12.025 44.122 11.9172 44.4271 11.9172C44.7322 11.9172 45.0269 12.025 45.2569 12.2206L45.5522 12.4093V21.0115L39.1479 24.5576C33.9757 27.4085 28.7933 30.2394 23.6415 33.1201C23.3827 33.29 23.0778 33.3808 22.7659 33.3808C22.4539 33.3808 22.1491 33.29 21.8903 33.1201C15.6388 29.6501 9.37377 26.2032 3.09516 22.7796L2.525 22.4816C2.48246 22.678 2.45521 22.8772 2.44353 23.0776C2.44353 24.1901 2.44353 25.3126 2.44353 26.4251C2.42312 26.5981 2.45945 26.7731 2.54725 26.9247C2.63505 27.0764 2.76984 27.1971 2.93229 27.2694C9.38059 30.7924 15.8289 34.3286 22.2772 37.8781C22.4297 37.9715 22.6062 38.0211 22.7863 38.0211C22.9664 38.0211 23.1428 37.9715 23.2953 37.8781L43.1188 26.9515C43.3231 26.8617 43.5175 26.7519 43.6991 26.6237C43.8279 26.5085 43.9803 26.4211 44.1461 26.3672C44.312 26.3133 44.4876 26.2942 44.6615 26.311C44.8355 26.3279 45.0038 26.3804 45.1556 26.4651C45.3073 26.5498 45.4389 26.6648 45.542 26.8025V35.4842L22.7557 48L0.0305123 35.4842V33.9743C0.20597 33.8827 0.372892 33.7764 0.529397 33.6565C0.670391 33.5363 0.851258 33.4701 1.03847 33.4701C1.22569 33.4701 1.40656 33.5363 1.54755 33.6565L10.9451 38.8316C14.6818 40.8878 18.4286 42.944 22.1448 45.0101C22.3272 45.1288 22.5415 45.1922 22.7608 45.1922C22.9801 45.1922 23.1944 45.1288 23.3768 45.0101C29.9201 41.3944 36.4906 37.7787 43.0882 34.1631V29.6335C42.8438 29.7428 42.6504 29.8222 42.4773 29.9216L23.9673 40.0932C22.8066 40.7289 22.8066 40.7388 21.6459 40.0932C14.6546 36.2457 7.66327 32.3982 0.671954 28.5508L0.0203208 28.1832V19.4818L0.44799 19.2235C0.610921 19.0953 0.813932 19.0254 1.02325 19.0254C1.23257 19.0254 1.43551 19.0953 1.59845 19.2235C3.23767 20.1473 4.89731 21.0413 6.54672 21.9551C11.78 24.8159 17.0031 27.6866 22.216 30.5672C22.3844 30.6782 22.5831 30.7376 22.7863 30.7376C22.9895 30.7376 23.1881 30.6782 23.3564 30.5672C29.7572 27.031 36.1716 23.5114 42.5995 20.0082C42.7753 19.9319 42.9221 19.8035 43.019 19.6413C43.1158 19.479 43.1579 19.2912 43.1391 19.1043C43.1391 17.8329 43.1391 16.5515 43.1391 15.131L42.121 15.6774L23.4073 25.988C23.2455 26.0867 23.0585 26.139 22.8677 26.139C22.6769 26.139 22.4899 26.0867 22.3281 25.988C15.011 21.9419 7.68022 17.9057 0.335946 13.8794L0 13.7702Z" fill="#E8372A"/>
+    </svg>
+  )
+}
+
+function S3Logo() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12.686 3.62949C15.135 2.41824 17.5754 1.19215 20.033 0C20.0544 4.0304 20.033 8.07778 20.033 12.1167C17.6396 12.6427 15.2763 13.3046 12.8829 13.8285L13.2126 14.0407L12.7117 13.9834C12.656 12.857 12.7117 11.7285 12.6817 10.6021C12.6817 8.27294 12.686 5.95015 12.686 3.62949V3.62949Z" fill="#8C3223"/>
+      <path d="M20.033 0C22.4834 1.21619 24.9353 2.43026 27.3886 3.64221V10.5936C27.3757 11.6712 27.3886 12.7509 27.3886 13.8285L27.2302 13.871C24.839 13.2749 22.4499 12.6618 20.0459 12.1167C20.0309 8.07778 20.0544 4.0304 20.033 0V0Z" fill="#E15343"/>
+      <path d="M0 9.90842C1.08749 9.38235 2.16 8.82234 3.25606 8.30899C3.24749 18.7414 3.24749 29.1738 3.25606 39.6061C2.16 39.1076 1.09606 38.5455 0.00856294 38.0194C0.00285431 28.6533 0 19.283 0 9.90842Z" fill="#8C3223"/>
+      <path d="M3.25606 8.30899C6.39223 9.10447 9.54982 9.81085 12.6881 10.6063C12.7095 11.7327 12.6624 12.8612 12.7181 13.9876L13.219 14.0449C15.4925 14.4098 17.7424 14.8934 20.018 15.2349C20.0437 16.1449 20.0394 17.0528 20.018 17.9629C17.5819 18.2429 15.135 18.5377 12.6924 18.8793C12.6924 22.2924 12.7053 25.7076 12.6924 29.1207C15.1286 29.4962 17.5819 29.7571 20.0266 30.0626C20.0758 30.9599 20.0437 31.8593 20.0416 32.7587C17.5883 33.1681 15.1436 33.6242 12.701 34.0866V37.33C9.54554 38.1085 6.39223 38.8192 3.24963 39.604C3.26105 29.1731 3.26319 18.7414 3.25606 8.30899V8.30899Z" fill="#E15343"/>
+      <path d="M27.3843 10.5936C30.5311 9.81934 33.6845 9.07266 36.8356 8.31961C36.8242 18.4522 36.8242 28.5848 36.8356 38.7173C36.8356 39.0058 36.8056 39.2943 36.78 39.5828C33.6459 38.8467 30.5183 38.0979 27.3864 37.3364C27.3736 36.2546 27.3864 35.1706 27.3864 34.0866C24.9395 33.6242 22.4884 33.1681 20.0308 32.7545C20.0308 31.8551 20.0651 30.9556 20.0159 30.0583C17.5711 29.7592 15.1179 29.492 12.6817 29.1165C12.7052 25.7034 12.6817 22.2881 12.6817 18.875C15.135 18.5377 17.5818 18.2429 20.0287 17.9523C20.0394 17.0423 20.0437 16.1344 20.0287 15.2243C22.0859 14.9337 24.1196 14.4776 26.1769 14.1637C26.5388 14.1052 26.8933 14.0085 27.2344 13.8752L27.3928 13.8328C27.3778 12.7488 27.3714 11.667 27.3843 10.5936V10.5936Z" fill="#8C3223"/>
+      <path d="M36.8378 8.31961C37.9081 8.86478 39.0042 9.38024 40.081 9.93389C40.071 19.2943 40.071 28.6548 40.081 38.0152C38.9807 38.5646 37.8675 39.0928 36.7757 39.6634V39.5849C36.8014 39.2965 36.8228 39.008 36.8314 38.7195C36.8328 28.5855 36.8349 18.4522 36.8378 8.31961V8.31961Z" fill="#E15343"/>
+      <path d="M12.8893 13.8285C15.2848 13.3046 17.6461 12.6427 20.0394 12.1167C22.4434 12.6618 24.8325 13.2749 27.2237 13.871C26.8826 14.0042 26.5281 14.101 26.1662 14.1594C24.1111 14.4776 22.0774 14.9337 20.018 15.2201C17.7402 14.8807 15.4903 14.3949 13.219 14.0301C13.1098 13.9685 12.9985 13.9007 12.8893 13.8285Z" fill="#5E1F19"/>
+      <path d="M20.0565 17.9565C22.497 18.2577 24.9417 18.5462 27.38 18.8793V29.1186C24.9353 29.4707 22.482 29.7762 20.0287 30.0477C20.0629 26.0152 20.0094 21.9848 20.0565 17.9565Z" fill="#E15343"/>
+      <path d="M12.6924 34.0824C15.1329 33.6199 17.5797 33.1639 20.033 32.7545C22.4884 33.1681 24.9396 33.6242 27.3886 34.0866C24.9374 34.6848 22.4927 35.3233 20.0309 35.8833C17.5776 35.3042 15.135 34.6933 12.6924 34.0824V34.0824Z" fill="#F2B0A9"/>
+      <path d="M12.686 37.3343C12.6967 36.2524 12.686 35.1727 12.686 34.0909C15.1286 34.6997 17.5733 35.3127 20.0223 35.8918C20.048 39.9222 20.033 43.9653 20.0223 48C17.5626 46.81 15.1222 45.5817 12.671 44.3705C12.681 42.0216 12.686 39.6761 12.686 37.3343Z" fill="#8C3223"/>
+      <path d="M20.0287 35.8855C22.4905 35.3254 24.9352 34.6869 27.3864 34.0887C27.3757 35.1706 27.3714 36.2546 27.3864 37.3385C27.3971 39.6719 27.3864 42.0053 27.3864 44.3536C24.9345 45.5655 22.4841 46.7796 20.0351 47.9958C20.0394 43.9569 20.0544 39.9201 20.0287 35.8855Z" fill="#E15343"/>
+    </svg>
+  )
+}
+
 function WorkspacesView({ workspacesData }) {
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -3673,11 +4291,14 @@ function PortalView({
     }
   }
 
-  // Check if we should show the CPU spike V2 conversation in main area
-  const showCpuSpikeV2Conversation = auraPanelFlow === 'cpu-spike-v2' && auraPanelMessages && auraPanelMessages.length > 0
+  // Check if we should show a conversation flow in the main area
+  const showFullscreenConversation = ['cpu-spike-v2', 'lakehouse', 'migration'].includes(auraPanelFlow) && auraPanelMessages && auraPanelMessages.length > 0
 
-  // If CPU spike V2 flow is active, render conversation in main area
-  if (showCpuSpikeV2Conversation) {
+  // If a conversation flow is active, render conversation in main area
+  if (showFullscreenConversation) {
+    const flowAgentName = auraPanelFlow === 'lakehouse' ? 'Lakehouse Agent' 
+      : auraPanelFlow === 'migration' ? 'Data Migration Agent' 
+      : 'Aura Agent'
     return (
       <div className="portal-view portal-view-conversation">
         <div className="portal-conversation-area">
@@ -3695,7 +4316,7 @@ function PortalView({
                 onTypingComplete={() => {
                   message.typingComplete = true
                 }}
-                agentName="Aura Agent"
+                agentName={message.agentName || flowAgentName}
                 compact={true}
                 onNavigate={onNavigate}
               />
@@ -3703,7 +4324,7 @@ function PortalView({
             {isAuraTyping && (
               <div className="message">
                 <div className="message-header">
-                  <span className="message-sender">Aura Agent</span>
+                  <span className="message-sender">{flowAgentName}</span>
                   <span className="dot" />
                   <span className="message-time">{formatTime(new Date())}</span>
                 </div>
@@ -4845,6 +5466,223 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
+        {content.sourceSelector && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-source-selector fade-in">
+            <div className="aura-selector-label">{content.sourceSelector.label}</div>
+            <div className="aura-source-options">
+              {content.sourceSelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className="aura-source-btn"
+                  onClick={() => onAction(opt.label)}
+                >
+                  <DataSourceLogo name={opt.icon} />
+                  <span>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.connectionTypeSelector && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-connection-type-selector fade-in">
+            <div className="aura-connection-type-options">
+              {content.connectionTypeSelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className="aura-connection-type-btn"
+                  onClick={() => onAction(opt.label)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.savedConnectionSelector && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-saved-connection-selector fade-in">
+            <div className="aura-saved-connection-options">
+              {content.savedConnectionSelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className="aura-saved-connection-btn"
+                  onClick={() => onAction(opt.label)}
+                >
+                  <DataSourceLogo name="snowflake" size={20} />
+                  <span>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.catalogSelector && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-catalog-selector-grouped fade-in">
+            {content.catalogSelector.availableCatalogs && content.catalogSelector.availableCatalogs.length > 0 && (
+              <div className="aura-catalog-group">
+                <div className="aura-catalog-group-label">Available catalogs</div>
+                <div className="aura-catalog-group-options">
+                  {content.catalogSelector.availableCatalogs.map((opt) => (
+                    <button
+                      key={opt.id}
+                      className="aura-catalog-option-btn"
+                      onClick={() => onAction(opt.label)}
+                    >
+                      <IconFA name="database" size={16} />
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {content.catalogSelector.externalCatalogs && content.catalogSelector.externalCatalogs.length > 0 && (
+              <div className="aura-catalog-group">
+                <div className="aura-catalog-group-label">External / federated</div>
+                <div className="aura-catalog-group-options">
+                  {content.catalogSelector.externalCatalogs.map((opt) => (
+                    <button
+                      key={opt.id}
+                      className="aura-catalog-option-btn external"
+                      onClick={() => onAction(opt.label)}
+                    >
+                      <IconFA name="database" size={16} />
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {content.catalogChecklist && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-catalog-checklist fade-in">
+            <div className="aura-catalog-checklist-items">
+              {content.catalogChecklist.catalogs.map((catalog) => (
+                <label key={catalog.id} className="aura-catalog-checklist-item">
+                  <input
+                    type="checkbox"
+                    defaultChecked={catalog.checked}
+                  />
+                  <span>{catalog.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.workspaceSelector && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-workspace-selector fade-in">
+            <div className="aura-workspace-options">
+              {content.workspaceSelector.options.map((opt) => (
+                <div key={opt.id} className="aura-workspace-option">
+                  {opt.subOptions ? (
+                    <span className="aura-workspace-label">{opt.label}</span>
+                  ) : (
+                    <button
+                      className="aura-workspace-btn"
+                      onClick={() => onAction(opt.label)}
+                    >
+                      {opt.label}
+                    </button>
+                  )}
+                  {opt.subOptions && (
+                    <div className="aura-workspace-suboptions">
+                      <div className="aura-workspace-suboptions-header">
+                        <span className="aura-ws-col-radio"></span>
+                        <span className="aura-ws-col-name">Name</span>
+                        <span className="aura-ws-col-project">Project</span>
+                        <span className="aura-ws-col-cloud">Cloud & Region</span>
+                      </div>
+                      {opt.subOptions.map((sub) => (
+                        <div
+                          key={sub.id}
+                          className="aura-workspace-suboption"
+                          onClick={() => onAction(sub.name)}
+                        >
+                          <div className="aura-ws-col-radio">
+                            <input
+                              type="radio"
+                              name="workspace-selection"
+                              className="aura-ws-radio"
+                              readOnly
+                            />
+                          </div>
+                          <div className="aura-ws-col-name">
+                            <div className="aura-ws-icon">
+                              {sub.status === 'active' ? <WorkspaceIconActive /> : <WorkspaceIconSuspended />}
+                            </div>
+                            <div className="aura-ws-name-info">
+                              <span className="aura-ws-name">{sub.name}</span>
+                              <div className="aura-ws-meta">
+                                <span className="aura-ws-group">{sub.group}</span>
+                                <span className={`aura-ws-env-badge ${sub.env === 'Prod' ? 'prod' : 'non-prod'}`}>{sub.env}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="aura-ws-col-project">
+                            <span className="aura-ws-project-name">{sub.project}</span>
+                            <span className={`aura-ws-project-type ${sub.projectType.toLowerCase()}`}>{sub.projectType}</span>
+                          </div>
+                          <div className="aura-ws-col-cloud">{sub.cloudRegion}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.tablePreview && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-table-preview fade-in">
+            <div className="aura-table-preview-title">{content.tablePreview.title}</div>
+            <div className="aura-table-preview-list">
+              {content.tablePreview.tables.map((table, i) => (
+                <div key={i} className="aura-table-preview-item">
+                  <span className="aura-table-preview-name">{table.name}</span>
+                  {table.rows && <span className="aura-table-preview-rows">{table.rows}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.speedLayerStats && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-speed-layer-stats fade-in">
+            {content.speedLayerStats.stats.map((stat, i) => (
+              <div key={i} className="aura-speed-stat">
+                <span className="aura-speed-stat-label">{stat.label}</span>
+                <span className={`aura-speed-stat-value ${stat.success ? 'success' : ''}`}>{stat.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {content.speedLayerStatus && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-speed-layer-status fade-in">
+            {content.speedLayerStatus.stats.map((stat, i) => (
+              <div key={i} className="aura-speed-status-stat">
+                <span className="aura-speed-status-label">{stat.label}</span>
+                <span className={`aura-speed-status-value ${stat.warning ? 'warning' : ''}`}>{stat.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {content.debugResult && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-debug-result fade-in">
+            <div className="aura-debug-title">{content.debugResult.title}</div>
+            <ul className="aura-debug-items">
+              {content.debugResult.items.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {content.steps && !content.progress && (!isTyping || paragraphsCompleted) && (
           <div className="aura-steps-list fade-in">
             {content.steps.map((step, i) => (
@@ -5303,6 +6141,9 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'arrow-trend-up': '\ue098',
     'arrow-right': '\uf061',
     'headphones': '\uf025',
+    'eye': '\uf06e',
+    'pen-to-square': '\uf044',
+    'trash': '\uf1f8',
   }
   
   const weightClass = weight === 'solid' ? 'fa-solid' : weight === 'light' ? 'fa-light' : 'fa-regular'
@@ -5677,6 +6518,7 @@ function CheckIcon() {
 const AURA_AGENTS = [
   { id: 'aura', name: 'Aura Agent', icon: 'sparkles' },
   { id: 'data-migration', name: 'Data Migration Agent', icon: 'database' },
+  { id: 'lakehouse', name: 'Lakehouse Agent', icon: 'layer-group' },
   { id: 'query-tuning', name: 'Query Tuning Agent', icon: 'chart-line' },
   { id: 'support', name: 'Support Agent', icon: 'headphones' },
   { id: 'observability', name: 'Observability Agent', icon: 'chart-line' },
@@ -6402,6 +7244,223 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
           </div>
         )}
 
+        {allDone && content.sourceSelector && (
+          <div className="aura-source-selector aura-fade-in">
+            <div className="aura-selector-label">{content.sourceSelector.label}</div>
+            <div className="aura-source-options">
+              {content.sourceSelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className="aura-source-btn"
+                  onClick={() => handleAction(opt.label)}
+                >
+                  <DataSourceLogo name={opt.icon} />
+                  <span>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.connectionTypeSelector && (
+          <div className="aura-connection-type-selector aura-fade-in">
+            <div className="aura-connection-type-options">
+              {content.connectionTypeSelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className="aura-connection-type-btn"
+                  onClick={() => handleAction(opt.label)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.savedConnectionSelector && (
+          <div className="aura-saved-connection-selector aura-fade-in">
+            <div className="aura-saved-connection-options">
+              {content.savedConnectionSelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className="aura-saved-connection-btn"
+                  onClick={() => handleAction(opt.label)}
+                >
+                  <DataSourceLogo name="snowflake" size={20} />
+                  <span>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.catalogSelector && (
+          <div className="aura-catalog-selector-grouped aura-fade-in">
+            {content.catalogSelector.availableCatalogs && content.catalogSelector.availableCatalogs.length > 0 && (
+              <div className="aura-catalog-group">
+                <div className="aura-catalog-group-label">Available catalogs</div>
+                <div className="aura-catalog-group-options">
+                  {content.catalogSelector.availableCatalogs.map((opt) => (
+                    <button
+                      key={opt.id}
+                      className="aura-catalog-option-btn"
+                      onClick={() => handleAction(opt.label)}
+                    >
+                      <IconFA name="database" size={16} />
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {content.catalogSelector.externalCatalogs && content.catalogSelector.externalCatalogs.length > 0 && (
+              <div className="aura-catalog-group">
+                <div className="aura-catalog-group-label">External / federated</div>
+                <div className="aura-catalog-group-options">
+                  {content.catalogSelector.externalCatalogs.map((opt) => (
+                    <button
+                      key={opt.id}
+                      className="aura-catalog-option-btn external"
+                      onClick={() => handleAction(opt.label)}
+                    >
+                      <IconFA name="database" size={16} />
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {allDone && content.catalogChecklist && (
+          <div className="aura-catalog-checklist aura-fade-in">
+            <div className="aura-catalog-checklist-items">
+              {content.catalogChecklist.catalogs.map((catalog) => (
+                <label key={catalog.id} className="aura-catalog-checklist-item">
+                  <input
+                    type="checkbox"
+                    defaultChecked={catalog.checked}
+                  />
+                  <span>{catalog.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.workspaceSelector && (
+          <div className="aura-workspace-selector aura-fade-in">
+            <div className="aura-workspace-options">
+              {content.workspaceSelector.options.map((opt) => (
+                <div key={opt.id} className="aura-workspace-option">
+                  {opt.subOptions ? (
+                    <span className="aura-workspace-label">{opt.label}</span>
+                  ) : (
+                    <button
+                      className="aura-workspace-btn"
+                      onClick={() => handleAction(opt.label)}
+                    >
+                      {opt.label}
+                    </button>
+                  )}
+                  {opt.subOptions && (
+                    <div className="aura-workspace-suboptions">
+                      <div className="aura-workspace-suboptions-header">
+                        <span className="aura-ws-col-radio"></span>
+                        <span className="aura-ws-col-name">Name</span>
+                        <span className="aura-ws-col-project">Project</span>
+                        <span className="aura-ws-col-cloud">Cloud & Region</span>
+                      </div>
+                      {opt.subOptions.map((sub) => (
+                        <div
+                          key={sub.id}
+                          className="aura-workspace-suboption"
+                          onClick={() => handleAction(sub.name)}
+                        >
+                          <div className="aura-ws-col-radio">
+                            <input
+                              type="radio"
+                              name="workspace-selection-panel"
+                              className="aura-ws-radio"
+                              readOnly
+                            />
+                          </div>
+                          <div className="aura-ws-col-name">
+                            <div className="aura-ws-icon">
+                              {sub.status === 'active' ? <WorkspaceIconActive /> : <WorkspaceIconSuspended />}
+                            </div>
+                            <div className="aura-ws-name-info">
+                              <span className="aura-ws-name">{sub.name}</span>
+                              <div className="aura-ws-meta">
+                                <span className="aura-ws-group">{sub.group}</span>
+                                <span className={`aura-ws-env-badge ${sub.env === 'Prod' ? 'prod' : 'non-prod'}`}>{sub.env}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="aura-ws-col-project">
+                            <span className="aura-ws-project-name">{sub.project}</span>
+                            <span className={`aura-ws-project-type ${sub.projectType.toLowerCase()}`}>{sub.projectType}</span>
+                          </div>
+                          <div className="aura-ws-col-cloud">{sub.cloudRegion}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.tablePreview && (
+          <div className="aura-table-preview aura-fade-in">
+            <div className="aura-table-preview-title">{content.tablePreview.title}</div>
+            <div className="aura-table-preview-list">
+              {content.tablePreview.tables.map((table, i) => (
+                <div key={i} className="aura-table-preview-item">
+                  <span className="aura-table-preview-name">{table.name}</span>
+                  {table.rows && <span className="aura-table-preview-rows">{table.rows}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.speedLayerStats && (
+          <div className="aura-speed-layer-stats aura-fade-in">
+            {content.speedLayerStats.stats.map((stat, i) => (
+              <div key={i} className="aura-speed-stat">
+                <span className="aura-speed-stat-label">{stat.label}</span>
+                <span className={`aura-speed-stat-value ${stat.success ? 'success' : ''}`}>{stat.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {allDone && content.speedLayerStatus && (
+          <div className="aura-speed-layer-status aura-fade-in">
+            {content.speedLayerStatus.stats.map((stat, i) => (
+              <div key={i} className="aura-speed-status-stat">
+                <span className="aura-speed-status-label">{stat.label}</span>
+                <span className={`aura-speed-status-value ${stat.warning ? 'warning' : ''}`}>{stat.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {allDone && content.debugResult && (
+          <div className="aura-debug-result aura-fade-in">
+            <div className="aura-debug-title">{content.debugResult.title}</div>
+            <ul className="aura-debug-items">
+              {content.debugResult.items.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {allDone && content.steps && !content.progress && (
           <div className="aura-steps-list aura-fade-in">
             {content.steps.map((step, i) => (
@@ -7038,7 +8097,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                   message.typingComplete = true
                   markAsTyped(message.id)
                 }}
-                agentName={agentName}
+                agentName={message.agentName || agentName}
                 compact={true}
                 onAdvanceSilently={onAdvanceSilently}
                 onNavigate={onNavigate}
