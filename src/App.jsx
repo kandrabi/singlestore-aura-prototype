@@ -3944,6 +3944,9 @@ function LakehouseView({ onOpenAura }) {
               <span>Create Speed Layer with AI</span>
             </button>
           </div>
+          <div className="ai-migration-image">
+            <img src="/images/lakehouse-banner.png" alt="Lakehouse Speed Layer" />
+          </div>
         </div>
 
         <div className="lakehouse-sources-section">
