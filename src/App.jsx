@@ -1286,7 +1286,7 @@ const LAKEHOUSE_CHAT_FLOW = [
         options: [
           { id: 'snowflake', label: 'Snowflake', icon: 'snowflake' },
           { id: 'databricks', label: 'Databricks', icon: 'databricks' },
-          { id: 'kafka', label: 'Kafka', icon: 'kafka' }
+          { id: 's3', label: 'S3 / Data Lake', icon: 's3' }
         ]
       }
     }
@@ -1478,11 +1478,15 @@ const LAKEHOUSE_CHAT_FLOW = [
       text: [
         { type: 'text', content: 'How much historical data would you like to enable?' }
       ],
-      historySelector: {
+      historyDropdown: {
+        label: 'Select data history window',
         options: [
-          { id: '3-months', label: 'Last 3 months', description: 'Lower data volume, faster setup' },
-          { id: '6-months', label: 'Last 6 months', description: 'Balanced data coverage' },
-          { id: '1-year', label: 'Last 1 year', description: 'Maximum historical coverage' }
+          { id: '1-month', label: 'Last 1 month' },
+          { id: '3-months', label: 'Last 3 months' },
+          { id: '6-months', label: 'Last 6 months' },
+          { id: '1-year', label: 'Last 1 year' },
+          { id: '2-years', label: 'Last 2 years' },
+          { id: 'custom', label: 'Custom date range...' }
         ]
       }
     }
@@ -1939,6 +1943,8 @@ function App() {
   const [billingFlowIndex, setBillingFlowIndex] = useState(0)
   const [lakehouseFlowIndex, setLakehouseFlowIndex] = useState(0)
   const [selectedLakehouseHistory, setSelectedLakehouseHistory] = useState('6 months') // User's history selection
+  const selectedLakehouseHistoryRef = useRef('6 months') // Ref for sync access in async functions
+  const [speedLayers, setSpeedLayers] = useState(LAKEHOUSE_SPEED_LAYERS) // Dynamic speed layers list
   const [billingFlowBranch, setBillingFlowBranch] = useState(null) // 'drivers' or 'recommendations'
   const [billingFlowStarted, setBillingFlowStarted] = useState(false) // Guard against double execution
   const [isAuraTyping, setIsAuraTyping] = useState(false)
@@ -2166,6 +2172,7 @@ function App() {
         setAuraPanelMessages([])
         setLakehouseFlowIndex(0)
         setSelectedLakehouseHistory('6 months')
+        selectedLakehouseHistoryRef.current = '6 months'
         setAuraPanelOpen(false)
       } else if (view === 'portal' && newView !== 'portal') {
         // Navigating AWAY from Home → move conversation to side panel
@@ -2176,6 +2183,7 @@ function App() {
         setAuraPanelMessages([])
         setLakehouseFlowIndex(0)
         setSelectedLakehouseHistory('6 months')
+        selectedLakehouseHistoryRef.current = '6 months'
         setAuraPanelOpen(false)
       }
     }
@@ -2302,19 +2310,35 @@ function App() {
       setIsAuraTyping(false)
       let message = JSON.parse(JSON.stringify(LAKEHOUSE_CHAT_FLOW[index]))
       
-      // Inject selected history into relevant messages
+      // Inject selected history into relevant messages (use ref for sync access)
+      const historyValue = selectedLakehouseHistoryRef.current
       if (message.content?.workspaceRecommendation?.history) {
-        message.content.workspaceRecommendation.history = selectedLakehouseHistory
+        message.content.workspaceRecommendation.history = historyValue
       }
       if (message.content?.speedLayerStats?.stats) {
         message.content.speedLayerStats.stats = message.content.speedLayerStats.stats.map(stat => 
-          stat.label === 'Data history:' ? { ...stat, value: selectedLakehouseHistory } : stat
+          stat.label === 'Data history:' ? { ...stat, value: historyValue } : stat
         )
       }
       if (message.content?.speedLayerStatus?.stats) {
         message.content.speedLayerStatus.stats = message.content.speedLayerStatus.stats.map(stat => 
-          stat.label === 'Data history:' ? { ...stat, value: selectedLakehouseHistory } : stat
+          stat.label === 'Data history:' ? { ...stat, value: historyValue } : stat
         )
+      }
+      
+      // Add new speed layer to table when success message is shown (Scene 17, index 16)
+      if (index === 16 && message.content?.success && message.content?.title?.includes('Speed layer successfully created')) {
+        const newSpeedLayer = {
+          id: Date.now(),
+          name: 'Analytics Events',
+          source: 'Snowflake',
+          dataset: 'horizon.analytics_events',
+          lastUpdated: 'Just now',
+          dataHistory: historyValue,
+          syncStatus: 'syncing',
+          tableCount: 24
+        }
+        setSpeedLayers(prev => [newSpeedLayer, ...prev])
       }
       
       // Mark previous progress messages as completed (without completedState)
@@ -2556,12 +2580,24 @@ function App() {
       setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
     } else if (auraPanelAgentName === 'Lakehouse Agent' || auraPanelFlow === 'lakehouse') {
       // Capture history selection for dynamic display in subsequent messages
-      if (actionText.includes('Last 3 months')) {
+      if (actionText.includes('Last 1 month')) {
+        setSelectedLakehouseHistory('1 month')
+        selectedLakehouseHistoryRef.current = '1 month'
+      } else if (actionText.includes('Last 3 months')) {
         setSelectedLakehouseHistory('3 months')
+        selectedLakehouseHistoryRef.current = '3 months'
       } else if (actionText.includes('Last 6 months')) {
         setSelectedLakehouseHistory('6 months')
+        selectedLakehouseHistoryRef.current = '6 months'
       } else if (actionText.includes('Last 1 year')) {
         setSelectedLakehouseHistory('1 year')
+        selectedLakehouseHistoryRef.current = '1 year'
+      } else if (actionText.includes('Last 2 years')) {
+        setSelectedLakehouseHistory('2 years')
+        selectedLakehouseHistoryRef.current = '2 years'
+      } else if (actionText.includes('Custom date range')) {
+        setSelectedLakehouseHistory('custom range')
+        selectedLakehouseHistoryRef.current = 'custom range'
       }
       // Handle "Open in Analyst" - jump to Analyst handoff scene (Scene 24)
       if (actionText === 'Open in Analyst') {
@@ -2956,7 +2992,7 @@ function App() {
       case 'billing':
         return <BillingPage onOpenAura={handleOpenAuraPanel} />
       case 'lakehouse':
-        return <LakehouseView onOpenAura={handleOpenAuraPanel} />
+        return <LakehouseView onOpenAura={handleOpenAuraPanel} speedLayers={speedLayers} />
       default:
         return null
     }
@@ -4119,9 +4155,7 @@ const LAKEHOUSE_SPEED_LAYERS = [
     name: 'Customer Events',
     source: 'Snowflake',
     dataset: 'analytics.customer_events',
-    syncType: 'Streaming',
     lastUpdated: '2 min ago',
-    status: 'Active',
     dataHistory: '6 months',
     syncStatus: 'active',
     tableCount: 24
@@ -4129,11 +4163,9 @@ const LAKEHOUSE_SPEED_LAYERS = [
   {
     id: 2,
     name: 'Product Catalog',
-    source: 'Amazon S3',
+    source: 'Snowflake',
     dataset: 's3://data-lake/products/',
-    syncType: 'Incremental',
     lastUpdated: '5 min ago',
-    status: 'Syncing',
     dataHistory: '3 months',
     syncStatus: 'syncing',
     tableCount: 12
@@ -4143,11 +4175,9 @@ const LAKEHOUSE_SPEED_LAYERS = [
     name: 'User Activity',
     source: 'Databricks',
     dataset: 'delta.user_activity_log',
-    syncType: 'Batch',
     lastUpdated: '15 min ago',
-    status: 'Lag detected',
     dataHistory: '1 year',
-    syncStatus: 'lag',
+    syncStatus: 'lagging',
     tableCount: 8
   }
 ]
@@ -4170,16 +4200,16 @@ const LAKEHOUSE_SOURCES = [
     action: 'Connect source'
   },
   {
-    id: 'kafka',
-    name: 'Kafka',
-    logo: 'kafka',
+    id: 's3',
+    name: 'Amazon S3',
+    logo: 's3',
     connected: false,
-    description: 'Stream real-time events from your Kafka topics',
+    description: 'Query and accelerate data from your data lake',
     action: 'Connect source'
   }
 ]
 
-function LakehouseView({ onOpenAura }) {
+function LakehouseView({ onOpenAura, speedLayers }) {
   return (
     <div className="lakehouse-view">
       <div className="lakehouse-main">
@@ -4222,7 +4252,7 @@ function LakehouseView({ onOpenAura }) {
                 <div className="lakehouse-source-logo">
                   {source.id === 'snowflake' && <SnowflakeLogo />}
                   {source.id === 'databricks' && <DatabricksLogo />}
-                  {source.id === 'kafka' && <KafkaLogo />}
+                  {source.id === 's3' && <S3Logo />}
                 </div>
                 <div className="lakehouse-source-info">
                   <span className="lakehouse-source-name">{source.name}</span>
@@ -4236,14 +4266,14 @@ function LakehouseView({ onOpenAura }) {
         </div>
 
         <div className="lakehouse-layers-section">
-          <h3 className="lakehouse-section-title">Your Speed Layers</h3>
+          <h3 className="lakehouse-section-title">Speed Layers</h3>
           <div className="workspaces-table-container">
             <table className="workspaces-table">
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Source</th>
-                  <th>Dataset</th>
+                  <th>Data Source</th>
+                  <th>Table / Path</th>
                   <th>Tables</th>
                   <th>Data History</th>
                   <th>Sync Status</th>
@@ -4252,41 +4282,52 @@ function LakehouseView({ onOpenAura }) {
                 </tr>
               </thead>
               <tbody>
-                {LAKEHOUSE_SPEED_LAYERS.map((layer) => (
+                {speedLayers.map((layer) => (
                   <tr key={layer.id}>
                     <td>
-                      <div className="workspace-name-cell">
-                        <div className="workspace-icon">
-                          <SpeedLayerIcon />
-                        </div>
-                        <div className="workspace-name-info">
-                          <span className="workspace-name">{layer.name}</span>
-                        </div>
-                      </div>
+                      <span className="workspace-name">{layer.name}</span>
                     </td>
                     <td>{layer.source}</td>
                     <td><code className="lakehouse-dataset-code">{layer.dataset}</code></td>
                     <td>{layer.tableCount}</td>
                     <td>{layer.dataHistory}</td>
                     <td>
-                      <span className={`lakehouse-sync-status-badge ${layer.syncStatus}`}>
+                      <span className={`lakehouse-sync-status-badge ${layer.syncStatus} ${layer.syncStatus === 'lagging' ? 'clickable' : ''}`}>
                         {layer.syncStatus === 'active' && <><IconFA name="circle-check" size={12} /> Active</>}
                         {layer.syncStatus === 'syncing' && <><IconFA name="rotate" size={12} /> Syncing</>}
-                        {layer.syncStatus === 'lag' && <><IconFA name="triangle-exclamation" size={12} /> Lag detected</>}
+                        {layer.syncStatus === 'lagging' && <><IconFA name="triangle-exclamation" size={12} /> Lagging</>}
+                        {layer.syncStatus === 'failed' && <><IconFA name="circle-xmark" size={12} /> Failed</>}
                       </span>
                     </td>
                     <td>{layer.lastUpdated}</td>
                     <td>
-                      <div className="workspace-actions">
-                        <button className="workspace-action-btn tertiary" title="View">
-                          <IconFA name="eye" size={14} />
+                      <div className="lakehouse-actions-dropdown">
+                        <button className="lakehouse-actions-btn">
+                          <IconFA name="ellipsis-vertical" size={14} />
                         </button>
-                        <button className="workspace-action-btn tertiary" title="Edit">
-                          <IconFA name="pen-to-square" size={14} />
-                        </button>
-                        <button className="workspace-action-btn tertiary" title="Delete">
-                          <IconFA name="trash" size={14} />
-                        </button>
+                        <div className="lakehouse-actions-menu">
+                          <button className="lakehouse-action-item">
+                            <IconFA name="eye" size={12} />
+                            <span>View status</span>
+                          </button>
+                          <button className="lakehouse-action-item">
+                            <IconFA name="bug" size={12} />
+                            <span>Debug</span>
+                          </button>
+                          <button className="lakehouse-action-item">
+                            <IconFA name="rotate" size={12} />
+                            <span>Recreate pipeline</span>
+                          </button>
+                          <div className="lakehouse-action-divider"></div>
+                          <button className="lakehouse-action-item">
+                            <IconFA name="calendar" size={12} />
+                            <span>Modify data history</span>
+                          </button>
+                          <button className="lakehouse-action-item">
+                            <IconFA name="expand" size={12} />
+                            <span>Resize workspace</span>
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -6059,6 +6100,38 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
+        {content.historyDropdown && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-history-dropdown fade-in">
+            <label className="aura-dropdown-label">{content.historyDropdown.label}</label>
+            <div className="aura-dropdown-row">
+              <div className="aura-dropdown-select-wrapper">
+                <select 
+                  className="aura-dropdown-select"
+                  id="history-dropdown-select"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select an option</option>
+                  {content.historyDropdown.options.map((opt) => (
+                    <option key={opt.id} value={opt.label}>{opt.label}</option>
+                  ))}
+                </select>
+                <IconFA name="chevron-down" size={12} />
+              </div>
+              <button 
+                className="aura-dropdown-submit"
+                onClick={() => {
+                  const select = document.getElementById('history-dropdown-select')
+                  if (select && select.value) {
+                    onAction(select.value)
+                  }
+                }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
         {content.workspaceRecommendation && (!isTyping || paragraphsCompleted) && (
           <div className="aura-workspace-recommendation fade-in">
             <div className="aura-recommendation-card">
@@ -6637,6 +6710,7 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'circle-check': '\uf058',
     'rotate': '\uf2f1',
     'calendar': '\uf133',
+    'circle-xmark': '\uf057',
   }
   
   const weightClass = weight === 'solid' ? 'fa-solid' : weight === 'light' ? 'fa-light' : 'fa-regular'
@@ -8070,6 +8144,38 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                   <IconFA name="chevron-right" size={12} />
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.historyDropdown && (
+          <div className="aura-history-dropdown aura-fade-in">
+            <label className="aura-dropdown-label">{content.historyDropdown.label}</label>
+            <div className="aura-dropdown-row">
+              <div className="aura-dropdown-select-wrapper">
+                <select 
+                  className="aura-dropdown-select"
+                  id="history-dropdown-select-panel"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select an option</option>
+                  {content.historyDropdown.options.map((opt) => (
+                    <option key={opt.id} value={opt.label}>{opt.label}</option>
+                  ))}
+                </select>
+                <IconFA name="chevron-down" size={12} />
+              </div>
+              <button 
+                className="aura-dropdown-submit"
+                onClick={() => {
+                  const select = document.getElementById('history-dropdown-select-panel')
+                  if (select && select.value) {
+                    handleAction(select.value)
+                  }
+                }}
+              >
+                Continue
+              </button>
             </div>
           </div>
         )}

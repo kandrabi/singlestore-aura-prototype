@@ -6286,6 +6286,12 @@ body {
   height: 80px;
 }
 
+.lakehouse-layers-section .workspaces-table td {
+  height: auto;
+  padding: 16px;
+  white-space: nowrap;
+}
+
 .workspace-cloud-region {
   color: var(--color-text-secondary);
 }
@@ -9941,6 +9947,7 @@ body {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .lakehouse-sync-status-badge.active {
@@ -9953,17 +9960,94 @@ body {
   color: #1e40af;
 }
 
-.lakehouse-sync-status-badge.lag {
+.lakehouse-sync-status-badge.lagging {
   background: #fef3c7;
   color: #92400e;
 }
 
-/* AI Migration Actions */
-.ai-migration-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+.lakehouse-sync-status-badge.lagging.clickable {
+  cursor: pointer;
 }
+
+.lakehouse-sync-status-badge.lagging.clickable:hover {
+  background: #fde68a;
+}
+
+.lakehouse-sync-status-badge.failed {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+
+/* Lakehouse Actions Dropdown */
+.lakehouse-actions-dropdown {
+  position: relative;
+}
+
+.lakehouse-actions-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.15s;
+}
+
+.lakehouse-actions-btn:hover {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #374151;
+}
+
+.lakehouse-actions-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 180px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 4px 0;
+  z-index: 100;
+}
+
+.lakehouse-actions-dropdown:hover .lakehouse-actions-menu {
+  display: block;
+}
+
+.lakehouse-action-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: #374151;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.lakehouse-action-item:hover {
+  background: #f3f4f6;
+}
+
+.lakehouse-action-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
+}
+
+/* AI Migration Actions */
 
 .ai-migration-btn.secondary {
   background: white;
@@ -10176,6 +10260,88 @@ body {
 .aura-history-desc {
   font-size: 12px;
   color: #6b7280;
+}
+
+/* History Dropdown */
+.aura-history-dropdown {
+  margin-top: 12px;
+}
+
+.aura-dropdown-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.aura-dropdown-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  max-width: 300px;
+}
+
+.aura-dropdown-select {
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #101828;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  transition: all 0.15s;
+}
+
+.aura-dropdown-select:hover {
+  border-color: var(--color-brand-7);
+}
+
+.aura-dropdown-select:focus {
+  outline: none;
+  border-color: var(--color-brand-8);
+  box-shadow: 0 0 0 3px rgba(152, 16, 250, 0.1);
+}
+
+.aura-dropdown-select-wrapper .fa-icon {
+  position: absolute;
+  right: 14px;
+  pointer-events: none;
+  color: #6b7280;
+}
+
+.aura-dropdown-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.aura-dropdown-submit {
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  color: white;
+  background: var(--color-brand-8);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.aura-dropdown-submit:hover {
+  background: var(--color-brand-9);
+}
+
+.aura-dropdown-submit:active {
+  transform: scale(0.98);
 }
 
 /* Workspace Recommendation */
