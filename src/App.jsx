@@ -1279,19 +1279,19 @@ const LAKEHOUSE_CHAT_FLOW = [
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: "Great — let's set up a real-time speed layer for your lakehouse." }
+        { type: 'text', content: "Let's set up a real-time speed layer for your lakehouse." }
       ],
       sourceSelector: {
-        label: 'Step 1: Select source system',
+        label: 'Select source system',
         options: [
           { id: 'snowflake', label: 'Snowflake', icon: 'snowflake' },
           { id: 'databricks', label: 'Databricks', icon: 'databricks' },
-          { id: 's3', label: 'S3 / Data Lake', icon: 's3' }
+          { id: 'kafka', label: 'Kafka', icon: 'kafka' }
         ]
       }
     }
   },
-  // Scene 2: Connection type selection (after Snowflake selected)
+  // Scene 2: Connection type selection
   {
     type: 'agent',
     content: {
@@ -1306,12 +1306,13 @@ const LAKEHOUSE_CHAT_FLOW = [
       }
     }
   },
-  // Scene 3: Snowflake connections list
+  // Scene 3: Connection list
   {
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'Select a Snowflake connection:' }
+        { type: 'text', content: 'Select a connection:' },
+        { type: 'helper', content: 'This connection provides access to your data catalogs.' }
       ],
       savedConnectionSelector: {
         options: [
@@ -1321,23 +1322,40 @@ const LAKEHOUSE_CHAT_FLOW = [
       }
     }
   },
-  // Scene 4: Connecting and discovering catalogs progress
+  // Scene 4: Connecting and initializing catalog access
   {
     type: 'agent',
     content: {
       progress: true,
-      text: 'Connecting to Snowflake...',
+      text: 'Connecting and initializing catalog access...',
       steps: [
-        '✓ Connecting to Snowflake...',
-        '→ Discovering available Iceberg catalogs...'
+        '✓ Authenticating...',
+        '✓ Establishing connection...',
+        '→ Initializing catalog context...'
       ],
       completedState: {
-        text: 'Connected successfully.',
+        text: 'Connection established.',
         subtext: ''
       }
     }
   },
-  // Scene 5: Iceberg catalogs list (split into Available and External)
+  // Scene 5: Discovering catalogs within connection
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Discovering catalogs within your connection...',
+      steps: [
+        '✓ Scanning connection metadata...',
+        '→ Identifying accessible catalogs...'
+      ],
+      completedState: {
+        text: 'Catalog discovery complete.',
+        subtext: ''
+      }
+    }
+  },
+  // Scene 6: Iceberg catalogs list
   {
     type: 'agent',
     content: {
@@ -1355,48 +1373,160 @@ const LAKEHOUSE_CHAT_FLOW = [
       }
     }
   },
-  // Scene 6: Discovery progress (after catalog selection)
+  // Scene 7: Fetching databases progress
   {
     type: 'agent',
     content: {
       progress: true,
-      text: 'Analyzing datasets...',
+      text: 'Fetching databases from selected catalog...',
       steps: [
-        '✓ Connecting to Horizon Catalog',
-        '✓ Analyzing datasets...',
-        '→ Discovering tables...'
+        '✓ Connecting to catalog...',
+        '→ Loading database metadata...'
       ],
       completedState: {
-        text: 'Discovered 50 tables',
+        text: 'Database discovery complete.',
         subtext: ''
       }
     }
   },
-  // Scene 5: Discovery result with table preview and proceed options
+  // Scene 8: Database selection
   {
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'Discovered 50 tables.' }
+        { type: 'text', content: 'I found the following databases in this catalog:' },
+        { type: 'helper', content: 'These databases are from your connected data source.' }
+      ],
+      databaseSelector: {
+        databases: [
+          { id: 'analytics_prod', label: 'analytics_prod', tables: 24 },
+          { id: 'customer_360', label: 'customer_360', tables: 18 },
+          { id: 'sales_data', label: 'sales_data', tables: 12 },
+          { id: 'raw_events', label: 'raw_events', tables: 8 }
+        ]
+      }
+    }
+  },
+  // Scene 9: Discovering tables progress
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Analyzing database...',
+      steps: [
+        '✓ Scanning table metadata...',
+        '✓ Analyzing schemas...',
+        '→ Estimating data volumes...'
+      ],
+      completedState: {
+        text: 'Analysis complete.',
+        subtext: ''
+      }
+    }
+  },
+  // Scene 10: Tables discovered with options
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Found 24 tables in analytics_prod.' }
       ],
       tablePreview: {
-        title: 'Preview:',
+        title: 'Available tables:',
         tables: [
-          { name: 'customer' },
-          { name: 'orders' },
-          { name: 'transactions' }
+          { name: 'customer_events', rows: '2.4M rows' },
+          { name: 'orders', rows: '850K rows' },
+          { name: 'transactions', rows: '1.2M rows' },
+          { name: 'user_sessions', rows: '5.1M rows' }
         ]
       },
       followUp: 'How would you like to proceed?',
       actions: ['Set up speed layer for all tables', 'Select specific tables', 'Explore data']
     }
   },
-  // Scene 6: Workspace selection
+  // Scene 11: Data exploration (if user clicks "Explore data")
   {
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'Which workspace should this be set up in?' }
+        { type: 'text', content: 'Previewing source data using external tables (no ingestion required):' },
+        { type: 'helper', content: 'This preview helps you validate schema and data before setting up the speed layer.' }
+      ],
+      schemaPreview: {
+        tableName: 'customer_events (source table)',
+        columns: [
+          { name: 'event_id', type: 'STRING', nullable: false },
+          { name: 'customer_id', type: 'STRING', nullable: false },
+          { name: 'event_type', type: 'STRING', nullable: true },
+          { name: 'event_timestamp', type: 'TIMESTAMP', nullable: false },
+          { name: 'properties', type: 'JSON', nullable: true }
+        ],
+        sampleDataLabel: 'Sample data (read-only)',
+        sampleData: [
+          { event_id: 'evt_001', customer_id: 'cust_123', event_type: 'purchase', event_timestamp: '2024-03-15 10:23:45' },
+          { event_id: 'evt_002', customer_id: 'cust_456', event_type: 'page_view', event_timestamp: '2024-03-15 10:24:12' },
+          { event_id: 'evt_003', customer_id: 'cust_789', event_type: 'signup', event_timestamp: '2024-03-15 10:25:00' }
+        ]
+      },
+      actions: ['Continue with setup', 'Preview another table']
+    }
+  },
+  // Scene 12: History window selection
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'How much historical data would you like to enable?' }
+      ],
+      historySelector: {
+        options: [
+          { id: '3-months', label: 'Last 3 months', description: 'Lower data volume, faster setup' },
+          { id: '6-months', label: 'Last 6 months', description: 'Balanced data coverage' },
+          { id: '1-year', label: 'Last 1 year', description: 'Maximum historical coverage' }
+        ]
+      }
+    }
+  },
+  // Scene 13: Workspace sizing recommendation
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Recommending workspace size based on selected data and history window...',
+      steps: [
+        '✓ Analyzing data volume...',
+        '✓ Calculating resource requirements...',
+        '→ Optimizing configuration...'
+      ],
+      completedState: {
+        text: 'Configuration prepared based on your data selection.',
+        subtext: ''
+      }
+    }
+  },
+  // Scene 14: Workspace recommendation result
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: "Based on your selected data history and tables, here's the recommended workspace configuration:" }
+      ],
+      workspaceRecommendation: {
+        size: 'S-32',
+        estimatedData: '~45 GB',
+        tables: 24,
+        history: '6 months'
+      },
+      followUp: 'Would you like to proceed with this configuration?',
+      actions: ['Use recommended configuration', 'Customize settings']
+    }
+  },
+  // Scene 15: Workspace selection
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Select a workspace for deployment:' }
       ],
       workspaceSelector: {
         options: [
@@ -1404,12 +1534,9 @@ const LAKEHOUSE_CHAT_FLOW = [
             id: 'existing', 
             label: 'Existing workspace', 
             subOptions: [
-              { id: 'prod-analytics', name: 'prod-analytics', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active' },
-              { id: 'workspace-2', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active' },
-              { id: 'workspace-1a', name: 'Workspace-1', group: 'Group 1', env: 'Non-Prod', project: 'Acme', projectType: 'Shared', cloudRegion: 'AWS • US East', status: 'paused' },
-              { id: 'workspace-1b', name: 'Workspace-1', group: 'Group 1', env: 'Non-Prod', project: 'Kixo', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'paused' },
-              { id: 'workspace-2b', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Kixo', projectType: 'Enterprise', cloudRegion: 'GCP • US East', status: 'active' },
-              { id: 'workspace-2c', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active' }
+              { id: 'analytics-optimized', name: 'analytics-optimized', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-32', recommended: true },
+              { id: 'prod-analytics', name: 'prod-analytics', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-16', sizeNote: 'Below recommended' },
+              { id: 'workspace-2', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-8', sizeNote: 'Below recommended' }
             ]
           },
           { id: 'new', label: 'Create new workspace' }
@@ -1417,99 +1544,192 @@ const LAKEHOUSE_CHAT_FLOW = [
       }
     }
   },
-  // Scene 7: Execution progress
+  // Scene 16: Pipeline execution
   {
     type: 'agent',
     content: {
       progress: true,
-      text: 'Setting up speed layer...',
+      text: 'Setting up automated pipeline...',
       steps: [
-        '✓ Optimizing data layout...',
-        '✓ Creating speed layer...',
+        '✓ Generating pipeline configuration...',
+        '✓ Creating speed layer tables...',
+        '✓ Running initial data sync...',
         '→ Enabling real-time sync...'
       ]
     }
   },
-  // Scene 8: Success with summary
+  // Scene 17: Success state
   {
     type: 'agent',
     content: {
       success: true,
       title: 'Speed layer successfully created! ✅',
-      text: 'You can now query your data or monitor performance.',
+      text: 'Your data is now available for real-time queries.',
       speedLayerStats: {
         stats: [
-          { label: 'Tables enabled:', value: '50', success: true },
-          { label: 'Latency reduced:', value: '~85%', success: true },
-          { label: 'Real-time sync:', value: 'Active', success: true }
+          { label: 'Tables synced:', value: '24', success: true },
+          { label: 'Data history:', value: '6 months', success: true },
+          { label: 'Sync status:', value: 'Active', success: true }
         ]
       },
-      actions: ['Open in SQL Editor', 'View status']
+      actions: ['Open in Analyst', 'View status', 'Enable Smart Replicas']
     }
   },
-  // Scene 9: Status display with issue warning
+  // Scene 18: Smart Replicas option
   {
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: "Here's the current status:" }
+        { type: 'text', content: 'Would you like to enable Smart Replicas for scaling read performance?' }
+      ],
+      replicaSelector: {
+        options: [
+          { id: '10-replicas', label: '10 replicas', description: 'Standard scaling' },
+          { id: '15-replicas', label: '15 replicas', description: 'High availability' },
+          { id: '20-replicas', label: '20 replicas', description: 'Maximum throughput' }
+        ]
+      },
+      actions: ['Skip for now']
+    }
+  },
+  // Scene 19: Smart Replicas enabled
+  {
+    type: 'agent',
+    content: {
+      success: true,
+      title: 'Smart Replicas enabled! ✅',
+      text: '15 replicas are now active for your speed layer.',
+      speedLayerStats: {
+        stats: [
+          { label: 'Replicas:', value: '15 active', success: true },
+          { label: 'Read throughput:', value: 'Optimized', success: true }
+        ]
+      },
+      actions: ['Open in Analyst', 'View status']
+    }
+  },
+  // Scene 20: Status view with day 2 operations
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: "Here's the current status of your speed layer:" }
       ],
       speedLayerStatus: {
         stats: [
-          { label: 'Tables active:', value: '50' },
-          { label: 'Avg latency:', value: '120ms' },
-          { label: 'Status:', value: '1 table degraded ⚠️', warning: true }
-        ]
+          { label: 'Tables:', value: '24 healthy' },
+          { label: 'Sync status:', value: 'Active', success: true },
+          { label: 'Last sync:', value: '2 minutes ago' },
+          { label: 'Data history:', value: '6 months' }
+        ],
+        health: {
+          healthy: 23,
+          warning: 1,
+          total: 24
+        }
       },
-      followUp: 'Would you like to debug this issue?',
-      actions: ['Debug', 'Ignore for now']
+      followUp: 'One table has sync lag detected. Would you like to investigate?',
+      dayTwoActions: ['Debug issue', 'Recreate pipeline', 'Change history window', 'Resize workspace']
     }
   },
-  // Scene 10: Handoff to Observability Agent
+  // Scene 21: Handoff to Observability Agent
   {
     type: 'agent',
     content: {
       progress: true,
       text: 'Switching to Observability Agent...',
       steps: [
-        '→ Handing off to Observability Agent...'
+        '→ Analyzing pipeline health...'
       ],
       autoAdvance: true
     }
   },
-  // Scene 11: Observability Agent findings
+  // Scene 22: Observability Agent findings
   {
     type: 'agent',
     agentName: 'Observability Agent',
     content: {
       text: [
-        { type: 'bold', content: 'Issue detected: pipeline imbalance' }
+        { type: 'bold', content: 'Issue detected: Sync lag on user_sessions table' }
       ],
       debugResult: {
-        title: 'Suggested fix:',
+        title: 'Root cause:',
         items: [
-          'Rebalance ingestion pipeline',
-          'Optimize partitioning'
-        ]
+          'High write volume during peak hours',
+          'Pipeline throughput below threshold'
+        ],
+        suggestedFix: 'Increase pipeline parallelism and rebalance partitions'
       },
-      actions: ['Resolve automatically']
+      actions: ['Resolve automatically', 'View details']
     }
   },
-  // Scene 12: Resolution success
+  // Scene 23: Resolution success
   {
     type: 'agent',
     agentName: 'Observability Agent',
     content: {
       success: true,
       title: 'Issue resolved! ✅',
-      text: 'All tables are now healthy.',
+      text: 'Pipeline has been optimized. All tables are now syncing normally.',
       speedLayerStats: {
         stats: [
-          { label: 'Tables healthy:', value: '50 / 50', success: true },
-          { label: 'Sync status:', value: 'Real-time', success: true },
-          { label: 'Avg latency:', value: '95ms' }
+          { label: 'Tables healthy:', value: '24 / 24', success: true },
+          { label: 'Sync status:', value: 'Active', success: true },
+          { label: 'Lag:', value: 'None detected', success: true }
         ]
-      }
+      },
+      actions: ['Open in Analyst', 'View status']
+    }
+  },
+  // Scene 24: Transition to Analyst Agent
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Transferring to Analyst agent...',
+      steps: [
+        '✓ Preparing query environment...',
+        '✓ Attaching speed layer data...',
+        '→ Creating domain context...'
+      ],
+      autoAdvance: true
+    }
+  },
+  // Scene 25: Analyst Agent greeting with pre-filled domain
+  {
+    type: 'agent',
+    agentName: 'Analyst Agent',
+    content: {
+      text: [
+        { type: 'text', content: "I've prepared your data for analysis. Let's create a domain." },
+        { type: 'helper', content: 'Using your newly created workspace for analysis.' }
+      ],
+      domainForm: {
+        name: 'Sales Analytics',
+        description: 'Real-time analytics on analytics_prod from your speed layer',
+        connection: 'analytics-optimized',
+        tables: 24,
+        tablesList: ['customer_events', 'orders', 'transactions', 'user_sessions']
+      },
+      actions: ['Create Domain', 'Customize']
+    }
+  },
+  // Scene 26: Domain created success
+  {
+    type: 'agent',
+    agentName: 'Analyst Agent',
+    content: {
+      success: true,
+      title: 'Domain created! ✅',
+      text: 'Your Sales Analytics domain is ready for querying.',
+      speedLayerStats: {
+        stats: [
+          { label: 'Domain:', value: 'Sales Analytics', success: true },
+          { label: 'Tables:', value: '24 connected', success: true },
+          { label: 'Status:', value: 'Ready', success: true }
+        ]
+      },
+      actions: ['Start querying', 'View domain']
     }
   }
 ]
@@ -1718,6 +1938,7 @@ function App() {
   const [cpuSpikeV2FlowIndex, setCpuSpikeV2FlowIndex] = useState(0)
   const [billingFlowIndex, setBillingFlowIndex] = useState(0)
   const [lakehouseFlowIndex, setLakehouseFlowIndex] = useState(0)
+  const [selectedLakehouseHistory, setSelectedLakehouseHistory] = useState('6 months') // User's history selection
   const [billingFlowBranch, setBillingFlowBranch] = useState(null) // 'drivers' or 'recommendations'
   const [billingFlowStarted, setBillingFlowStarted] = useState(false) // Guard against double execution
   const [isAuraTyping, setIsAuraTyping] = useState(false)
@@ -1944,6 +2165,7 @@ function App() {
         setAuraPanelFlow('none')
         setAuraPanelMessages([])
         setLakehouseFlowIndex(0)
+        setSelectedLakehouseHistory('6 months')
         setAuraPanelOpen(false)
       } else if (view === 'portal' && newView !== 'portal') {
         // Navigating AWAY from Home → move conversation to side panel
@@ -1953,6 +2175,7 @@ function App() {
         setAuraPanelFlow('none')
         setAuraPanelMessages([])
         setLakehouseFlowIndex(0)
+        setSelectedLakehouseHistory('6 months')
         setAuraPanelOpen(false)
       }
     }
@@ -2077,7 +2300,22 @@ function App() {
     setIsAuraTyping(true)
     setTimeout(() => {
       setIsAuraTyping(false)
-      const message = LAKEHOUSE_CHAT_FLOW[index]
+      let message = JSON.parse(JSON.stringify(LAKEHOUSE_CHAT_FLOW[index]))
+      
+      // Inject selected history into relevant messages
+      if (message.content?.workspaceRecommendation?.history) {
+        message.content.workspaceRecommendation.history = selectedLakehouseHistory
+      }
+      if (message.content?.speedLayerStats?.stats) {
+        message.content.speedLayerStats.stats = message.content.speedLayerStats.stats.map(stat => 
+          stat.label === 'Data history:' ? { ...stat, value: selectedLakehouseHistory } : stat
+        )
+      }
+      if (message.content?.speedLayerStatus?.stats) {
+        message.content.speedLayerStatus.stats = message.content.speedLayerStatus.stats.map(stat => 
+          stat.label === 'Data history:' ? { ...stat, value: selectedLakehouseHistory } : stat
+        )
+      }
       
       // Mark previous progress messages as completed (without completedState)
       setAuraPanelMessages(prev => {
@@ -2317,7 +2555,21 @@ function App() {
     if (auraPanelAgentName === 'Data Migration Agent' || auraPanelFlow === 'migration') {
       setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
     } else if (auraPanelAgentName === 'Lakehouse Agent' || auraPanelFlow === 'lakehouse') {
-      setTimeout(() => addNextLakehouseMessage(lakehouseFlowIndex), 500)
+      // Capture history selection for dynamic display in subsequent messages
+      if (actionText.includes('Last 3 months')) {
+        setSelectedLakehouseHistory('3 months')
+      } else if (actionText.includes('Last 6 months')) {
+        setSelectedLakehouseHistory('6 months')
+      } else if (actionText.includes('Last 1 year')) {
+        setSelectedLakehouseHistory('1 year')
+      }
+      // Handle "Open in Analyst" - jump to Analyst handoff scene (Scene 24)
+      if (actionText === 'Open in Analyst') {
+        setLakehouseFlowIndex(24) // Jump to Analyst transition scene
+        setTimeout(() => addNextLakehouseMessage(23), 500) // Scene index is 0-based, so 23 = Scene 24
+      } else {
+        setTimeout(() => addNextLakehouseMessage(lakehouseFlowIndex), 500)
+      }
     } else if (auraPanelFlow === 'cpu-spike') {
       // Handle CPU spike flow actions
       if (['Investigate spike', 'Show affected queries'].includes(actionText)) {
@@ -3058,6 +3310,12 @@ function DataSourceLogo({ name, size = 24 }) {
       return (
         <svg width={size} height={size} viewBox="0 0 46 48" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M0 13.7702V12.4292L5.30454 9.44924C10.9112 6.36995 16.5212 3.28735 22.1346 0.201435C22.3216 0.0704546 22.5459 0 22.7761 0C23.0062 0 23.2306 0.0704546 23.4175 0.201435C28.6712 3.1218 33.9418 6.01898 39.2294 8.89299C39.9218 9.27045 40.2476 9.66776 40.0032 10.4922L38.6592 11.2273L22.7761 2.496L3.58386 13.055C3.81803 13.2139 3.97075 13.343 4.15402 13.4424C10.1815 16.7534 16.2022 20.0645 22.216 23.3756C22.3844 23.4866 22.5831 23.5459 22.7863 23.5459C22.9895 23.5459 23.1881 23.4866 23.3564 23.3756L39.8912 14.2768C41.1334 13.5914 42.3958 12.9556 43.5973 12.2206C43.8272 12.025 44.122 11.9172 44.4271 11.9172C44.7322 11.9172 45.0269 12.025 45.2569 12.2206L45.5522 12.4093V21.0115L39.1479 24.5576C33.9757 27.4085 28.7933 30.2394 23.6415 33.1201C23.3827 33.29 23.0778 33.3808 22.7659 33.3808C22.4539 33.3808 22.1491 33.29 21.8903 33.1201C15.6388 29.6501 9.37377 26.2032 3.09516 22.7796L2.525 22.4816C2.48246 22.678 2.45521 22.8772 2.44353 23.0776C2.44353 24.1901 2.44353 25.3126 2.44353 26.4251C2.42312 26.5981 2.45945 26.7731 2.54725 26.9247C2.63505 27.0764 2.76984 27.1971 2.93229 27.2694C9.38059 30.7924 15.8289 34.3286 22.2772 37.8781C22.4297 37.9715 22.6062 38.0211 22.7863 38.0211C22.9664 38.0211 23.1428 37.9715 23.2953 37.8781L43.1188 26.9515C43.3231 26.8617 43.5175 26.7519 43.6991 26.6237C43.8279 26.5085 43.9803 26.4211 44.1461 26.3672C44.312 26.3133 44.4876 26.2942 44.6615 26.311C44.8355 26.3279 45.0038 26.3804 45.1556 26.4651C45.3073 26.5498 45.4389 26.6648 45.542 26.8025V35.4842L22.7557 48L0.0305123 35.4842V33.9743C0.20597 33.8827 0.372892 33.7764 0.529397 33.6565C0.670391 33.5363 0.851258 33.4701 1.03847 33.4701C1.22569 33.4701 1.40656 33.5363 1.54755 33.6565L10.9451 38.8316C14.6818 40.8878 18.4286 42.944 22.1448 45.0101C22.3272 45.1288 22.5415 45.1922 22.7608 45.1922C22.9801 45.1922 23.1944 45.1288 23.3768 45.0101C29.9201 41.3944 36.4906 37.7787 43.0882 34.1631V29.6335C42.8438 29.7428 42.6504 29.8222 42.4773 29.9216L23.9673 40.0932C22.8066 40.7289 22.8066 40.7388 21.6459 40.0932C14.6546 36.2457 7.66327 32.3982 0.671954 28.5508L0.0203208 28.1832V19.4818L0.44799 19.2235C0.610921 19.0953 0.813932 19.0254 1.02325 19.0254C1.23257 19.0254 1.43551 19.0953 1.59845 19.2235C3.23767 20.1473 4.89731 21.0413 6.54672 21.9551C11.78 24.8159 17.0031 27.6866 22.216 30.5672C22.3844 30.6782 22.5831 30.7376 22.7863 30.7376C22.9895 30.7376 23.1881 30.6782 23.3564 30.5672C29.7572 27.031 36.1716 23.5114 42.5995 20.0082C42.7753 19.9319 42.9221 19.8035 43.019 19.6413C43.1158 19.479 43.1579 19.2912 43.1391 19.1043C43.1391 17.8329 43.1391 16.5515 43.1391 15.131L42.121 15.6774L23.4073 25.988C23.2455 26.0867 23.0585 26.139 22.8677 26.139C22.6769 26.139 22.4899 26.0867 22.3281 25.988C15.011 21.9419 7.68022 17.9057 0.335946 13.8794L0 13.7702Z" fill="#E8372A"/>
+        </svg>
+      )
+    case 'kafka':
+      return (
+        <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M31.2 24.8c-.4-1.2-1.2-2.2-2.2-2.9l.7-3.4c2.1.4 4.2-.3 5.7-1.8 2.1-2.1 2.5-5.3 1-7.8-1.5-2.5-4.5-3.6-7.2-2.6-2.7 1-4.3 3.7-3.9 6.5l-3.1 1.8c-1.2-1.3-2.9-2.1-4.8-2.1-3.6 0-6.5 2.9-6.5 6.5 0 2 .9 3.8 2.3 5l-1.8 3.1c-2.8-.4-5.5 1.2-6.5 3.9-1 2.7.1 5.7 2.6 7.2 2.5 1.5 5.7 1.1 7.8-1 1.5-1.5 2.2-3.6 1.8-5.7l3.4-.7c.7 1 1.7 1.8 2.9 2.2v3.5c-2.4.8-4.1 3-4.1 5.6 0 3.3 2.7 6 6 6s6-2.7 6-6c0-2.6-1.7-4.8-4.1-5.6v-3.5c1.2-.4 2.2-1.2 2.9-2.2l3.4.7c-.4 2.1.3 4.2 1.8 5.7 2.1 2.1 5.3 2.5 7.8 1s3.6-4.5 2.6-7.2c-1-2.7-3.7-4.3-6.5-3.9l-.7-3.4c1-.7 1.8-1.7 2.2-2.9h3.5c.8 2.4 3 4.1 5.6 4.1 3.3 0 6-2.7 6-6s-2.7-6-6-6c-2.6 0-4.8 1.7-5.6 4.1h-3.5zm-6.8 1.6c-1.3 0-2.4-1.1-2.4-2.4s1.1-2.4 2.4-2.4 2.4 1.1 2.4 2.4-1.1 2.4-2.4 2.4z" fill="#231F20"/>
         </svg>
       )
     default:
@@ -3864,7 +4122,9 @@ const LAKEHOUSE_SPEED_LAYERS = [
     syncType: 'Streaming',
     lastUpdated: '2 min ago',
     status: 'Active',
-    performanceGain: '12x faster'
+    dataHistory: '6 months',
+    syncStatus: 'active',
+    tableCount: 24
   },
   {
     id: 2,
@@ -3873,8 +4133,10 @@ const LAKEHOUSE_SPEED_LAYERS = [
     dataset: 's3://data-lake/products/',
     syncType: 'Incremental',
     lastUpdated: '5 min ago',
-    status: 'Active',
-    performanceGain: '8x faster'
+    status: 'Syncing',
+    dataHistory: '3 months',
+    syncStatus: 'syncing',
+    tableCount: 12
   },
   {
     id: 3,
@@ -3883,8 +4145,10 @@ const LAKEHOUSE_SPEED_LAYERS = [
     dataset: 'delta.user_activity_log',
     syncType: 'Batch',
     lastUpdated: '15 min ago',
-    status: 'Syncing',
-    performanceGain: '15x faster'
+    status: 'Lag detected',
+    dataHistory: '1 year',
+    syncStatus: 'lag',
+    tableCount: 8
   }
 ]
 
@@ -3906,11 +4170,11 @@ const LAKEHOUSE_SOURCES = [
     action: 'Connect source'
   },
   {
-    id: 's3',
-    name: 'Amazon S3',
-    logo: 's3',
+    id: 'kafka',
+    name: 'Kafka',
+    logo: 'kafka',
     connected: false,
-    description: 'Query and accelerate data from your data lake',
+    description: 'Stream real-time events from your Kafka topics',
     action: 'Connect source'
   }
 ]
@@ -3951,26 +4215,20 @@ function LakehouseView({ onOpenAura }) {
         </div>
 
         <div className="lakehouse-sources-section">
-          <h3 className="lakehouse-section-title">Select Source</h3>
+          <h3 className="lakehouse-section-title">Sources</h3>
           <div className="lakehouse-sources-grid">
             {LAKEHOUSE_SOURCES.map((source) => (
               <div key={source.id} className="lakehouse-source-card">
-                <div className="lakehouse-source-header">
-                  <div className="lakehouse-source-logo">
-                    {source.id === 'snowflake' && <SnowflakeLogo />}
-                    {source.id === 'databricks' && <DatabricksLogo />}
-                    {source.id === 's3' && <S3Logo />}
-                  </div>
-                  <div className="lakehouse-source-info">
-                    <span className="lakehouse-source-name">{source.name}</span>
-                    <span className={`lakehouse-source-status ${source.connected ? 'connected' : 'not-connected'}`}>
-                      {source.connected ? 'Connected' : 'Not connected'}
-                    </span>
-                  </div>
+                <div className="lakehouse-source-logo">
+                  {source.id === 'snowflake' && <SnowflakeLogo />}
+                  {source.id === 'databricks' && <DatabricksLogo />}
+                  {source.id === 'kafka' && <KafkaLogo />}
                 </div>
-                <p className="lakehouse-source-description">{source.description}</p>
-                <div className="lakehouse-source-action">
-                  <span className={source.connected ? 'connected' : ''}>{source.action} →</span>
+                <div className="lakehouse-source-info">
+                  <span className="lakehouse-source-name">{source.name}</span>
+                  <span className={`lakehouse-source-status ${source.connected ? 'connected' : 'not-connected'}`}>
+                    {source.connected ? 'Connected' : 'Not connected'}
+                  </span>
                 </div>
               </div>
             ))}
@@ -3985,11 +4243,11 @@ function LakehouseView({ onOpenAura }) {
                 <tr>
                   <th>Name</th>
                   <th>Source</th>
-                  <th>Dataset / Table</th>
-                  <th>Sync Type</th>
+                  <th>Dataset</th>
+                  <th>Tables</th>
+                  <th>Data History</th>
+                  <th>Sync Status</th>
                   <th>Last Updated</th>
-                  <th>Status</th>
-                  <th>Performance Gain</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -4008,19 +4266,16 @@ function LakehouseView({ onOpenAura }) {
                     </td>
                     <td>{layer.source}</td>
                     <td><code className="lakehouse-dataset-code">{layer.dataset}</code></td>
+                    <td>{layer.tableCount}</td>
+                    <td>{layer.dataHistory}</td>
                     <td>
-                      <span className="lakehouse-sync-badge">{layer.syncType}</span>
-                    </td>
-                    <td>{layer.lastUpdated}</td>
-                    <td>
-                      <span className={`lakehouse-status-badge ${layer.status === 'Active' ? 'active' : 'syncing'}`}>
-                        {layer.status}
+                      <span className={`lakehouse-sync-status-badge ${layer.syncStatus}`}>
+                        {layer.syncStatus === 'active' && <><IconFA name="circle-check" size={12} /> Active</>}
+                        {layer.syncStatus === 'syncing' && <><IconFA name="rotate" size={12} /> Syncing</>}
+                        {layer.syncStatus === 'lag' && <><IconFA name="triangle-exclamation" size={12} /> Lag detected</>}
                       </span>
                     </td>
-                    <td className="lakehouse-cell-performance">
-                      <IconFA name="bolt" size={14} />
-                      <span>{layer.performanceGain}</span>
-                    </td>
+                    <td>{layer.lastUpdated}</td>
                     <td>
                       <div className="workspace-actions">
                         <button className="workspace-action-btn tertiary" title="View">
@@ -4088,6 +4343,14 @@ function S3Logo() {
       <path d="M12.6924 34.0824C15.1329 33.6199 17.5797 33.1639 20.033 32.7545C22.4884 33.1681 24.9396 33.6242 27.3886 34.0866C24.9374 34.6848 22.4927 35.3233 20.0309 35.8833C17.5776 35.3042 15.135 34.6933 12.6924 34.0824V34.0824Z" fill="#F2B0A9"/>
       <path d="M12.686 37.3343C12.6967 36.2524 12.686 35.1727 12.686 34.0909C15.1286 34.6997 17.5733 35.3127 20.0223 35.8918C20.048 39.9222 20.033 43.9653 20.0223 48C17.5626 46.81 15.1222 45.5817 12.671 44.3705C12.681 42.0216 12.686 39.6761 12.686 37.3343Z" fill="#8C3223"/>
       <path d="M20.0287 35.8855C22.4905 35.3254 24.9352 34.6869 27.3864 34.0887C27.3757 35.1706 27.3714 36.2546 27.3864 37.3385C27.3971 39.6719 27.3864 42.0053 27.3864 44.3536C24.9345 45.5655 22.4841 46.7796 20.0351 47.9958C20.0394 43.9569 20.0544 39.9201 20.0287 35.8855Z" fill="#E15343"/>
+    </svg>
+  )
+}
+
+function KafkaLogo() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M31.2 24.8c-.4-1.2-1.2-2.2-2.2-2.9l.7-3.4c2.1.4 4.2-.3 5.7-1.8 2.1-2.1 2.5-5.3 1-7.8-1.5-2.5-4.5-3.6-7.2-2.6-2.7 1-4.3 3.7-3.9 6.5l-3.1 1.8c-1.2-1.3-2.9-2.1-4.8-2.1-3.6 0-6.5 2.9-6.5 6.5 0 2 .9 3.8 2.3 5l-1.8 3.1c-2.8-.4-5.5 1.2-6.5 3.9-1 2.7.1 5.7 2.6 7.2 2.5 1.5 5.7 1.1 7.8-1 1.5-1.5 2.2-3.6 1.8-5.7l3.4-.7c.7 1 1.7 1.8 2.9 2.2v3.5c-2.4.8-4.1 3-4.1 5.6 0 3.3 2.7 6 6 6s6-2.7 6-6c0-2.6-1.7-4.8-4.1-5.6v-3.5c1.2-.4 2.2-1.2 2.9-2.2l3.4.7c-.4 2.1.3 4.2 1.8 5.7 2.1 2.1 5.3 2.5 7.8 1s3.6-4.5 2.6-7.2c-1-2.7-3.7-4.3-6.5-3.9l-.7-3.4c1-.7 1.8-1.7 2.2-2.9h3.5c.8 2.4 3 4.1 5.6 4.1 3.3 0 6-2.7 6-6s-2.7-6-6-6c-2.6 0-4.8 1.7-5.6 4.1h-3.5zm-6.8 1.6c-1.3 0-2.4-1.1-2.4-2.4s1.1-2.4 2.4-2.4 2.4 1.1 2.4 2.4-1.1 2.4-2.4 2.4z" fill="#231F20"/>
     </svg>
   )
 }
@@ -4760,6 +5023,14 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
       )
     }
 
+    if (t.type === 'helper') {
+      return (
+        <p key={index} className="message-text message-helper-text">
+          {t.content}
+        </p>
+      )
+    }
+
     return (
       <p key={index} className="message-text">
         {t.type === 'bold' && <strong>{t.content}</strong>}
@@ -5296,6 +5567,14 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                 )
               }
               
+              if (t.type === 'helper') {
+                return (
+                  <p key={i} className="message-text message-helper-text">
+                    {t.content}
+                  </p>
+                )
+              }
+
               return (
                 <p key={i} className="message-text">
                   {t.type === 'bold' && <strong>{t.content}</strong>}
@@ -5595,11 +5874,12 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                         <span className="aura-ws-col-name">Name</span>
                         <span className="aura-ws-col-project">Project</span>
                         <span className="aura-ws-col-cloud">Cloud & Region</span>
+                        <span className="aura-ws-col-size">Size</span>
                       </div>
                       {opt.subOptions.map((sub) => (
                         <div
                           key={sub.id}
-                          className="aura-workspace-suboption"
+                          className={`aura-workspace-suboption ${sub.recommended ? 'recommended' : ''}`}
                           onClick={() => onAction(sub.name)}
                         >
                           <div className="aura-ws-col-radio">
@@ -5607,6 +5887,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                               type="radio"
                               name="workspace-selection"
                               className="aura-ws-radio"
+                              defaultChecked={sub.recommended}
                               readOnly
                             />
                           </div>
@@ -5615,7 +5896,10 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                               {sub.status === 'active' ? <WorkspaceIconActive /> : <WorkspaceIconSuspended />}
                             </div>
                             <div className="aura-ws-name-info">
-                              <span className="aura-ws-name">{sub.name}</span>
+                              <div className="aura-ws-name-row">
+                                <span className="aura-ws-name">{sub.name}</span>
+                                {sub.recommended && <span className="aura-ws-recommended-badge">Recommended</span>}
+                              </div>
                               <div className="aura-ws-meta">
                                 <span className="aura-ws-group">{sub.group}</span>
                                 <span className={`aura-ws-env-badge ${sub.env === 'Prod' ? 'prod' : 'non-prod'}`}>{sub.env}</span>
@@ -5627,6 +5911,10 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                             <span className={`aura-ws-project-type ${sub.projectType.toLowerCase()}`}>{sub.projectType}</span>
                           </div>
                           <div className="aura-ws-col-cloud">{sub.cloudRegion}</div>
+                          <div className="aura-ws-col-size">
+                            <span className="aura-ws-size">{sub.size}</span>
+                            {sub.sizeNote && <span className="aura-ws-size-note">{sub.sizeNote}</span>}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -5681,6 +5969,207 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                 <li key={i}>{item}</li>
               ))}
             </ul>
+            {content.debugResult.suggestedFix && (
+              <div className="aura-debug-suggested-fix">
+                <strong>Suggested fix:</strong> {content.debugResult.suggestedFix}
+              </div>
+            )}
+          </div>
+        )}
+
+        {content.databaseSelector && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-database-selector fade-in">
+            <div className="aura-database-options">
+              {content.databaseSelector.databases.map((db) => (
+                <button
+                  key={db.id}
+                  className="aura-database-btn"
+                  onClick={() => onAction(db.label)}
+                >
+                  <IconFA name="database" size={16} />
+                  <div className="aura-database-info">
+                    <span className="aura-database-name">{db.label}</span>
+                    <span className="aura-database-tables">{db.tables} tables</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.schemaPreview && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-schema-preview fade-in">
+            <div className="aura-schema-header">
+              <IconFA name="table" size={14} />
+              <span>{content.schemaPreview.tableName}</span>
+            </div>
+            <div className="aura-schema-columns">
+              <div className="aura-schema-columns-header">
+                <span>Column</span>
+                <span>Type</span>
+                <span>Nullable</span>
+              </div>
+              {content.schemaPreview.columns.map((col, i) => (
+                <div key={i} className="aura-schema-column">
+                  <span className="aura-schema-col-name">{col.name}</span>
+                  <span className="aura-schema-col-type">{col.type}</span>
+                  <span className="aura-schema-col-null">{col.nullable ? 'Yes' : 'No'}</span>
+                </div>
+              ))}
+            </div>
+            {content.schemaPreview.sampleData && (
+              <div className="aura-schema-sample">
+                <div className="aura-schema-sample-header">{content.schemaPreview.sampleDataLabel || 'Sample data'}</div>
+                <div className="aura-schema-sample-table">
+                  <div className="aura-schema-sample-row header">
+                    {Object.keys(content.schemaPreview.sampleData[0]).map((key) => (
+                      <span key={key}>{key}</span>
+                    ))}
+                  </div>
+                  {content.schemaPreview.sampleData.map((row, i) => (
+                    <div key={i} className="aura-schema-sample-row">
+                      {Object.values(row).map((val, j) => (
+                        <span key={j}>{val}</span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {content.historySelector && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-history-selector fade-in">
+            <div className="aura-history-options">
+              {content.historySelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className="aura-history-btn"
+                  onClick={() => onAction(opt.label)}
+                >
+                  <div className="aura-history-info">
+                    <span className="aura-history-label">{opt.label}</span>
+                    <span className="aura-history-desc">{opt.description}</span>
+                  </div>
+                  <IconFA name="chevron-right" size={12} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.workspaceRecommendation && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-workspace-recommendation fade-in">
+            <div className="aura-recommendation-card">
+              <div className="aura-recommendation-row">
+                <span className="aura-recommendation-label">Workspace size</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.size}</span>
+              </div>
+              <div className="aura-recommendation-row">
+                <span className="aura-recommendation-label">Estimated data</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.estimatedData}</span>
+              </div>
+              <div className="aura-recommendation-row">
+                <span className="aura-recommendation-label">Tables</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.tables}</span>
+              </div>
+              <div className="aura-recommendation-row">
+                <span className="aura-recommendation-label">Data history</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.history}</span>
+              </div>
+              {content.workspaceRecommendation.monthlyCost && (
+                <div className="aura-recommendation-row highlight">
+                  <span className="aura-recommendation-label">Est. monthly cost</span>
+                  <span className="aura-recommendation-value">{content.workspaceRecommendation.monthlyCost}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {content.replicaSelector && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-replica-selector fade-in">
+            <div className="aura-replica-options">
+              {content.replicaSelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className="aura-replica-btn"
+                  onClick={() => onAction(opt.label)}
+                >
+                  <div className="aura-replica-info">
+                    <span className="aura-replica-label">{opt.label}</span>
+                    <span className="aura-replica-desc">{opt.description}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.speedLayerStatus?.health && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-health-bar fade-in">
+            <div className="aura-health-visual">
+              <div className="aura-health-segment healthy" style={{ width: `${(content.speedLayerStatus.health.healthy / content.speedLayerStatus.health.total) * 100}%` }}></div>
+              <div className="aura-health-segment warning" style={{ width: `${(content.speedLayerStatus.health.warning / content.speedLayerStatus.health.total) * 100}%` }}></div>
+            </div>
+            <div className="aura-health-legend">
+              <span className="aura-health-legend-item healthy">{content.speedLayerStatus.health.healthy} healthy</span>
+              <span className="aura-health-legend-item warning">{content.speedLayerStatus.health.warning} with issues</span>
+            </div>
+          </div>
+        )}
+
+        {content.dayTwoActions && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-day-two-actions fade-in">
+            <div className="aura-day-two-grid">
+              {content.dayTwoActions.map((action, i) => (
+                <button
+                  key={i}
+                  className="aura-day-two-btn"
+                  onClick={() => onAction(action)}
+                >
+                  {action === 'Debug issue' && <IconFA name="bug" size={14} />}
+                  {action === 'Recreate pipeline' && <IconFA name="rotate" size={14} />}
+                  {action === 'Change history window' && <IconFA name="calendar" size={14} />}
+                  {action === 'Resize workspace' && <IconFA name="expand" size={14} />}
+                  <span>{action}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.domainForm && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-domain-form fade-in">
+            <div className="aura-domain-form-card">
+              <div className="aura-domain-form-row">
+                <span className="aura-domain-form-label">Name</span>
+                <span className="aura-domain-form-value">{content.domainForm.name}</span>
+              </div>
+              <div className="aura-domain-form-row">
+                <span className="aura-domain-form-label">Description</span>
+                <span className="aura-domain-form-value">{content.domainForm.description}</span>
+              </div>
+              <div className="aura-domain-form-row">
+                <span className="aura-domain-form-label">Connection</span>
+                <span className="aura-domain-form-value highlight">{content.domainForm.connection}</span>
+              </div>
+              <div className="aura-domain-form-row">
+                <span className="aura-domain-form-label">Tables</span>
+                <span className="aura-domain-form-value">{content.domainForm.tables} tables selected</span>
+              </div>
+              {content.domainForm.tablesList && (
+                <div className="aura-domain-form-tables">
+                  {content.domainForm.tablesList.map((table, i) => (
+                    <span key={i} className="aura-domain-table-tag">{table}</span>
+                  ))}
+                  {content.domainForm.tables > content.domainForm.tablesList.length && (
+                    <span className="aura-domain-table-more">+{content.domainForm.tables - content.domainForm.tablesList.length} more</span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -6145,6 +6634,9 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'eye': '\uf06e',
     'pen-to-square': '\uf044',
     'trash': '\uf1f8',
+    'circle-check': '\uf058',
+    'rotate': '\uf2f1',
+    'calendar': '\uf133',
   }
   
   const weightClass = weight === 'solid' ? 'fa-solid' : weight === 'light' ? 'fa-light' : 'fa-regular'
@@ -7177,7 +7669,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
           if (!isLineTyped && !isLineActive) return null
           
           return (
-            <p key={i} className={`aura-message-text ${t.type === 'success' ? 'aura-text-success' : ''}`}>
+            <p key={i} className={`aura-message-text ${t.type === 'success' ? 'aura-text-success' : ''} ${t.type === 'helper' ? 'aura-helper-text' : ''}`}>
               {t.type === 'success' && <span className="success-check">✓</span>}
               {t.type === 'success' && ' '}
               {t.type === 'bold' ? (
@@ -7397,11 +7889,12 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                         <span className="aura-ws-col-name">Name</span>
                         <span className="aura-ws-col-project">Project</span>
                         <span className="aura-ws-col-cloud">Cloud & Region</span>
+                        <span className="aura-ws-col-size">Size</span>
                       </div>
                       {opt.subOptions.map((sub) => (
                         <div
                           key={sub.id}
-                          className="aura-workspace-suboption"
+                          className={`aura-workspace-suboption ${sub.recommended ? 'recommended' : ''}`}
                           onClick={() => handleAction(sub.name)}
                         >
                           <div className="aura-ws-col-radio">
@@ -7409,6 +7902,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                               type="radio"
                               name="workspace-selection-panel"
                               className="aura-ws-radio"
+                              defaultChecked={sub.recommended}
                               readOnly
                             />
                           </div>
@@ -7417,7 +7911,10 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                               {sub.status === 'active' ? <WorkspaceIconActive /> : <WorkspaceIconSuspended />}
                             </div>
                             <div className="aura-ws-name-info">
-                              <span className="aura-ws-name">{sub.name}</span>
+                              <div className="aura-ws-name-row">
+                                <span className="aura-ws-name">{sub.name}</span>
+                                {sub.recommended && <span className="aura-ws-recommended-badge">Recommended</span>}
+                              </div>
                               <div className="aura-ws-meta">
                                 <span className="aura-ws-group">{sub.group}</span>
                                 <span className={`aura-ws-env-badge ${sub.env === 'Prod' ? 'prod' : 'non-prod'}`}>{sub.env}</span>
@@ -7429,6 +7926,10 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                             <span className={`aura-ws-project-type ${sub.projectType.toLowerCase()}`}>{sub.projectType}</span>
                           </div>
                           <div className="aura-ws-col-cloud">{sub.cloudRegion}</div>
+                          <div className="aura-ws-col-size">
+                            <span className="aura-ws-size">{sub.size}</span>
+                            {sub.sizeNote && <span className="aura-ws-size-note">{sub.sizeNote}</span>}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -7483,6 +7984,207 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                 <li key={i}>{item}</li>
               ))}
             </ul>
+            {content.debugResult.suggestedFix && (
+              <div className="aura-debug-suggested-fix">
+                <strong>Suggested fix:</strong> {content.debugResult.suggestedFix}
+              </div>
+            )}
+          </div>
+        )}
+
+        {allDone && content.databaseSelector && (
+          <div className="aura-database-selector aura-fade-in">
+            <div className="aura-database-options">
+              {content.databaseSelector.databases.map((db) => (
+                <button
+                  key={db.id}
+                  className="aura-database-btn"
+                  onClick={() => handleAction(db.label)}
+                >
+                  <IconFA name="database" size={16} />
+                  <div className="aura-database-info">
+                    <span className="aura-database-name">{db.label}</span>
+                    <span className="aura-database-tables">{db.tables} tables</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.schemaPreview && (
+          <div className="aura-schema-preview aura-fade-in">
+            <div className="aura-schema-header">
+              <IconFA name="table" size={14} />
+              <span>{content.schemaPreview.tableName}</span>
+            </div>
+            <div className="aura-schema-columns">
+              <div className="aura-schema-columns-header">
+                <span>Column</span>
+                <span>Type</span>
+                <span>Nullable</span>
+              </div>
+              {content.schemaPreview.columns.map((col, i) => (
+                <div key={i} className="aura-schema-column">
+                  <span className="aura-schema-col-name">{col.name}</span>
+                  <span className="aura-schema-col-type">{col.type}</span>
+                  <span className="aura-schema-col-null">{col.nullable ? 'Yes' : 'No'}</span>
+                </div>
+              ))}
+            </div>
+            {content.schemaPreview.sampleData && (
+              <div className="aura-schema-sample">
+                <div className="aura-schema-sample-header">{content.schemaPreview.sampleDataLabel || 'Sample data'}</div>
+                <div className="aura-schema-sample-table">
+                  <div className="aura-schema-sample-row header">
+                    {Object.keys(content.schemaPreview.sampleData[0]).map((key) => (
+                      <span key={key}>{key}</span>
+                    ))}
+                  </div>
+                  {content.schemaPreview.sampleData.map((row, i) => (
+                    <div key={i} className="aura-schema-sample-row">
+                      {Object.values(row).map((val, j) => (
+                        <span key={j}>{val}</span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {allDone && content.historySelector && (
+          <div className="aura-history-selector aura-fade-in">
+            <div className="aura-history-options">
+              {content.historySelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className="aura-history-btn"
+                  onClick={() => handleAction(opt.label)}
+                >
+                  <div className="aura-history-info">
+                    <span className="aura-history-label">{opt.label}</span>
+                    <span className="aura-history-desc">{opt.description}</span>
+                  </div>
+                  <IconFA name="chevron-right" size={12} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.workspaceRecommendation && (
+          <div className="aura-workspace-recommendation aura-fade-in">
+            <div className="aura-recommendation-card">
+              <div className="aura-recommendation-row">
+                <span className="aura-recommendation-label">Workspace size</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.size}</span>
+              </div>
+              <div className="aura-recommendation-row">
+                <span className="aura-recommendation-label">Estimated data</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.estimatedData}</span>
+              </div>
+              <div className="aura-recommendation-row">
+                <span className="aura-recommendation-label">Tables</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.tables}</span>
+              </div>
+              <div className="aura-recommendation-row">
+                <span className="aura-recommendation-label">Data history</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.history}</span>
+              </div>
+              {content.workspaceRecommendation.monthlyCost && (
+                <div className="aura-recommendation-row highlight">
+                  <span className="aura-recommendation-label">Est. monthly cost</span>
+                  <span className="aura-recommendation-value">{content.workspaceRecommendation.monthlyCost}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.replicaSelector && (
+          <div className="aura-replica-selector aura-fade-in">
+            <div className="aura-replica-options">
+              {content.replicaSelector.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  className="aura-replica-btn"
+                  onClick={() => handleAction(opt.label)}
+                >
+                  <div className="aura-replica-info">
+                    <span className="aura-replica-label">{opt.label}</span>
+                    <span className="aura-replica-desc">{opt.description}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.speedLayerStatus?.health && (
+          <div className="aura-health-bar aura-fade-in">
+            <div className="aura-health-visual">
+              <div className="aura-health-segment healthy" style={{ width: `${(content.speedLayerStatus.health.healthy / content.speedLayerStatus.health.total) * 100}%` }}></div>
+              <div className="aura-health-segment warning" style={{ width: `${(content.speedLayerStatus.health.warning / content.speedLayerStatus.health.total) * 100}%` }}></div>
+            </div>
+            <div className="aura-health-legend">
+              <span className="aura-health-legend-item healthy">{content.speedLayerStatus.health.healthy} healthy</span>
+              <span className="aura-health-legend-item warning">{content.speedLayerStatus.health.warning} with issues</span>
+            </div>
+          </div>
+        )}
+
+        {allDone && content.dayTwoActions && (
+          <div className="aura-day-two-actions aura-fade-in">
+            <div className="aura-day-two-grid">
+              {content.dayTwoActions.map((action, i) => (
+                <button
+                  key={i}
+                  className="aura-day-two-btn"
+                  onClick={() => handleAction(action)}
+                >
+                  {action === 'Debug issue' && <IconFA name="bug" size={14} />}
+                  {action === 'Recreate pipeline' && <IconFA name="rotate" size={14} />}
+                  {action === 'Change history window' && <IconFA name="calendar" size={14} />}
+                  {action === 'Resize workspace' && <IconFA name="expand" size={14} />}
+                  <span>{action}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.domainForm && (
+          <div className="aura-domain-form aura-fade-in">
+            <div className="aura-domain-form-card">
+              <div className="aura-domain-form-row">
+                <span className="aura-domain-form-label">Name</span>
+                <span className="aura-domain-form-value">{content.domainForm.name}</span>
+              </div>
+              <div className="aura-domain-form-row">
+                <span className="aura-domain-form-label">Description</span>
+                <span className="aura-domain-form-value">{content.domainForm.description}</span>
+              </div>
+              <div className="aura-domain-form-row">
+                <span className="aura-domain-form-label">Connection</span>
+                <span className="aura-domain-form-value highlight">{content.domainForm.connection}</span>
+              </div>
+              <div className="aura-domain-form-row">
+                <span className="aura-domain-form-label">Tables</span>
+                <span className="aura-domain-form-value">{content.domainForm.tables} tables selected</span>
+              </div>
+              {content.domainForm.tablesList && (
+                <div className="aura-domain-form-tables">
+                  {content.domainForm.tablesList.map((table, i) => (
+                    <span key={i} className="aura-domain-table-tag">{table}</span>
+                  ))}
+                  {content.domainForm.tables > content.domainForm.tablesList.length && (
+                    <span className="aura-domain-table-more">+{content.domainForm.tables - content.domainForm.tablesList.length} more</span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
