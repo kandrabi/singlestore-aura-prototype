@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Editor, { DiffEditor } from '@monaco-editor/react'
 import './index.css'
 
@@ -6952,17 +6953,30 @@ function AgentInput({
   disabled = false
 }) {
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
   const dropdownRef = useRef(null)
+  const buttonRef = useRef(null)
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target) && 
+          buttonRef.current && !buttonRef.current.contains(e.target)) {
         setAgentDropdownOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (agentDropdownOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setDropdownPosition({
+        top: rect.top,
+        left: rect.left
+      })
+    }
+  }, [agentDropdownOpen])
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -7003,8 +7017,9 @@ function AgentInput({
               <MicIcon />
             </button>
           )}
-          <div className="agent-dropdown-wrapper" ref={dropdownRef}>
+          <div className="agent-dropdown-wrapper">
             <button 
+              ref={buttonRef}
               className="agent-selector-btn"
               onClick={() => setAgentDropdownOpen(!agentDropdownOpen)}
               type="button"
@@ -7013,8 +7028,17 @@ function AgentInput({
               <span>{selectedAgent?.name || 'Aura Agent'}</span>
               <ChevronDownIcon className="chevron" />
             </button>
-            {agentDropdownOpen && (
-              <div className="agent-dropdown">
+            {agentDropdownOpen && createPortal(
+              <div 
+                ref={dropdownRef}
+                className="agent-dropdown agent-dropdown-portal"
+                style={{
+                  position: 'fixed',
+                  top: dropdownPosition.top,
+                  left: dropdownPosition.left,
+                  transform: 'translateY(-100%) translateY(-4px)'
+                }}
+              >
                 {AURA_AGENTS.map((agent) => (
                   <button
                     key={agent.id}
@@ -7027,7 +7051,8 @@ function AgentInput({
                     {selectedAgent?.id === agent.id && <IconFA name="check" size={12} />}
                   </button>
                 ))}
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         </div>
