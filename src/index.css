@@ -1587,6 +1587,18 @@ body {
   font-weight: 700;
 }
 
+.message-helper-text {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.aura-helper-text {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
 .text-link {
   font-weight: 600;
   color: var(--color-brand-9);
@@ -9348,7 +9360,7 @@ body {
 
 .aura-workspace-suboptions-header {
   display: grid;
-  grid-template-columns: 24px 1fr 150px 140px;
+  grid-template-columns: 24px 1fr 150px 140px 100px;
   gap: 16px;
   padding: 16px;
   background: #FAFAFA;
@@ -9361,7 +9373,7 @@ body {
 
 .aura-workspace-suboption {
   display: grid;
-  grid-template-columns: 24px 1fr 150px 140px;
+  grid-template-columns: 24px 1fr 150px 140px 100px;
   gap: 16px;
   align-items: center;
   width: 100%;
@@ -9505,6 +9517,54 @@ body {
 .aura-ws-col-cloud {
   font-size: 13px;
   color: var(--color-text-secondary);
+}
+
+.aura-ws-col-size {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 100px;
+}
+
+.aura-ws-size {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.aura-ws-size-note {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.aura-ws-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aura-ws-recommended-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #f0fdf4;
+  color: #16a34a;
+  border-radius: 4px;
+  border: 1px solid #bbf7d0;
+}
+
+.aura-workspace-suboption.recommended {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.aura-workspace-suboption.recommended:hover {
+  background: #dcfce7;
 }
 
 .aura-table-preview {
@@ -9725,27 +9785,36 @@ body {
 }
 
 .lakehouse-sources-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-  gap: 16px;
+  display: flex;
+  gap: 12px;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
 .lakehouse-source-card {
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 8px;
+  padding: 12px 16px;
   display: flex;
-  flex-direction: column;
-  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+  flex: 0 1 auto;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.lakehouse-source-card:hover {
+  border-color: var(--color-brand-7);
+  background: #faf5ff;
 }
 
 .lakehouse-source-header {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 16px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 0;
 }
 
 .lakehouse-source-logo {
@@ -9753,29 +9822,29 @@ body {
 }
 
 .lakehouse-source-logo svg {
-  width: 48px;
-  height: 48px;
+  width: 32px;
+  height: 32px;
 }
 
 .lakehouse-source-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding-top: 8px;
+  gap: 2px;
+  padding-top: 0;
 }
 
 .lakehouse-source-name {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
   color: #101828;
-  letter-spacing: -0.44px;
+  letter-spacing: -0.2px;
 }
 
 .lakehouse-source-status {
   display: inline-block;
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   width: fit-content;
 }
@@ -9791,27 +9860,11 @@ body {
 }
 
 .lakehouse-source-description {
-  font-size: 14px;
-  color: #4a5565;
-  margin: 0 0 auto 0;
-  line-height: 1.4;
+  display: none;
 }
 
 .lakehouse-source-action {
-  padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
-  margin-top: 16px;
-}
-
-.lakehouse-source-action span {
-  font-size: 14px;
-  font-weight: 500;
-  color: #6b7280;
-  cursor: pointer;
-}
-
-.lakehouse-source-action span.connected {
-  color: #9810fa;
+  display: none;
 }
 
 .lakehouse-layers-section {
@@ -9867,4 +9920,500 @@ body {
 .workspace-actions {
   display: flex;
   gap: 4px;
+}
+
+/* Sync Status Badge */
+.lakehouse-sync-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.lakehouse-sync-status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.lakehouse-sync-status-badge.syncing {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.lakehouse-sync-status-badge.lag {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* AI Migration Actions */
+.ai-migration-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ai-migration-btn.secondary {
+  background: white;
+  color: var(--color-brand-8);
+  border: 1px solid var(--color-brand-7);
+}
+
+.ai-migration-btn.secondary:hover {
+  background: var(--color-bg-surface-brand);
+}
+
+/* Database Selector */
+.aura-database-selector {
+  margin-top: 12px;
+}
+
+.aura-database-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aura-database-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.aura-database-btn:hover {
+  border-color: var(--color-brand-7);
+  background: var(--color-bg-surface-brand);
+}
+
+.aura-database-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aura-database-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-database-tables {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Schema Preview */
+.aura-schema-preview {
+  margin-top: 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.aura-schema-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-schema-columns {
+  padding: 8px 0;
+}
+
+.aura-schema-columns-header {
+  display: grid;
+  grid-template-columns: 1fr 100px 80px;
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.aura-schema-column {
+  display: grid;
+  grid-template-columns: 1fr 100px 80px;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-schema-column:last-child {
+  border-bottom: none;
+}
+
+.aura-schema-col-name {
+  font-family: 'Menlo', monospace;
+  font-size: 12px;
+  color: #101828;
+}
+
+.aura-schema-col-type {
+  font-family: 'Menlo', monospace;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.aura-schema-col-null {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.aura-schema-sample {
+  border-top: 1px solid #e5e7eb;
+}
+
+.aura-schema-sample-header {
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #f9fafb;
+}
+
+.aura-schema-sample-table {
+  overflow-x: auto;
+}
+
+.aura-schema-sample-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-schema-sample-row.header {
+  font-weight: 600;
+  color: #6b7280;
+  background: #f9fafb;
+}
+
+.aura-schema-sample-row:last-child {
+  border-bottom: none;
+}
+
+.aura-schema-sample-row span {
+  font-family: 'Menlo', monospace;
+  font-size: 11px;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* History Selector */
+.aura-history-selector {
+  margin-top: 12px;
+}
+
+.aura-history-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aura-history-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.aura-history-btn:hover {
+  border-color: var(--color-brand-7);
+  background: var(--color-bg-surface-brand);
+}
+
+.aura-history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aura-history-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-history-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Workspace Recommendation */
+.aura-workspace-recommendation {
+  margin-top: 12px;
+}
+
+.aura-recommendation-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.aura-recommendation-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-recommendation-row:last-child {
+  border-bottom: none;
+}
+
+.aura-recommendation-row.highlight {
+  background: #f9fafb;
+}
+
+.aura-recommendation-label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.aura-recommendation-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #101828;
+}
+
+/* Replica Selector */
+.aura-replica-selector {
+  margin-top: 12px;
+}
+
+.aura-replica-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aura-replica-btn {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.aura-replica-btn:hover {
+  border-color: var(--color-brand-7);
+  background: var(--color-bg-surface-brand);
+}
+
+.aura-replica-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aura-replica-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-replica-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Health Bar */
+.aura-health-bar {
+  margin-top: 12px;
+}
+
+.aura-health-visual {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.aura-health-segment {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.aura-health-segment.healthy {
+  background: #22c55e;
+}
+
+.aura-health-segment.warning {
+  background: #f59e0b;
+}
+
+.aura-health-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.aura-health-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.aura-health-legend-item::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.aura-health-legend-item.healthy::before {
+  background: #22c55e;
+}
+
+.aura-health-legend-item.warning::before {
+  background: #f59e0b;
+}
+
+/* Day Two Actions */
+.aura-day-two-actions {
+  margin-top: 12px;
+}
+
+.aura-day-two-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.aura-day-two-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.aura-day-two-btn:hover {
+  border-color: var(--color-brand-7);
+  background: var(--color-bg-surface-brand);
+  color: var(--color-brand-8);
+}
+
+/* Debug Suggested Fix */
+.aura-debug-suggested-fix {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #166534;
+}
+
+/* Domain Form */
+.aura-domain-form {
+  margin-top: 12px;
+}
+
+.aura-domain-form-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.aura-domain-form-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-domain-form-row:last-child {
+  border-bottom: none;
+}
+
+.aura-domain-form-label {
+  font-size: 13px;
+  color: #6b7280;
+  min-width: 100px;
+}
+
+.aura-domain-form-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #101828;
+  text-align: right;
+  flex: 1;
+}
+
+.aura-domain-form-value.highlight {
+  color: var(--color-brand-8);
+}
+
+.aura-domain-form-tables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px;
+  background: #f9fafb;
+}
+
+.aura-domain-table-tag {
+  display: inline-block;
+  padding: 4px 8px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'Menlo', monospace;
+  color: #374151;
+}
+
+.aura-domain-table-more {
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #6b7280;
 }
