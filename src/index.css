@@ -9676,6 +9676,421 @@ body {
   color: #d97706;
 }
 
+/* Dataset Card - for positions data flow */
+.aura-dataset-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.aura-dataset-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.aura-dataset-card-icon {
+  width: 32px;
+  height: 32px;
+  background: #ede9fe;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7c3aed;
+}
+
+.aura-dataset-card-info {
+  flex: 1;
+}
+
+.aura-dataset-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #101828;
+  font-family: var(--font-family-mono);
+}
+
+.aura-dataset-card-source {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.aura-dataset-card-badge {
+  font-size: 11px;
+  font-weight: 500;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.aura-dataset-card-schema {
+  padding: 0;
+}
+
+.aura-dataset-schema-row {
+  display: flex;
+  padding: 10px 16px;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.aura-dataset-schema-row.header {
+  background: #f9fafb;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-dataset-schema-row.header span {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  min-width: 90px;
+}
+
+.aura-dataset-schema-row.types span {
+  font-size: 12px;
+  font-family: var(--font-family-mono);
+  color: #9ca3af;
+  min-width: 90px;
+}
+
+/* Scope Options */
+.aura-scope-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.aura-scope-option-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.aura-scope-option-btn:hover {
+  background: #f9fafb;
+  border-color: #7c3aed;
+}
+
+.aura-scope-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aura-scope-option-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-scope-option-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.aura-scope-option-btn svg {
+  color: #9ca3af;
+}
+
+/* Speed Layer Plan Card */
+.aura-speed-layer-plan {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.aura-plan-rows {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-plan-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-plan-row:last-child {
+  border-bottom: none;
+}
+
+.aura-plan-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.aura-plan-value {
+  font-size: 13px;
+  color: #101828;
+  font-weight: 500;
+}
+
+.aura-plan-value.highlight {
+  color: #7c3aed;
+  font-family: var(--font-family-mono);
+}
+
+.aura-plan-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-plan-section:last-child {
+  border-bottom: none;
+}
+
+.aura-plan-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.aura-plan-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aura-plan-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #101828;
+}
+
+.aura-plan-list li svg {
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+.aura-plan-list.muted li {
+  color: #6b7280;
+}
+
+.aura-plan-list.muted li svg {
+  color: #9ca3af;
+}
+
+/* Optimized Structure Card */
+.aura-optimized-structure {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.aura-structure-layer {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.aura-structure-layer.base {
+  background: #f9fafb;
+}
+
+.aura-structure-layer-icon {
+  width: 28px;
+  height: 28px;
+  background: #ede9fe;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7c3aed;
+  flex-shrink: 0;
+}
+
+.aura-structure-layer.view .aura-structure-layer-icon {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.aura-structure-layer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aura-structure-layer-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-structure-layer-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Speed Layer Complete Card */
+.aura-speed-layer-complete {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.aura-complete-stats {
+  display: flex;
+  gap: 24px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #bbf7d0;
+}
+
+.aura-complete-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aura-complete-stat-label {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.aura-complete-stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.aura-complete-benefits {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aura-complete-benefits li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #101828;
+}
+
+.aura-complete-benefits li svg {
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+.aura-complete-routing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #bbf7d0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.aura-complete-routing svg {
+  color: #7c3aed;
+}
+
+/* Next Actions */
+.aura-next-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.aura-next-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.aura-next-action-btn:hover {
+  background: #f9fafb;
+  border-color: #7c3aed;
+}
+
+.aura-next-action-icon {
+  width: 32px;
+  height: 32px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.aura-next-action-btn:hover .aura-next-action-icon {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.aura-next-action-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.aura-next-action-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-next-action-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
 .aura-debug-result {
   background: var(--color-bg-surface-2);
   border: 1px solid var(--color-border);

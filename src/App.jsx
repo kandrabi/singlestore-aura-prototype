@@ -801,7 +801,8 @@ const QUERY_TUNING_PROMPTS = [
 const LAKEHOUSE_PROMPTS = [
   'Set up real-time speed layer for your data',
   'Check status on speed layer Customer Events',
-  'Monitor and manage your real-time data system'
+  'Monitor and manage your real-time data system',
+  'I need our positions data'
 ]
 
 const BILLING_PROMPTS = [
@@ -1907,6 +1908,168 @@ GROUP BY YEAR(created_at);`,
   }
 ]
 
+// Positions Data Materialization Flow (Lakehouse Agent sub-flow)
+// Triggered by: "I need our positions data", "positions data", etc.
+const POSITIONS_DATA_FLOW = [
+  // Step 1: Data Discovery - Initial message + progress
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Looking for positions data you have access to...',
+      steps: [
+        '✓ Scanning connected data sources',
+        '✓ Analyzing schema patterns',
+        '→ Identifying primary dataset'
+      ],
+      completedState: {
+        text: 'Found a match.',
+        subtext: ''
+      }
+    }
+  },
+  // Step 2: Dataset result card
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'I found this dataset that matches your request:' }
+      ],
+      datasetCard: {
+        name: 'positions_daily',
+        source: 'Lakehouse · Reference Datasets',
+        badge: 'Primary match',
+        schema: [
+          { name: 'account_id', type: 'STRING' },
+          { name: 'as_of_date', type: 'DATE' },
+          { name: 'instrument_id', type: 'STRING' },
+          { name: 'quantity', type: 'DECIMAL' },
+          { name: 'market_value', type: 'DECIMAL' },
+          { name: 'currency', type: 'STRING' },
+          { name: 'book', type: 'STRING' }
+        ]
+      },
+      followUp: 'Does this look right?',
+      actions: ['Yes, use this', 'Keep looking']
+    }
+  },
+  // Step 3: Intent - What would you like to do
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'What would you like to do with this data?' }
+      ],
+      actions: ['Create a speed layer', 'Just explore it']
+    }
+  },
+  // Step 4: Scope selection
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Would you like the full dataset or a specific slice?' }
+      ],
+      scopeOptions: [
+        { id: 'full', label: 'Full dataset', description: 'All positions across all regions' },
+        { id: 'slice', label: 'Last 90 days, US equities', description: 'Focused section for faster performance' }
+      ]
+    }
+  },
+  // Step 5: Section Plan card
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: "Here's the speed layer I'll create:" }
+      ],
+      speedLayerPlan: {
+        rows: [
+          { label: 'Source', value: 'positions_daily' },
+          { label: 'Filter', value: 'Last 90 days · US equities' },
+          { label: 'Speed layer', value: 'positions_speed_us_equities', highlight: true }
+        ],
+        benefits: [
+          'Sub-second query performance',
+          'Optimized for analytics and AI workloads'
+        ],
+        exampleQueries: [
+          'Current positions by book',
+          'Top exposures by sector',
+          'Day-over-day changes'
+        ]
+      },
+      followUp: 'How would you like the data structured?',
+      actions: ['Keep it raw', 'Add aggregations']
+    }
+  },
+  // Step 6: Optimized Structure card (when user selects aggregations)
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: "I'll create these optimized views:" }
+      ],
+      optimizedStructure: {
+        layers: [
+          { name: 'Base Layer', description: 'Filtered positions for US equities (90 days)', type: 'base' },
+          { name: 'Current Positions', description: 'Latest snapshot per account & instrument', type: 'view' },
+          { name: 'Exposure by Sector', description: 'Aggregated market value by sector', type: 'view' }
+        ]
+      },
+      autoAdvance: true
+    }
+  },
+  // Step 7: Progress / Materialization
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Setting up your speed layer...',
+      steps: [
+        '✓ Creating base tables',
+        '✓ Loading initial data',
+        '→ Configuring real-time sync'
+      ],
+      completedState: {
+        text: 'Speed layer is ready.',
+        subtext: ''
+      }
+    }
+  },
+  // Step 8: Completion card
+  {
+    type: 'agent',
+    content: {
+      success: true,
+      title: 'Speed Layer Ready ✓',
+      speedLayerComplete: {
+        stats: [
+          { label: 'Query latency', value: '< 50ms' },
+          { label: 'Sync status', value: 'Real-time' },
+          { label: 'Views created', value: '3' }
+        ],
+        routingNote: "I'll automatically route 'positions data' requests to this layer."
+      },
+      autoAdvance: true
+    }
+  },
+  // Step 9: Next actions
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Your speed layer is live. What would you like to do next?' }
+      ],
+      nextActions: [
+        { label: 'Expand coverage', description: 'Add EMEA credit, global macro sections', icon: 'plus' },
+        { label: 'Query with AI', description: 'Ask "largest US equity exposures today"', icon: 'sparkles' },
+        { label: 'Optimize further', description: 'Auto-tune for your query patterns', icon: 'bolt' }
+      ]
+    }
+  }
+]
+
 const USER_MESSAGES = [
   'View recommended actions',
   'Suggest alternate options',
@@ -1932,12 +2095,13 @@ function App() {
   const [auraPanelMessages, setAuraPanelMessages] = useState([])
   const [auraPanelInput, setAuraPanelInput] = useState('')
   const [auraPanelAgentName, setAuraPanelAgentName] = useState('Aura Agent')
-  const [auraPanelFlow, setAuraPanelFlow] = useState('none') // 'none', 'default', 'cpu-spike', 'migration', 'cpu-spike-v2', 'lakehouse'
+  const [auraPanelFlow, setAuraPanelFlow] = useState('none') // 'none', 'default', 'cpu-spike', 'migration', 'cpu-spike-v2', 'lakehouse', 'positions-data'
   const [auraPanelFlowIndex, setAuraPanelFlowIndex] = useState(0)
   const [migrationFlowIndex, setMigrationFlowIndex] = useState(0)
   const [cpuSpikeV2FlowIndex, setCpuSpikeV2FlowIndex] = useState(0)
   const [billingFlowIndex, setBillingFlowIndex] = useState(0)
   const [lakehouseFlowIndex, setLakehouseFlowIndex] = useState(0)
+  const [positionsDataFlowIndex, setPositionsDataFlowIndex] = useState(0)
   const [selectedLakehouseHistory, setSelectedLakehouseHistory] = useState('6 months') // User's history selection
   const [billingFlowBranch, setBillingFlowBranch] = useState(null) // 'drivers' or 'recommendations'
   const [billingFlowStarted, setBillingFlowStarted] = useState(false) // Guard against double execution
@@ -2157,7 +2321,7 @@ function App() {
     }
     
     // Lakehouse flow: Reset conversation when navigating to Home
-    const hasLakehouseConversation = auraPanelFlow === 'lakehouse' && auraPanelMessages.length > 0
+    const hasLakehouseConversation = (auraPanelFlow === 'lakehouse' || auraPanelFlow === 'positions-data') && auraPanelMessages.length > 0
     
     if (hasLakehouseConversation) {
       if (view === 'portal' && newView === 'portal') {
@@ -2165,6 +2329,7 @@ function App() {
         setAuraPanelFlow('none')
         setAuraPanelMessages([])
         setLakehouseFlowIndex(0)
+        setPositionsDataFlowIndex(0)
         setSelectedLakehouseHistory('6 months')
         setAuraPanelOpen(false)
       } else if (view === 'portal' && newView !== 'portal') {
@@ -2175,6 +2340,7 @@ function App() {
         setAuraPanelFlow('none')
         setAuraPanelMessages([])
         setLakehouseFlowIndex(0)
+        setPositionsDataFlowIndex(0)
         setSelectedLakehouseHistory('6 months')
         setAuraPanelOpen(false)
       }
@@ -2357,6 +2523,54 @@ function App() {
     }, 1000)
   }
 
+  // Positions Data Materialization flow message handler (Lakehouse Agent sub-flow)
+  const addNextPositionsDataMessage = (index) => {
+    if (index >= POSITIONS_DATA_FLOW.length) return
+    setIsAuraTyping(true)
+    setTimeout(() => {
+      setIsAuraTyping(false)
+      let message = JSON.parse(JSON.stringify(POSITIONS_DATA_FLOW[index]))
+      
+      // Mark previous progress messages as completed
+      setAuraPanelMessages(prev => {
+        const updated = prev.map(msg => 
+          (msg.content?.progress && !msg.content?.completedState) 
+            ? { ...msg, content: { ...msg.content, completed: true } } 
+            : msg
+        )
+        return [...updated, { ...message, id: Date.now(), timestamp: new Date() }]
+      })
+      setPositionsDataFlowIndex(index + 1)
+      
+      // Auto-advance progress messages after a delay
+      if (message.content?.progress) {
+        const hasSteps = message.content?.steps?.length > 0
+        const stepsCount = message.content?.steps?.length || 0
+        const stepsDelay = hasSteps ? (800 + (stepsCount * 700) + 400 + 500) : 2500
+        
+        setTimeout(() => {
+          if (message.content?.completedState) {
+            setAuraPanelMessages(prev => 
+              prev.map(msg => 
+                msg.content?.progress && msg.content?.completedState && !msg.content?.completed
+                  ? { ...msg, content: { ...msg.content, completed: true } }
+                  : msg
+              )
+            )
+            setTimeout(() => addNextPositionsDataMessage(index + 1), 2000)
+          } else {
+            addNextPositionsDataMessage(index + 1)
+          }
+        }, stepsDelay)
+      }
+      
+      // Auto-advance autoAdvance messages
+      if (message.content?.autoAdvance && !message.content?.progress) {
+        setTimeout(() => addNextPositionsDataMessage(index + 1), 2500)
+      }
+    }, 1000)
+  }
+
   // Billing flow message handler (Aura Agent on billing page or Support Agent)
   const addNextBillingMessage = (messageIndex, branch = null) => {
     let message
@@ -2439,8 +2653,20 @@ function App() {
     setAuraPanelMessages(prev => [...prev, { type: 'user', id: Date.now(), text, timestamp: new Date() }])
     setAuraPanelInput('')
     
+    // Check for positions data flow trigger (Lakehouse Agent sub-flow)
+    const lowerText = text.toLowerCase()
+    if (lowerText.includes('positions data') || 
+        lowerText.includes('need our positions') ||
+        lowerText.includes('positions table')) {
+      setAuraPanelFlow('positions-data')
+      setPositionsDataFlowIndex(1)
+      setAuraPanelAgentName('Lakehouse Agent')
+      setTimeout(() => addNextPositionsDataMessage(0), 500)
+      return
+    }
+    
     // Check for lakehouse flow trigger
-    if (text.toLowerCase().includes('speed layer') || text.toLowerCase().includes('lakehouse')) {
+    if (lowerText.includes('speed layer') || lowerText.includes('lakehouse')) {
       setAuraPanelFlow('lakehouse')
       setLakehouseFlowIndex(1)
       setAuraPanelAgentName('Lakehouse Agent')
@@ -2554,6 +2780,9 @@ function App() {
     // Route to correct flow based on active flow type
     if (auraPanelAgentName === 'Data Migration Agent' || auraPanelFlow === 'migration') {
       setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
+    } else if (auraPanelFlow === 'positions-data') {
+      // Handle positions data materialization flow actions
+      setTimeout(() => addNextPositionsDataMessage(positionsDataFlowIndex), 500)
     } else if (auraPanelAgentName === 'Lakehouse Agent' || auraPanelFlow === 'lakehouse') {
       // Capture history selection for dynamic display in subsequent messages
       if (actionText.includes('Last 3 months')) {
@@ -4556,12 +4785,12 @@ function PortalView({
   }
 
   // Check if we should show a conversation flow in the main area
-  const showFullscreenConversation = ['cpu-spike-v2', 'lakehouse', 'migration'].includes(auraPanelFlow) && auraPanelMessages && auraPanelMessages.length > 0
+  const showFullscreenConversation = ['cpu-spike-v2', 'lakehouse', 'positions-data', 'migration'].includes(auraPanelFlow) && auraPanelMessages && auraPanelMessages.length > 0
 
   // If a conversation flow is active, render conversation in main area
   if (showFullscreenConversation) {
-    const flowAgentName = auraPanelFlow === 'lakehouse' ? 'Lakehouse Agent' 
-      : auraPanelFlow === 'migration' ? 'Data Migration Agent' 
+    const flowAgentName = (auraPanelFlow === 'lakehouse' || auraPanelFlow === 'positions-data') ? 'Lakehouse Agent'
+      : auraPanelFlow === 'migration' ? 'Data Migration Agent'
       : 'Aura Agent'
     return (
       <div className="portal-view portal-view-conversation">
@@ -5957,6 +6186,147 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                 <span className="aura-speed-status-label">{stat.label}</span>
                 <span className={`aura-speed-status-value ${stat.warning ? 'warning' : ''}`}>{stat.value}</span>
               </div>
+            ))}
+          </div>
+        )}
+
+        {content.datasetCard && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-dataset-card fade-in">
+            <div className="aura-dataset-card-header">
+              <div className="aura-dataset-card-icon">
+                <IconFA name="table" size={14} />
+              </div>
+              <div className="aura-dataset-card-info">
+                <div className="aura-dataset-card-name">{content.datasetCard.name}</div>
+                <div className="aura-dataset-card-source">{content.datasetCard.source}</div>
+              </div>
+              {content.datasetCard.badge && (
+                <span className="aura-dataset-card-badge">{content.datasetCard.badge}</span>
+              )}
+            </div>
+            <div className="aura-dataset-card-schema">
+              <div className="aura-dataset-schema-row header">
+                {content.datasetCard.schema.map((col, i) => (
+                  <span key={i}>{col.name}</span>
+                ))}
+              </div>
+              <div className="aura-dataset-schema-row types">
+                {content.datasetCard.schema.map((col, i) => (
+                  <span key={i}>{col.type}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {content.scopeOptions && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-scope-options fade-in">
+            {content.scopeOptions.map((opt) => (
+              <button
+                key={opt.id}
+                className="aura-scope-option-btn"
+                onClick={() => onAction(opt.label)}
+              >
+                <div className="aura-scope-option-content">
+                  <span className="aura-scope-option-label">{opt.label}</span>
+                  <span className="aura-scope-option-desc">{opt.description}</span>
+                </div>
+                <IconFA name="chevron-right" size={12} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {content.speedLayerPlan && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-speed-layer-plan fade-in">
+            <div className="aura-plan-rows">
+              {content.speedLayerPlan.rows.map((row, i) => (
+                <div key={i} className="aura-plan-row">
+                  <span className="aura-plan-label">{row.label}</span>
+                  <span className={`aura-plan-value ${row.highlight ? 'highlight' : ''}`}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+            <div className="aura-plan-section">
+              <div className="aura-plan-section-title">Benefits</div>
+              <ul className="aura-plan-list">
+                {content.speedLayerPlan.benefits.map((b, i) => (
+                  <li key={i}><IconFA name="check" size={10} /><span>{b}</span></li>
+                ))}
+              </ul>
+            </div>
+            <div className="aura-plan-section">
+              <div className="aura-plan-section-title">Example queries</div>
+              <ul className="aura-plan-list muted">
+                {content.speedLayerPlan.exampleQueries.map((q, i) => (
+                  <li key={i}><IconFA name="terminal" size={10} /><span>{q}</span></li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {content.optimizedStructure && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-optimized-structure fade-in">
+            {content.optimizedStructure.layers.map((layer, i) => (
+              <div key={i} className={`aura-structure-layer ${layer.type}`}>
+                <div className="aura-structure-layer-icon">
+                  <IconFA name={layer.type === 'base' ? 'database' : 'layer-group'} size={12} />
+                </div>
+                <div className="aura-structure-layer-content">
+                  <span className="aura-structure-layer-name">{layer.name}</span>
+                  <span className="aura-structure-layer-desc">{layer.description}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {content.speedLayerComplete && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-speed-layer-complete fade-in">
+            {content.speedLayerComplete.stats && (
+              <div className="aura-complete-stats">
+                {content.speedLayerComplete.stats.map((stat, i) => (
+                  <div key={i} className="aura-complete-stat">
+                    <span className="aura-complete-stat-label">{stat.label}</span>
+                    <span className="aura-complete-stat-value">{stat.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {content.speedLayerComplete.benefits && (
+              <ul className="aura-complete-benefits">
+                {content.speedLayerComplete.benefits.map((b, i) => (
+                  <li key={i}>
+                    <IconFA name="check" size={12} />
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="aura-complete-routing">
+              <IconFA name="sparkles" size={12} />
+              <span>{content.speedLayerComplete.routingNote}</span>
+            </div>
+          </div>
+        )}
+
+        {content.nextActions && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-next-actions fade-in">
+            {content.nextActions.map((action, i) => (
+              <button
+                key={i}
+                className="aura-next-action-btn"
+                onClick={() => onAction(action.label)}
+              >
+                <div className="aura-next-action-icon">
+                  <IconFA name={action.icon || 'arrow-right'} size={12} />
+                </div>
+                <div className="aura-next-action-content">
+                  <span className="aura-next-action-label">{action.label}</span>
+                  <span className="aura-next-action-desc">{action.description}</span>
+                </div>
+              </button>
             ))}
           </div>
         )}
@@ -7972,6 +8342,147 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                 <span className="aura-speed-status-label">{stat.label}</span>
                 <span className={`aura-speed-status-value ${stat.warning ? 'warning' : ''}`}>{stat.value}</span>
               </div>
+            ))}
+          </div>
+        )}
+
+        {allDone && content.datasetCard && (
+          <div className="aura-dataset-card aura-fade-in">
+            <div className="aura-dataset-card-header">
+              <div className="aura-dataset-card-icon">
+                <IconFA name="table" size={14} />
+              </div>
+              <div className="aura-dataset-card-info">
+                <div className="aura-dataset-card-name">{content.datasetCard.name}</div>
+                <div className="aura-dataset-card-source">{content.datasetCard.source}</div>
+              </div>
+              {content.datasetCard.badge && (
+                <span className="aura-dataset-card-badge">{content.datasetCard.badge}</span>
+              )}
+            </div>
+            <div className="aura-dataset-card-schema">
+              <div className="aura-dataset-schema-row header">
+                {content.datasetCard.schema.map((col, i) => (
+                  <span key={i}>{col.name}</span>
+                ))}
+              </div>
+              <div className="aura-dataset-schema-row types">
+                {content.datasetCard.schema.map((col, i) => (
+                  <span key={i}>{col.type}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {allDone && content.scopeOptions && (
+          <div className="aura-scope-options aura-fade-in">
+            {content.scopeOptions.map((opt) => (
+              <button
+                key={opt.id}
+                className="aura-scope-option-btn"
+                onClick={() => handleAction(opt.label)}
+              >
+                <div className="aura-scope-option-content">
+                  <span className="aura-scope-option-label">{opt.label}</span>
+                  <span className="aura-scope-option-desc">{opt.description}</span>
+                </div>
+                <IconFA name="chevron-right" size={12} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {allDone && content.speedLayerPlan && (
+          <div className="aura-speed-layer-plan aura-fade-in">
+            <div className="aura-plan-rows">
+              {content.speedLayerPlan.rows.map((row, i) => (
+                <div key={i} className="aura-plan-row">
+                  <span className="aura-plan-label">{row.label}</span>
+                  <span className={`aura-plan-value ${row.highlight ? 'highlight' : ''}`}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+            <div className="aura-plan-section">
+              <div className="aura-plan-section-title">Benefits</div>
+              <ul className="aura-plan-list">
+                {content.speedLayerPlan.benefits.map((b, i) => (
+                  <li key={i}><IconFA name="check" size={10} /><span>{b}</span></li>
+                ))}
+              </ul>
+            </div>
+            <div className="aura-plan-section">
+              <div className="aura-plan-section-title">Example queries</div>
+              <ul className="aura-plan-list muted">
+                {content.speedLayerPlan.exampleQueries.map((q, i) => (
+                  <li key={i}><IconFA name="terminal" size={10} /><span>{q}</span></li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {allDone && content.optimizedStructure && (
+          <div className="aura-optimized-structure aura-fade-in">
+            {content.optimizedStructure.layers.map((layer, i) => (
+              <div key={i} className={`aura-structure-layer ${layer.type}`}>
+                <div className="aura-structure-layer-icon">
+                  <IconFA name={layer.type === 'base' ? 'database' : 'layer-group'} size={12} />
+                </div>
+                <div className="aura-structure-layer-content">
+                  <span className="aura-structure-layer-name">{layer.name}</span>
+                  <span className="aura-structure-layer-desc">{layer.description}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {allDone && content.speedLayerComplete && (
+          <div className="aura-speed-layer-complete aura-fade-in">
+            {content.speedLayerComplete.stats && (
+              <div className="aura-complete-stats">
+                {content.speedLayerComplete.stats.map((stat, i) => (
+                  <div key={i} className="aura-complete-stat">
+                    <span className="aura-complete-stat-label">{stat.label}</span>
+                    <span className="aura-complete-stat-value">{stat.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {content.speedLayerComplete.benefits && (
+              <ul className="aura-complete-benefits">
+                {content.speedLayerComplete.benefits.map((b, i) => (
+                  <li key={i}>
+                    <IconFA name="check" size={12} />
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="aura-complete-routing">
+              <IconFA name="sparkles" size={12} />
+              <span>{content.speedLayerComplete.routingNote}</span>
+            </div>
+          </div>
+        )}
+
+        {allDone && content.nextActions && (
+          <div className="aura-next-actions aura-fade-in">
+            {content.nextActions.map((action, i) => (
+              <button
+                key={i}
+                className="aura-next-action-btn"
+                onClick={() => handleAction(action.label)}
+              >
+                <div className="aura-next-action-icon">
+                  <IconFA name={action.icon || 'arrow-right'} size={12} />
+                </div>
+                <div className="aura-next-action-content">
+                  <span className="aura-next-action-label">{action.label}</span>
+                  <span className="aura-next-action-desc">{action.description}</span>
+                </div>
+              </button>
             ))}
           </div>
         )}
