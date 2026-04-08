@@ -802,7 +802,7 @@ const LAKEHOUSE_PROMPTS = [
   'Set up real-time speed layer for your data',
   'Check status on speed layer Customer Events',
   'Monitor and manage your real-time data system',
-  'I need our positions data'
+  'Explore my data'
 ]
 
 const BILLING_PROMPTS = [
@@ -1909,8 +1909,20 @@ GROUP BY YEAR(created_at);`,
 ]
 
 // Positions Data Materialization Flow (Lakehouse Agent sub-flow)
-// Triggered by: "I need our positions data", "positions data", etc.
+// Triggered by: "Explore my data" (suggestion) or "positions data" (typed)
+// - Suggestion: starts at index 0 (data selection)
+// - Typed query: starts at index 1 (data discovery)
 const POSITIONS_DATA_FLOW = [
+  // Step 0: Data Selection (only shown when triggered via suggestion)
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'What kind of data do you want to explore?' }
+      ],
+      actions: ['Positions data', 'Orders data', 'Trades data']
+    }
+  },
   // Step 1: Data Discovery - Initial message + progress
   {
     type: 'agent',
@@ -2655,13 +2667,24 @@ function App() {
     
     // Check for positions data flow trigger (Lakehouse Agent sub-flow)
     const lowerText = text.toLowerCase()
-    if (lowerText.includes('positions data') || 
-        lowerText.includes('need our positions') ||
-        lowerText.includes('positions table')) {
+    
+    // "Explore my data" from suggestion → start at data selection (index 0)
+    if (lowerText === 'explore my data') {
       setAuraPanelFlow('positions-data')
       setPositionsDataFlowIndex(1)
       setAuraPanelAgentName('Lakehouse Agent')
       setTimeout(() => addNextPositionsDataMessage(0), 500)
+      return
+    }
+    
+    // Typed query with "positions data" → skip selection, go to discovery (index 1)
+    if (lowerText.includes('positions data') || 
+        lowerText.includes('need our positions') ||
+        lowerText.includes('positions table')) {
+      setAuraPanelFlow('positions-data')
+      setPositionsDataFlowIndex(2)
+      setAuraPanelAgentName('Lakehouse Agent')
+      setTimeout(() => addNextPositionsDataMessage(1), 500)
       return
     }
     
@@ -2782,7 +2805,32 @@ function App() {
       setTimeout(() => addNextMigrationMessage(migrationFlowIndex), 500)
     } else if (auraPanelFlow === 'positions-data') {
       // Handle positions data materialization flow actions
-      setTimeout(() => addNextPositionsDataMessage(positionsDataFlowIndex), 500)
+      
+      // Handle data type selection from initial step
+      if (actionText === 'Positions data') {
+        // Continue to data discovery step
+        setTimeout(() => addNextPositionsDataMessage(positionsDataFlowIndex), 500)
+      } else if (actionText === 'Orders data' || actionText === 'Trades data') {
+        // Placeholder - show coming soon message
+        setIsAuraTyping(true)
+        setTimeout(() => {
+          setIsAuraTyping(false)
+          setAuraPanelMessages(prev => [...prev, {
+            type: 'agent',
+            id: Date.now(),
+            timestamp: new Date(),
+            content: {
+              text: [
+                { type: 'text', content: `${actionText} exploration is coming soon. For now, I can help you with Positions data.` }
+              ],
+              actions: ['Positions data']
+            }
+          }])
+        }, 500)
+      } else {
+        // Continue normal flow for other actions
+        setTimeout(() => addNextPositionsDataMessage(positionsDataFlowIndex), 500)
+      }
     } else if (auraPanelAgentName === 'Lakehouse Agent' || auraPanelFlow === 'lakehouse') {
       // Capture history selection for dynamic display in subsequent messages
       if (actionText.includes('Last 3 months')) {
