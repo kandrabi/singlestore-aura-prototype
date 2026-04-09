@@ -7565,22 +7565,20 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
-        {!content.progress && (message.showContent !== false) && paragraphsCompleted && (
-          <div className={`toolbar-row fade-in ${isLast ? '' : ''}`}>
+        {!content.progress && (message.showContent !== false) && paragraphsCompleted && isLast && (
+          <div className="toolbar-row fade-in">
             <div className="toolbar">
               <button className="toolbar-btn"><IconFA name="copy" size={12} /></button>
               <button className="toolbar-btn"><IconFA name="refresh" size={12} /></button>
               <button className="toolbar-btn"><IconFA name="bug" size={12} /></button>
             </div>
-            {isLast && (
-              <div className="toolbar-right">
-                <span className="helpful-text">Was this helpful?</span>
-                <div className="toolbar">
-                  <button className="toolbar-btn"><IconFA name="thumbs-up" /></button>
-                  <button className="toolbar-btn"><IconFA name="thumbs-down" /></button>
-                </div>
+            <div className="toolbar-right">
+              <span className="helpful-text">Was this helpful?</span>
+              <div className="toolbar">
+                <button className="toolbar-btn"><IconFA name="thumbs-up" /></button>
+                <button className="toolbar-btn"><IconFA name="thumbs-down" /></button>
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>
