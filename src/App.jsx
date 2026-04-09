@@ -1549,6 +1549,7 @@ const LAKEHOUSE_CHAT_FLOW = [
               { id: 'workspace-2', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-0', sizeMemory: '32 GB', sizeNote: 'Below recommended' }
             ]
           },
+          { id: 'continue', label: 'Continue with existing' },
           { id: 'new', label: 'Create new workspace' }
         ]
       }
@@ -2951,17 +2952,17 @@ function App() {
         setSelectedLakehouseHistory('custom range')
         selectedLakehouseHistoryRef.current = 'custom range'
       }
-      // Handle "Open in Analyst" - jump to Analyst handoff scene (Scene 24)
+      // Handle "Open in Analyst" - jump to Analyst handoff scene (Scene 24, array index 21)
       if (actionText === 'Open in Analyst') {
-        setLakehouseFlowIndex(24) // Jump to Analyst transition scene
-        setTimeout(() => addNextLakehouseMessage(23), 500) // Scene index is 0-based, so 23 = Scene 24
+        setLakehouseFlowIndex(22) // Next will be Scene 25 (index 22)
+        setTimeout(() => addNextLakehouseMessage(21), 500) // Scene 24 is at index 21
       } else if (actionText === 'View status') {
-        // Jump to status view scene (Scene 20, index 19)
-        setLakehouseFlowIndex(20)
-        setTimeout(() => addNextLakehouseMessage(19), 500)
+        // Jump to status view scene (Scene 20, array index 17)
+        setLakehouseFlowIndex(18)
+        setTimeout(() => addNextLakehouseMessage(17), 500)
       } else if (actionText === 'Create Domain') {
-        // User confirmed - advance to domain creation progress (Scene 26, index 25)
-        setTimeout(() => addNextLakehouseMessage(25), 500)
+        // User confirmed - advance to domain creation progress (Scene 26, array index 23)
+        setTimeout(() => addNextLakehouseMessage(23), 500)
       } else if (actionText === 'Cancel' || actionText === 'Edit settings') {
         // User cancelled or wants to edit - stay on current scene, just acknowledge
         setIsAuraTyping(true)
@@ -6576,18 +6577,9 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         {content.workspaceSelector && (!isTyping || paragraphsCompleted) && (
           <div className="aura-workspace-selector fade-in">
             <div className="aura-workspace-options">
-              {content.workspaceSelector.options.map((opt) => (
+              {content.workspaceSelector.options.filter(opt => opt.subOptions).map((opt) => (
                 <div key={opt.id} className="aura-workspace-option">
-                  {opt.subOptions ? (
-                    <span className="aura-workspace-label">{opt.label}</span>
-                  ) : (
-                    <button
-                      className="aura-workspace-btn"
-                      onClick={() => onAction(opt.label)}
-                    >
-                      {opt.label}
-                    </button>
-                  )}
+                  <span className="aura-workspace-label">{opt.label}</span>
                   {opt.subOptions && (
                     <div className="aura-workspace-suboptions">
                       <div className="aura-workspace-suboptions-header">
@@ -6641,6 +6633,17 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                     </div>
                   )}
                 </div>
+              ))}
+            </div>
+            <div className="aura-workspace-buttons">
+              {content.workspaceSelector.options.filter(opt => !opt.subOptions).map((opt) => (
+                <button
+                  key={opt.id}
+                  className={`aura-workspace-btn ${opt.primary ? 'primary' : ''}`}
+                  onClick={() => onAction(opt.label)}
+                >
+                  {opt.label}
+                </button>
               ))}
             </div>
           </div>
@@ -9062,18 +9065,9 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
         {allDone && content.workspaceSelector && (
           <div className="aura-workspace-selector aura-fade-in">
             <div className="aura-workspace-options">
-              {content.workspaceSelector.options.map((opt) => (
+              {content.workspaceSelector.options.filter(opt => opt.subOptions).map((opt) => (
                 <div key={opt.id} className="aura-workspace-option">
-                  {opt.subOptions ? (
-                    <span className="aura-workspace-label">{opt.label}</span>
-                  ) : (
-                    <button
-                      className="aura-workspace-btn"
-                      onClick={() => handleAction(opt.label)}
-                    >
-                      {opt.label}
-                    </button>
-                  )}
+                  <span className="aura-workspace-label">{opt.label}</span>
                   {opt.subOptions && (
                     <div className="aura-workspace-suboptions">
                       <div className="aura-workspace-suboptions-header">
@@ -9127,6 +9121,17 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                     </div>
                   )}
                 </div>
+              ))}
+            </div>
+            <div className="aura-workspace-buttons">
+              {content.workspaceSelector.options.filter(opt => !opt.subOptions).map((opt) => (
+                <button
+                  key={opt.id}
+                  className={`aura-workspace-btn ${opt.primary ? 'primary' : ''}`}
+                  onClick={() => handleAction(opt.label)}
+                >
+                  {opt.label}
+                </button>
               ))}
             </div>
           </div>
