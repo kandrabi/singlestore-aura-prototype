@@ -1519,8 +1519,8 @@ const LAKEHOUSE_CHAT_FLOW = [
         { type: 'text', content: "Based on your dataset and history window, here's the recommended configuration:" }
       ],
       workspaceRecommendation: {
-        size: 'S-2',
-        sizeMemory: '128 GB',
+        size: 'S-40',
+        sizeMemory: '2.5 TB',
         totalDataSize: '~3.2 TB',
         speedLayerSize: '~800 GB',
         tables: 2400,
@@ -1544,9 +1544,9 @@ const LAKEHOUSE_CHAT_FLOW = [
             id: 'existing', 
             label: 'Existing workspace', 
             subOptions: [
-              { id: 'analytics-optimized', name: 'analytics-optimized', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-2', sizeMemory: '128 GB', recommended: true },
-              { id: 'prod-analytics', name: 'prod-analytics', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-1', sizeMemory: '64 GB', sizeNote: 'Below recommended' },
-              { id: 'workspace-2', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-0', sizeMemory: '32 GB', sizeNote: 'Below recommended' }
+              { id: 'analytics-optimized', name: 'analytics-optimized', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-40', sizeMemory: '2.5 TB', recommended: true },
+              { id: 'prod-analytics', name: 'prod-analytics', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-32', sizeMemory: '2 TB', sizeNote: 'Below recommended' },
+              { id: 'workspace-2', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-24', sizeMemory: '1.5 TB', sizeNote: 'Below recommended' }
             ]
           },
           { id: 'continue', label: 'Continue with existing' },
@@ -2539,11 +2539,11 @@ function App() {
         // Proportional: 1mo=1/24, 3mo=3/24, 6mo=6/24, 1yr=12/24, 2yr=24/24
         // Workspace sizing: memory ≈ 10-20% of selected data size
         const historyScaling = {
-          'Last 1 month': { speedLayerSize: '~130 GB', size: 'S-1', sizeMemory: '64 GB' },
-          'Last 3 months': { speedLayerSize: '~400 GB', size: 'S-2', sizeMemory: '128 GB' },
-          'Last 6 months': { speedLayerSize: '~800 GB', size: 'S-2', sizeMemory: '128 GB' },
-          'Last 1 year': { speedLayerSize: '~1.6 TB', size: 'S-4', sizeMemory: '256 GB' },
-          'Last 2 years': { speedLayerSize: '~3.2 TB', size: 'S-8', sizeMemory: '512 GB' }
+          'Last 1 month': { speedLayerSize: '~130 GB', size: 'S-32', sizeMemory: '2 TB' },
+          'Last 3 months': { speedLayerSize: '~400 GB', size: 'S-36', sizeMemory: '2.25 TB' },
+          'Last 6 months': { speedLayerSize: '~800 GB', size: 'S-40', sizeMemory: '2.5 TB' },
+          'Last 1 year': { speedLayerSize: '~1.6 TB', size: 'S-48', sizeMemory: '3 TB' },
+          'Last 2 years': { speedLayerSize: '~3.2 TB', size: 'S-56', sizeMemory: '3.5 TB' }
         }
         const scaling = historyScaling[historyValue] || historyScaling['Last 6 months']
         message.content.workspaceRecommendation.size = scaling.size
