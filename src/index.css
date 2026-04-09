@@ -11221,6 +11221,234 @@ code.materialization-card-value {
   color: #6b7280;
 }
 
+/* Dataset Selector */
+.aura-dataset-selector {
+  margin-top: 12px;
+}
+
+.aura-dataset-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aura-dataset-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.aura-dataset-btn:hover {
+  border-color: var(--color-brand-7);
+  background: var(--color-bg-surface-brand);
+}
+
+.aura-dataset-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aura-dataset-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-dataset-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.aura-dataset-tables {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.aura-dataset-size {
+  font-size: 12px;
+  color: var(--color-brand-9);
+  font-weight: 500;
+}
+
+/* Dataset Preview */
+.aura-dataset-preview {
+  margin-top: 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.aura-dataset-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.aura-dataset-preview-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-dataset-preview-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.aura-dataset-preview-dot {
+  color: #d1d5db;
+}
+
+.aura-dataset-preview-tables {
+  padding: 0;
+}
+
+.aura-dataset-preview-tables-header {
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-dataset-preview-table-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-dataset-preview-table-row:last-child {
+  border-bottom: none;
+}
+
+.aura-dataset-table-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-dataset-table-rows {
+  width: 100px;
+  font-size: 12px;
+  color: #6b7280;
+  text-align: right;
+}
+
+.aura-dataset-table-size {
+  width: 80px;
+  font-size: 12px;
+  color: #6b7280;
+  text-align: right;
+}
+
+/* Speed Layer Config */
+.aura-speed-layer-config {
+  margin-top: 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.aura-config-summary {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-config-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 0;
+}
+
+.aura-config-label {
+  width: 100px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.aura-config-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-config-row.highlight .aura-config-label,
+.aura-config-row.highlight .aura-config-value {
+  color: var(--color-brand-9);
+  font-weight: 500;
+}
+
+.aura-config-reduction {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(var(--color-brand-9-rgb), 0.1);
+  border-top: 1px solid var(--color-gray-4);
+  font-size: 12px;
+  color: var(--color-brand-9);
+}
+
+.aura-config-options {
+  padding: 12px 16px;
+}
+
+.aura-config-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.aura-config-option input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-brand-9);
+}
+
+.aura-config-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aura-config-option-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #101828;
+}
+
+.aura-config-option-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
 /* Schema Preview */
 .aura-schema-preview {
   margin-top: 12px;
@@ -11501,6 +11729,23 @@ code.materialization-card-value {
   font-size: 14px;
   font-weight: 500;
   color: #111827;
+}
+
+.aura-recommendation-row.highlight .aura-recommendation-label,
+.aura-recommendation-row.highlight .aura-recommendation-value.highlight {
+  color: var(--color-brand-9);
+}
+
+.aura-recommendation-justification {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(var(--color-brand-9-rgb), 0.08);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--color-brand-9);
 }
 
 /* Replica Selector */

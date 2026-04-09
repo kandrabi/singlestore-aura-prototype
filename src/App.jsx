@@ -1337,8 +1337,7 @@ const LAKEHOUSE_CHAT_FLOW = [
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'Select a connection:' },
-        { type: 'helper', content: 'This connection provides access to your data catalogs.' }
+        { type: 'text', content: 'Select a connection:' }
       ],
       savedConnectionSelector: {
         options: [
@@ -1348,101 +1347,67 @@ const LAKEHOUSE_CHAT_FLOW = [
       }
     }
   },
-  // Scene 4: Connecting and initializing catalog access
+  // Scene 4: Connecting and discovering data (system-driven, no catalog selection)
   {
     type: 'agent',
     content: {
       progress: true,
-      text: 'Connecting and initializing catalog access...',
+      text: 'Connecting to your data environment...',
       steps: [
         '✓ Authenticating...',
-        '✓ Establishing connection...',
-        '→ Initializing catalog context...'
+        '✓ Establishing secure connection...',
+        '→ Discovering metadata...'
       ],
       completedState: {
-        text: 'Connection established.',
+        text: 'Connected successfully.',
         subtext: ''
       }
     }
   },
-  // Scene 5: Discovering catalogs within connection
+  // Scene 5: Discovering datasets (system-driven)
   {
     type: 'agent',
     content: {
       progress: true,
-      text: 'Discovering catalogs within your connection...',
+      text: 'Identifying available datasets...',
       steps: [
-        '✓ Scanning connection metadata...',
-        '→ Identifying accessible catalogs...'
-      ],
-      completedState: {
-        text: 'Catalog discovery complete.',
-        subtext: ''
-      }
-    }
-  },
-  // Scene 6: Iceberg catalogs list
-  {
-    type: 'agent',
-    content: {
-      text: [
-        { type: 'text', content: 'I discovered the following Iceberg catalogs from your connection:' }
-      ],
-      catalogSelector: {
-        availableCatalogs: [
-          { id: 'horizon-catalog', label: 'Horizon Catalog' },
-          { id: 'polaris-catalog', label: 'Polaris Catalog' }
-        ],
-        externalCatalogs: [
-          { id: 'glue-catalog', label: 'Glue Catalog' }
-        ]
-      }
-    }
-  },
-  // Scene 7: Fetching databases progress
-  {
-    type: 'agent',
-    content: {
-      progress: true,
-      text: 'Fetching databases from selected catalog...',
-      steps: [
-        '✓ Connecting to catalog...',
-        '→ Loading database metadata...'
-      ],
-      completedState: {
-        text: 'Database discovery complete.',
-        subtext: ''
-      }
-    }
-  },
-  // Scene 8: Database selection
-  {
-    type: 'agent',
-    content: {
-      text: [
-        { type: 'text', content: 'I found the following databases in this catalog:' },
-        { type: 'helper', content: 'These databases are from your connected data source.' }
-      ],
-      databaseSelector: {
-        databases: [
-          { id: 'analytics_prod', label: 'analytics_prod', tables: 24 },
-          { id: 'customer_360', label: 'customer_360', tables: 18 },
-          { id: 'sales_data', label: 'sales_data', tables: 12 },
-          { id: 'raw_events', label: 'raw_events', tables: 8 }
-        ]
-      }
-    }
-  },
-  // Scene 9: Discovering tables progress
-  {
-    type: 'agent',
-    content: {
-      progress: true,
-      text: 'Analyzing database...',
-      steps: [
-        '✓ Scanning table metadata...',
-        '✓ Analyzing schemas...',
+        '✓ Scanning data environment...',
+        '✓ Analyzing dataset metadata...',
         '→ Estimating data volumes...'
+      ],
+      completedState: {
+        text: 'Dataset discovery complete.',
+        subtext: ''
+      }
+    }
+  },
+  // Scene 6: Dataset selection (replaces catalog + database selection)
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'I discovered the following datasets from your connection:' }
+      ],
+      datasetSelector: {
+        datasets: [
+          { id: 'analytics_prod', label: 'analytics_prod', tables: 2400, totalDataSize: '~3.2 TB', totalDataBytes: 3200 },
+          { id: 'customer_360', label: 'customer_360', tables: 1850, totalDataSize: '~2.1 TB', totalDataBytes: 2100 },
+          { id: 'sales_data', label: 'sales_data', tables: 920, totalDataSize: '~1.4 TB', totalDataBytes: 1400 },
+          { id: 'raw_events', label: 'raw_events', tables: 580, totalDataSize: '~890 GB', totalDataBytes: 890 }
+        ]
+      }
+    }
+  },
+  // Scene 7: Analyzing dataset progress
+  {
+    type: 'agent',
+    content: {
+      progress: true,
+      text: 'Analyzing dataset...',
+      steps: [
+        '✓ Scanning table schemas...',
+        '✓ Profiling data distribution...',
+        '→ Preparing preview...'
       ],
       completedState: {
         text: 'Analysis complete.',
@@ -1450,36 +1415,27 @@ const LAKEHOUSE_CHAT_FLOW = [
       }
     }
   },
-  // Scene 10: Tables discovered with options
+  // Scene 8: Data preview (shown BEFORE setup options)
   {
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'Found 24 tables in analytics_prod.' }
-      ],
-      tablePreview: {
-        title: 'Available tables:',
-        tables: [
-          { name: 'customer_events', rows: '2.4M rows' },
-          { name: 'orders', rows: '850K rows' },
-          { name: 'transactions', rows: '1.2M rows' },
-          { name: 'user_sessions', rows: '5.1M rows' }
-        ]
-      },
-      followUp: 'How would you like to proceed?',
-      actions: ['Set up speed layer for all tables', 'Select specific tables', 'Explore data']
-    }
-  },
-  // Scene 11: Data exploration (if user clicks "Explore data")
-  {
-    type: 'agent',
-    content: {
-      text: [
-        { type: 'text', content: 'Previewing source data using external tables (no ingestion required):' },
+        { type: 'text', content: 'Previewing data from analytics_prod using external tables (no ingestion required):' },
         { type: 'helper', content: 'This preview helps you validate schema and data before setting up the speed layer.' }
       ],
+      datasetPreview: {
+        datasetName: 'analytics_prod',
+        tables: 2400,
+        totalDataSize: '~3.2 TB',
+        sampleTables: [
+          { name: 'customer_events', rows: '245M rows', size: '~180 GB' },
+          { name: 'orders', rows: '89M rows', size: '~95 GB' },
+          { name: 'transactions', rows: '156M rows', size: '~210 GB' },
+          { name: 'user_sessions', rows: '512M rows', size: '~340 GB' }
+        ]
+      },
       schemaPreview: {
-        tableName: 'customer_events (source table)',
+        tableName: 'customer_events (sample schema)',
         columns: [
           { name: 'event_id', type: 'STRING', nullable: false },
           { name: 'customer_id', type: 'STRING', nullable: false },
@@ -1487,17 +1443,17 @@ const LAKEHOUSE_CHAT_FLOW = [
           { name: 'event_timestamp', type: 'TIMESTAMP', nullable: false },
           { name: 'properties', type: 'JSON', nullable: true }
         ],
-        sampleDataLabel: 'Sample data (read-only)',
+        sampleDataLabel: 'Sample rows (read-only)',
         sampleData: [
           { event_id: 'evt_001', customer_id: 'cust_123', event_type: 'purchase', event_timestamp: '2024-03-15 10:23:45' },
           { event_id: 'evt_002', customer_id: 'cust_456', event_type: 'page_view', event_timestamp: '2024-03-15 10:24:12' },
           { event_id: 'evt_003', customer_id: 'cust_789', event_type: 'signup', event_timestamp: '2024-03-15 10:25:00' }
         ]
       },
-      actions: ['Continue with setup', 'Preview another table']
+      actions: ['Continue with setup', 'Preview another dataset']
     }
   },
-  // Scene 12: History window selection
+  // Scene 9: History window selection
   {
     type: 'agent',
     content: {
@@ -1517,41 +1473,65 @@ const LAKEHOUSE_CHAT_FLOW = [
       }
     }
   },
-  // Scene 13: Workspace sizing recommendation
+  // Scene 10: Configuration with auto-schema option
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'Configure your speed layer settings:' }
+      ],
+      speedLayerConfig: {
+        datasetName: 'analytics_prod',
+        tables: 2400,
+        totalDataSize: '~3.2 TB',
+        speedLayerSize: '~1.6 TB',
+        selectedHistory: '6 months',
+        dataReduction: 'Reducing dataset from ~3.2 TB → ~1.6 TB based on 6 months history',
+        options: [
+          { id: 'auto-schema', label: 'Enable automatic schema updates', defaultChecked: true, description: 'Automatically detect and apply schema changes from source' }
+        ]
+      },
+      actions: ['Continue', 'Advanced settings']
+    }
+  },
+  // Scene 11: Workspace sizing recommendation
   {
     type: 'agent',
     content: {
       progress: true,
-      text: 'Recommending workspace size based on selected data and history window...',
+      text: 'Calculating optimal workspace configuration...',
       steps: [
         '✓ Analyzing data volume...',
         '✓ Calculating resource requirements...',
         '→ Optimizing configuration...'
       ],
       completedState: {
-        text: 'Configuration prepared based on your data selection.',
+        text: 'Configuration prepared.',
         subtext: ''
       }
     }
   },
-  // Scene 14: Workspace recommendation result
+  // Scene 12: Workspace recommendation result
   {
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: "Based on your selected data history and tables, here's the recommended workspace configuration:" }
+        { type: 'text', content: "Based on your dataset and history window, here's the recommended configuration:" }
       ],
       workspaceRecommendation: {
-        size: 'S-32',
-        estimatedData: '~45 GB',
-        tables: 24,
-        history: '6 months'
+        size: 'S-4',
+        sizeMemory: '256 GB',
+        totalDataSize: '~3.2 TB',
+        speedLayerSize: '~1.6 TB',
+        tables: 2400,
+        history: '6 months',
+        justification: 'Recommended based on estimated speed layer size and expected query workload'
       },
       followUp: 'Would you like to proceed with this configuration?',
       actions: ['Use recommended configuration', 'Customize settings']
     }
   },
-  // Scene 15: Workspace selection
+  // Scene 13: Workspace selection
   {
     type: 'agent',
     content: {
@@ -1564,9 +1544,9 @@ const LAKEHOUSE_CHAT_FLOW = [
             id: 'existing', 
             label: 'Existing workspace', 
             subOptions: [
-              { id: 'analytics-optimized', name: 'analytics-optimized', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-32', recommended: true },
-              { id: 'prod-analytics', name: 'prod-analytics', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-16', sizeNote: 'Below recommended' },
-              { id: 'workspace-2', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-8', sizeNote: 'Below recommended' }
+              { id: 'analytics-optimized', name: 'analytics-optimized', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-4', sizeMemory: '256 GB', recommended: true },
+              { id: 'prod-analytics', name: 'prod-analytics', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-2', sizeMemory: '128 GB', sizeNote: 'Below recommended' },
+              { id: 'workspace-2', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-1', sizeMemory: '64 GB', sizeNote: 'Below recommended' }
             ]
           },
           { id: 'new', label: 'Create new workspace' }
@@ -1574,7 +1554,7 @@ const LAKEHOUSE_CHAT_FLOW = [
       }
     }
   },
-  // Scene 16: Pipeline execution
+  // Scene 14: Pipeline execution
   {
     type: 'agent',
     content: {
@@ -1582,13 +1562,13 @@ const LAKEHOUSE_CHAT_FLOW = [
       text: 'Setting up automated pipeline...',
       steps: [
         '✓ Generating pipeline configuration...',
-        '✓ Creating speed layer tables...',
+        '✓ Creating speed layer...',
         '✓ Running initial data sync...',
         '→ Enabling real-time sync...'
       ]
     }
   },
-  // Scene 17: Success state
+  // Scene 15: Success state
   {
     type: 'agent',
     content: {
@@ -1597,7 +1577,8 @@ const LAKEHOUSE_CHAT_FLOW = [
       text: 'Your data is now available for real-time queries.',
       speedLayerStats: {
         stats: [
-          { label: 'Tables synced:', value: '24', success: true },
+          { label: 'Dataset:', value: 'analytics_prod', success: true },
+          { label: 'Tables:', value: '2,400', success: true },
           { label: 'Data history:', value: '6 months', success: true },
           { label: 'Sync status:', value: 'Active', success: true }
         ]
@@ -1647,18 +1628,19 @@ const LAKEHOUSE_CHAT_FLOW = [
       ],
       speedLayerStatus: {
         stats: [
-          { label: 'Tables:', value: '24 healthy' },
+          { label: 'Dataset:', value: 'analytics_prod' },
+          { label: 'Tables:', value: '2,400 healthy' },
           { label: 'Sync status:', value: 'Active', success: true },
           { label: 'Last sync:', value: '2 minutes ago' },
           { label: 'Data history:', value: '6 months' }
         ],
         health: {
-          healthy: 23,
-          warning: 1,
-          total: 24
+          healthy: 2396,
+          warning: 4,
+          total: 2400
         }
       },
-      followUp: 'One table has sync lag detected. Would you like to investigate?',
+      followUp: '4 tables have sync lag detected. Would you like to investigate?',
       dayTwoActions: ['Debug issue', 'Recreate pipeline', 'Change history window', 'Resize workspace']
     }
   },
@@ -1703,7 +1685,7 @@ const LAKEHOUSE_CHAT_FLOW = [
       text: 'Pipeline has been optimized. All tables are now syncing normally.',
       speedLayerStats: {
         stats: [
-          { label: 'Tables healthy:', value: '24 / 24', success: true },
+          { label: 'Tables healthy:', value: '2,400 / 2,400', success: true },
           { label: 'Sync status:', value: 'Active', success: true },
           { label: 'Lag:', value: 'None detected', success: true }
         ]
@@ -2537,17 +2519,23 @@ function App() {
       const historyValue = selectedLakehouseHistoryRef.current
       if (message.content?.workspaceRecommendation?.history) {
         message.content.workspaceRecommendation.history = historyValue
-        // Scale workspace size and estimated data based on history duration
+        // Proportional data reduction based on history window (total dataset ~3.2 TB = 3200 GB)
+        // Data reduction: 1 month = ~8%, 3 months = ~25%, 6 months = ~50%, 1 year = ~85%, 2 years = 100%
+        // Workspace sizing: memory ≈ 10-20% of selected data size
+        // Mapping: ≤200GB→S-1, 200-800GB→S-2, 800GB-2TB→S-4, 2-4TB→S-8, 4-8TB→S-16
+        const totalDataGB = 3200 // 3.2 TB
         const historyScaling = {
-          'Last 1 month': { size: 'S-00', estimatedData: '~8 GB' },
-          'Last 3 months': { size: 'S-0', estimatedData: '~22 GB' },
-          'Last 6 months': { size: 'S-32', estimatedData: '~45 GB' },
-          'Last 1 year': { size: 'S-64', estimatedData: '~90 GB' },
-          'Last 2 years': { size: 'S-128', estimatedData: '~180 GB' }
+          'Last 1 month': { dataPercent: 0.08, speedLayerSize: '~260 GB', size: 'S-2', sizeMemory: '128 GB' },
+          'Last 3 months': { dataPercent: 0.22, speedLayerSize: '~720 GB', size: 'S-2', sizeMemory: '128 GB' },
+          'Last 6 months': { dataPercent: 0.50, speedLayerSize: '~1.6 TB', size: 'S-4', sizeMemory: '256 GB' },
+          'Last 1 year': { dataPercent: 0.85, speedLayerSize: '~2.7 TB', size: 'S-8', sizeMemory: '512 GB' },
+          'Last 2 years': { dataPercent: 1.00, speedLayerSize: '~3.2 TB', size: 'S-8', sizeMemory: '512 GB' }
         }
         const scaling = historyScaling[historyValue] || historyScaling['Last 6 months']
         message.content.workspaceRecommendation.size = scaling.size
-        message.content.workspaceRecommendation.estimatedData = scaling.estimatedData
+        message.content.workspaceRecommendation.sizeMemory = scaling.sizeMemory
+        message.content.workspaceRecommendation.speedLayerSize = scaling.speedLayerSize
+        message.content.workspaceRecommendation.totalDataSize = '~3.2 TB'
       }
       if (message.content?.speedLayerStats?.stats) {
         message.content.speedLayerStats.stats = message.content.speedLayerStats.stats.map(stat => 
@@ -2560,17 +2548,17 @@ function App() {
         )
       }
       
-      // Add new speed layer to table when success message is shown (Scene 17, index 16)
-      if (index === 16 && message.content?.success && message.content?.title?.includes('Speed layer successfully created')) {
+      // Add new speed layer to table when success message is shown (Scene 15, index 14)
+      if (index === 14 && message.content?.success && message.content?.title?.includes('Speed layer successfully created')) {
         const newSpeedLayer = {
           id: Date.now(),
-          name: 'Analytics Events',
-          source: 'Snowflake',
-          dataset: 'horizon.analytics_events',
+          name: 'Analytics Prod',
+          dataSource: 'Snowflake',
+          dataset: 'analytics_prod',
           lastUpdated: 'Just now',
           dataHistory: historyValue,
           syncStatus: 'syncing',
-          tableCount: 24
+          tables: 2400
         }
         setSpeedLayers(prev => [newSpeedLayer, ...prev])
       }
@@ -2938,6 +2926,10 @@ function App() {
       if (actionText === 'Open in Analyst') {
         setLakehouseFlowIndex(24) // Jump to Analyst transition scene
         setTimeout(() => addNextLakehouseMessage(23), 500) // Scene index is 0-based, so 23 = Scene 24
+      } else if (actionText === 'View status') {
+        // Jump to status view scene (Scene 20, index 19)
+        setLakehouseFlowIndex(20)
+        setTimeout(() => addNextLakehouseMessage(19), 500)
       } else {
         setTimeout(() => addNextLakehouseMessage(lakehouseFlowIndex), 500)
       }
@@ -3327,7 +3319,45 @@ function App() {
       case 'billing':
         return <BillingPage onOpenAura={handleOpenAuraPanel} />
       case 'lakehouse':
-        return <LakehouseView onOpenAura={handleOpenAuraPanel} speedLayers={speedLayers} />
+        return <LakehouseView 
+          onOpenAura={handleOpenAuraPanel} 
+          speedLayers={speedLayers} 
+          onViewStatus={(layer) => {
+            // Open Aura panel with Lakehouse Agent and jump to status view
+            setAuraPanelOpen(true)
+            setAuraPanelAgentName('Lakehouse Agent')
+            setAuraPanelFlow('lakehouse')
+            // Add a message showing we're viewing status for this layer
+            const statusMessage = {
+              type: 'agent',
+              id: Date.now(),
+              timestamp: new Date(),
+              content: {
+                text: [
+                  { type: 'text', content: `Here's the current status of ${layer.name}:` }
+                ],
+                speedLayerStatus: {
+                  stats: [
+                    { label: 'Dataset:', value: layer.dataset },
+                    { label: 'Tables:', value: `${layer.tables?.toLocaleString()} healthy` },
+                    { label: 'Sync status:', value: layer.syncStatus === 'active' ? 'Active' : layer.syncStatus === 'syncing' ? 'Syncing' : layer.syncStatus, success: layer.syncStatus === 'active' },
+                    { label: 'Last sync:', value: layer.lastUpdated },
+                    { label: 'Data history:', value: layer.dataHistory }
+                  ],
+                  health: {
+                    healthy: Math.floor(layer.tables * 0.998),
+                    warning: Math.ceil(layer.tables * 0.002),
+                    total: layer.tables
+                  }
+                },
+                followUp: layer.syncStatus === 'lagging' ? 'Some tables have sync lag detected. Would you like to investigate?' : 'All tables are syncing normally.',
+                dayTwoActions: ['Debug issue', 'Recreate pipeline', 'Change history window', 'Resize workspace']
+              }
+            }
+            setAuraPanelMessages([statusMessage])
+            setLakehouseFlowIndex(20)
+          }}
+        />
       default:
         return null
     }
@@ -4487,33 +4517,33 @@ function BillingPage({ onOpenAura }) {
 const LAKEHOUSE_SPEED_LAYERS = [
   {
     id: 1,
-    name: 'Customer Events',
-    source: 'Snowflake',
-    dataset: 'analytics.customer_events',
-    lastUpdated: '2 min ago',
+    name: 'Customer Analytics',
+    dataSource: 'Snowflake',
+    dataset: 'analytics_prod',
+    tables: 2400,
     dataHistory: '6 months',
     syncStatus: 'active',
-    tableCount: 24
+    lastUpdated: '2 min ago'
   },
   {
     id: 2,
     name: 'Product Catalog',
-    source: 'Snowflake',
-    dataset: 's3://data-lake/products/',
-    lastUpdated: '5 min ago',
+    dataSource: 'Snowflake',
+    dataset: 'product_data',
+    tables: 920,
     dataHistory: '3 months',
     syncStatus: 'syncing',
-    tableCount: 12
+    lastUpdated: '5 min ago'
   },
   {
     id: 3,
     name: 'User Activity',
-    source: 'Databricks',
-    dataset: 'delta.user_activity_log',
-    lastUpdated: '15 min ago',
+    dataSource: 'Databricks',
+    dataset: 'user_events',
+    tables: 580,
     dataHistory: '1 year',
     syncStatus: 'lagging',
-    tableCount: 8
+    lastUpdated: '15 min ago'
   }
 ]
 
@@ -4544,7 +4574,7 @@ const LAKEHOUSE_SOURCES = [
   }
 ]
 
-function LakehouseView({ onOpenAura, speedLayers }) {
+function LakehouseView({ onOpenAura, speedLayers, onViewStatus }) {
   return (
     <div className="lakehouse-view">
       <div className="lakehouse-main">
@@ -4608,7 +4638,7 @@ function LakehouseView({ onOpenAura, speedLayers }) {
                 <tr>
                   <th>Name</th>
                   <th>Data Source</th>
-                  <th>Table / Path</th>
+                  <th>Dataset</th>
                   <th>Tables</th>
                   <th>Data History</th>
                   <th>Sync Status</th>
@@ -4622,9 +4652,9 @@ function LakehouseView({ onOpenAura, speedLayers }) {
                     <td>
                       <span className="workspace-name">{layer.name}</span>
                     </td>
-                    <td>{layer.source}</td>
+                    <td>{layer.dataSource}</td>
                     <td><code className="lakehouse-dataset-code">{layer.dataset}</code></td>
-                    <td>{layer.tableCount}</td>
+                    <td>{layer.tables?.toLocaleString()}</td>
                     <td>{layer.dataHistory}</td>
                     <td>
                       <span className={`lakehouse-sync-status-badge ${layer.syncStatus} ${layer.syncStatus === 'lagging' ? 'clickable' : ''}`}>
@@ -4641,24 +4671,24 @@ function LakehouseView({ onOpenAura, speedLayers }) {
                           <IconFA name="ellipsis-vertical" size={14} />
                         </button>
                         <div className="lakehouse-actions-menu">
-                          <button className="lakehouse-action-item">
+                          <button className="lakehouse-action-item" onClick={() => onViewStatus && onViewStatus(layer)}>
                             <IconFA name="eye" size={12} />
                             <span>View status</span>
                           </button>
-                          <button className="lakehouse-action-item">
+                          <button className="lakehouse-action-item" onClick={() => onOpenAura && onOpenAura({ agent: 'Lakehouse Agent', action: 'Debug' })}>
                             <IconFA name="bug" size={12} />
                             <span>Debug</span>
                           </button>
-                          <button className="lakehouse-action-item">
+                          <button className="lakehouse-action-item" onClick={() => onOpenAura && onOpenAura({ agent: 'Lakehouse Agent', action: 'Recreate pipeline' })}>
                             <IconFA name="rotate" size={12} />
                             <span>Recreate pipeline</span>
                           </button>
                           <div className="lakehouse-action-divider"></div>
-                          <button className="lakehouse-action-item">
+                          <button className="lakehouse-action-item" onClick={() => onOpenAura && onOpenAura({ agent: 'Lakehouse Agent', action: 'Change history window' })}>
                             <IconFA name="calendar" size={12} />
                             <span>Modify data history</span>
                           </button>
-                          <button className="lakehouse-action-item">
+                          <button className="lakehouse-action-item" onClick={() => onOpenAura && onOpenAura({ agent: 'Lakehouse Agent', action: 'Resize workspace' })}>
                             <IconFA name="expand" size={12} />
                             <span>Resize workspace</span>
                           </button>
@@ -6552,7 +6582,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                           </div>
                           <div className="aura-ws-col-cloud">{sub.cloudRegion}</div>
                           <div className="aura-ws-col-size">
-                            <span className="aura-ws-size">{sub.size}</span>
+                            <span className="aura-ws-size">{sub.size}{sub.sizeMemory && ` (${sub.sizeMemory})`}</span>
                             {sub.sizeNote && <span className="aura-ws-size-note">{sub.sizeNote}</span>}
                           </div>
                         </div>
@@ -6830,6 +6860,105 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
+        {content.datasetSelector && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-dataset-selector fade-in">
+            <div className="aura-dataset-options">
+              {content.datasetSelector.datasets.map((ds) => (
+                <button
+                  key={ds.id}
+                  className="aura-dataset-btn"
+                  onClick={() => onAction(ds.label)}
+                >
+                  <IconFA name="database" size={16} />
+                  <div className="aura-dataset-info">
+                    <span className="aura-dataset-name">{ds.label}</span>
+                    <div className="aura-dataset-meta">
+                      <span className="aura-dataset-tables">{ds.tables?.toLocaleString()} tables</span>
+                      <span className="aura-dataset-size">Total data: {ds.totalDataSize || ds.estimatedSize}</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {content.datasetPreview && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-dataset-preview fade-in">
+            <div className="aura-dataset-preview-header">
+              <div className="aura-dataset-preview-title">
+                <IconFA name="database" size={14} />
+                <span>{content.datasetPreview.datasetName}</span>
+              </div>
+              <div className="aura-dataset-preview-stats">
+                <span>{content.datasetPreview.tables?.toLocaleString()} tables</span>
+                <span className="aura-dataset-preview-dot">•</span>
+                <span>Total: {content.datasetPreview.totalDataSize || content.datasetPreview.estimatedSize}</span>
+              </div>
+            </div>
+            {content.datasetPreview.sampleTables && (
+              <div className="aura-dataset-preview-tables">
+                <div className="aura-dataset-preview-tables-header">
+                  <span>Sample tables</span>
+                </div>
+                {content.datasetPreview.sampleTables.map((table, i) => (
+                  <div key={i} className="aura-dataset-preview-table-row">
+                    <span className="aura-dataset-table-name">{table.name}</span>
+                    <span className="aura-dataset-table-rows">{table.rows}</span>
+                    <span className="aura-dataset-table-size">{table.size}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {content.speedLayerConfig && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-speed-layer-config fade-in">
+            <div className="aura-config-summary">
+              <div className="aura-config-row">
+                <span className="aura-config-label">Dataset</span>
+                <span className="aura-config-value">{content.speedLayerConfig.datasetName}</span>
+              </div>
+              <div className="aura-config-row">
+                <span className="aura-config-label">Tables</span>
+                <span className="aura-config-value">{content.speedLayerConfig.tables?.toLocaleString()}</span>
+              </div>
+              <div className="aura-config-row">
+                <span className="aura-config-label">Total data size</span>
+                <span className="aura-config-value">{content.speedLayerConfig.totalDataSize}</span>
+              </div>
+              <div className="aura-config-row">
+                <span className="aura-config-label">Selected history</span>
+                <span className="aura-config-value">{content.speedLayerConfig.selectedHistory}</span>
+              </div>
+              <div className="aura-config-row highlight">
+                <span className="aura-config-label">Speed layer size</span>
+                <span className="aura-config-value highlight">{content.speedLayerConfig.speedLayerSize}</span>
+              </div>
+            </div>
+            {content.speedLayerConfig.dataReduction && (
+              <div className="aura-config-reduction">
+                <IconFA name="compress" size={12} />
+                <span>{content.speedLayerConfig.dataReduction}</span>
+              </div>
+            )}
+            {content.speedLayerConfig.options && (
+              <div className="aura-config-options">
+                {content.speedLayerConfig.options.map((opt) => (
+                  <label key={opt.id} className="aura-config-option">
+                    <input type="checkbox" defaultChecked={opt.defaultChecked} />
+                    <div className="aura-config-option-content">
+                      <span className="aura-config-option-label">{opt.label}</span>
+                      {opt.description && <span className="aura-config-option-desc">{opt.description}</span>}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {content.schemaPreview && (!isTyping || paragraphsCompleted) && (
           <div className="aura-schema-preview fade-in">
             <div className="aura-schema-header">
@@ -6928,28 +7057,38 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           <div className="aura-workspace-recommendation fade-in">
             <div className="aura-recommendation-card">
               <div className="aura-recommendation-row">
-                <span className="aura-recommendation-label">Workspace size</span>
-                <span className="aura-recommendation-value">{content.workspaceRecommendation.size}</span>
+                <span className="aura-recommendation-label">Total data size</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.totalDataSize}</span>
               </div>
               <div className="aura-recommendation-row">
-                <span className="aura-recommendation-label">Estimated data</span>
-                <span className="aura-recommendation-value">{content.workspaceRecommendation.estimatedData}</span>
+                <span className="aura-recommendation-label">Selected history</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.history}</span>
+              </div>
+              <div className="aura-recommendation-row highlight">
+                <span className="aura-recommendation-label">Speed layer size</span>
+                <span className="aura-recommendation-value highlight">{content.workspaceRecommendation.speedLayerSize}</span>
               </div>
               <div className="aura-recommendation-row">
                 <span className="aura-recommendation-label">Tables</span>
-                <span className="aura-recommendation-value">{content.workspaceRecommendation.tables}</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.tables?.toLocaleString()}</span>
               </div>
-              <div className="aura-recommendation-row">
-                <span className="aura-recommendation-label">Data history</span>
-                <span className="aura-recommendation-value">{content.workspaceRecommendation.history}</span>
+              <div className="aura-recommendation-row highlight">
+                <span className="aura-recommendation-label">Recommended workspace</span>
+                <span className="aura-recommendation-value highlight">{content.workspaceRecommendation.size} ({content.workspaceRecommendation.sizeMemory})</span>
               </div>
               {content.workspaceRecommendation.monthlyCost && (
-                <div className="aura-recommendation-row highlight">
+                <div className="aura-recommendation-row">
                   <span className="aura-recommendation-label">Est. monthly cost</span>
                   <span className="aura-recommendation-value">{content.workspaceRecommendation.monthlyCost}</span>
                 </div>
               )}
             </div>
+            {content.workspaceRecommendation.justification && (
+              <div className="aura-recommendation-justification">
+                <IconFA name="lightbulb" size={12} />
+                <span>{content.workspaceRecommendation.justification}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -8921,7 +9060,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                           </div>
                           <div className="aura-ws-col-cloud">{sub.cloudRegion}</div>
                           <div className="aura-ws-col-size">
-                            <span className="aura-ws-size">{sub.size}</span>
+                            <span className="aura-ws-size">{sub.size}{sub.sizeMemory && ` (${sub.sizeMemory})`}</span>
                             {sub.sizeNote && <span className="aura-ws-size-note">{sub.sizeNote}</span>}
                           </div>
                         </div>
@@ -9199,6 +9338,105 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
           </div>
         )}
 
+        {allDone && content.datasetSelector && (
+          <div className="aura-dataset-selector aura-fade-in">
+            <div className="aura-dataset-options">
+              {content.datasetSelector.datasets.map((ds) => (
+                <button
+                  key={ds.id}
+                  className="aura-dataset-btn"
+                  onClick={() => handleAction(ds.label)}
+                >
+                  <IconFA name="database" size={16} />
+                  <div className="aura-dataset-info">
+                    <span className="aura-dataset-name">{ds.label}</span>
+                    <div className="aura-dataset-meta">
+                      <span className="aura-dataset-tables">{ds.tables?.toLocaleString()} tables</span>
+                      <span className="aura-dataset-size">Total data: {ds.totalDataSize || ds.estimatedSize}</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allDone && content.datasetPreview && (
+          <div className="aura-dataset-preview aura-fade-in">
+            <div className="aura-dataset-preview-header">
+              <div className="aura-dataset-preview-title">
+                <IconFA name="database" size={14} />
+                <span>{content.datasetPreview.datasetName}</span>
+              </div>
+              <div className="aura-dataset-preview-stats">
+                <span>{content.datasetPreview.tables?.toLocaleString()} tables</span>
+                <span className="aura-dataset-preview-dot">•</span>
+                <span>Total: {content.datasetPreview.totalDataSize || content.datasetPreview.estimatedSize}</span>
+              </div>
+            </div>
+            {content.datasetPreview.sampleTables && (
+              <div className="aura-dataset-preview-tables">
+                <div className="aura-dataset-preview-tables-header">
+                  <span>Sample tables</span>
+                </div>
+                {content.datasetPreview.sampleTables.map((table, i) => (
+                  <div key={i} className="aura-dataset-preview-table-row">
+                    <span className="aura-dataset-table-name">{table.name}</span>
+                    <span className="aura-dataset-table-rows">{table.rows}</span>
+                    <span className="aura-dataset-table-size">{table.size}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {allDone && content.speedLayerConfig && (
+          <div className="aura-speed-layer-config aura-fade-in">
+            <div className="aura-config-summary">
+              <div className="aura-config-row">
+                <span className="aura-config-label">Dataset</span>
+                <span className="aura-config-value">{content.speedLayerConfig.datasetName}</span>
+              </div>
+              <div className="aura-config-row">
+                <span className="aura-config-label">Tables</span>
+                <span className="aura-config-value">{content.speedLayerConfig.tables?.toLocaleString()}</span>
+              </div>
+              <div className="aura-config-row">
+                <span className="aura-config-label">Total data size</span>
+                <span className="aura-config-value">{content.speedLayerConfig.totalDataSize}</span>
+              </div>
+              <div className="aura-config-row">
+                <span className="aura-config-label">Selected history</span>
+                <span className="aura-config-value">{content.speedLayerConfig.selectedHistory}</span>
+              </div>
+              <div className="aura-config-row highlight">
+                <span className="aura-config-label">Speed layer size</span>
+                <span className="aura-config-value highlight">{content.speedLayerConfig.speedLayerSize}</span>
+              </div>
+            </div>
+            {content.speedLayerConfig.dataReduction && (
+              <div className="aura-config-reduction">
+                <IconFA name="compress" size={12} />
+                <span>{content.speedLayerConfig.dataReduction}</span>
+              </div>
+            )}
+            {content.speedLayerConfig.options && (
+              <div className="aura-config-options">
+                {content.speedLayerConfig.options.map((opt) => (
+                  <label key={opt.id} className="aura-config-option">
+                    <input type="checkbox" defaultChecked={opt.defaultChecked} />
+                    <div className="aura-config-option-content">
+                      <span className="aura-config-option-label">{opt.label}</span>
+                      {opt.description && <span className="aura-config-option-desc">{opt.description}</span>}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {allDone && content.schemaPreview && (
           <div className="aura-schema-preview aura-fade-in">
             <div className="aura-schema-header">
@@ -9297,28 +9535,38 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
           <div className="aura-workspace-recommendation aura-fade-in">
             <div className="aura-recommendation-card">
               <div className="aura-recommendation-row">
-                <span className="aura-recommendation-label">Workspace size</span>
-                <span className="aura-recommendation-value">{content.workspaceRecommendation.size}</span>
+                <span className="aura-recommendation-label">Total data size</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.totalDataSize}</span>
               </div>
               <div className="aura-recommendation-row">
-                <span className="aura-recommendation-label">Estimated data</span>
-                <span className="aura-recommendation-value">{content.workspaceRecommendation.estimatedData}</span>
+                <span className="aura-recommendation-label">Selected history</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.history}</span>
+              </div>
+              <div className="aura-recommendation-row highlight">
+                <span className="aura-recommendation-label">Speed layer size</span>
+                <span className="aura-recommendation-value highlight">{content.workspaceRecommendation.speedLayerSize}</span>
               </div>
               <div className="aura-recommendation-row">
                 <span className="aura-recommendation-label">Tables</span>
-                <span className="aura-recommendation-value">{content.workspaceRecommendation.tables}</span>
+                <span className="aura-recommendation-value">{content.workspaceRecommendation.tables?.toLocaleString()}</span>
               </div>
-              <div className="aura-recommendation-row">
-                <span className="aura-recommendation-label">Data history</span>
-                <span className="aura-recommendation-value">{content.workspaceRecommendation.history}</span>
+              <div className="aura-recommendation-row highlight">
+                <span className="aura-recommendation-label">Recommended workspace</span>
+                <span className="aura-recommendation-value highlight">{content.workspaceRecommendation.size} ({content.workspaceRecommendation.sizeMemory})</span>
               </div>
               {content.workspaceRecommendation.monthlyCost && (
-                <div className="aura-recommendation-row highlight">
+                <div className="aura-recommendation-row">
                   <span className="aura-recommendation-label">Est. monthly cost</span>
                   <span className="aura-recommendation-value">{content.workspaceRecommendation.monthlyCost}</span>
                 </div>
               )}
             </div>
+            {content.workspaceRecommendation.justification && (
+              <div className="aura-recommendation-justification">
+                <IconFA name="lightbulb" size={12} />
+                <span>{content.workspaceRecommendation.justification}</span>
+              </div>
+            )}
           </div>
         )}
 
