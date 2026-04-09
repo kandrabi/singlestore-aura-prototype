@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Editor, { DiffEditor } from '@monaco-editor/react'
 import './index.css'
@@ -250,9 +250,11 @@ function AnimatedList({ items, isTyping, onComplete }) {
 }
 
 function formatTime(date) {
-  const hours = date.getHours().toString().padStart(2, '0')
+  const hours = date.getHours()
   const minutes = date.getMinutes().toString().padStart(2, '0')
-  return `${hours}:${minutes}`
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  const hour12 = hours % 12 || 12
+  return `${hour12}:${minutes} ${ampm}`
 }
 
 const ALERTS = [
@@ -970,7 +972,11 @@ const MIGRATION_CHAT_FLOW = [
       progress: true,
       text: 'Connecting to MCP server...',
       url: 'https://mcp.internal.acmecorp.com/postgres-prod-cluster',
-      // After completion, update to this state
+      steps: [
+        '✓ Authenticating with MCP server...',
+        '✓ Establishing secure connection...',
+        '→ Introspecting database...'
+      ],
       completedState: {
         text: 'Secure connection to PostgreSQL established.',
         subtext: '→ Introspecting database...'
@@ -1119,7 +1125,9 @@ const MIGRATION_CHAT_FLOW = [
     content: {
       text: [
         { type: 'success', content: 'All 4 flagged tables have been reviewed and resolved.' },
+        { type: 'break' },
         { type: 'text', content: 'All generated DDL has been validated against the SingleStore parser.' },
+        { type: 'break' },
         { type: 'bold', content: 'Your schema is 100% ready. Shall we move on to provisioning the Flow instance for data ingestion?' }
       ],
       actions: ['Yes', 'Review DDL again']
@@ -1193,6 +1201,11 @@ const MIGRATION_CHAT_FLOW = [
     content: {
       progress: true,
       text: 'Provisioning F2 Flow instance...',
+      steps: [
+        '✓ Allocating compute resources...',
+        '✓ Configuring flow runtime...',
+        '→ Initializing instance...'
+      ],
       completedState: {
         text: 'Provisioning F2 Flow instance...',
         subtext: 'Complete'
@@ -1251,7 +1264,19 @@ const MIGRATION_CHAT_FLOW = [
       ]
     }
   },
-  // Scene 5: Verification & cross-agent handoff
+  // Scene 5b: Migration progress indicator
+  {
+    type: 'agent',
+    content: {
+      migrationProgress: {
+        text: 'Loading data from source...',
+        tables: '50 tables',
+        rows: '142.8M rows',
+        duration: 4
+      }
+    }
+  },
+  // Scene 6: Verification & cross-agent handoff
   {
     type: 'agent',
     content: {
@@ -2400,6 +2425,11 @@ function App() {
       setAuraPanelAgentName(nextAgent)
     }
     
+    // Collapse fullscreen chat when navigating via menu
+    if (auraPanelFullscreen) {
+      setAuraPanelFullscreen(false)
+    }
+    
     setView(newView)
   }
 
@@ -2462,8 +2492,8 @@ function App() {
         // Calculate delay based on whether there are steps
         const hasSteps = message.content?.steps?.length > 0
         const stepsCount = message.content?.steps?.length || 0
-        // For steps: 800ms initial + 700ms per step + 400ms completion + buffer
-        const stepsDelay = hasSteps ? (800 + (stepsCount * 700) + 400 + 500) : 2500
+        // For steps: 3000ms thinking + 800ms per step + 500ms buffer
+        const stepsDelay = hasSteps ? (3000 + (stepsCount * 800) + 500) : 2500
         
         setTimeout(() => {
           // If this message has a completedState, update it in place first
@@ -2475,8 +2505,8 @@ function App() {
                   : msg
               )
             )
-            // Then advance to next message after another delay
-            setTimeout(() => addNextMigrationMessage(index + 1), 2000)
+            // Then advance to next message after brief delay for collapse animation
+            setTimeout(() => addNextMigrationMessage(index + 1), 500)
           } else {
             addNextMigrationMessage(index + 1)
           }
@@ -2486,6 +2516,12 @@ function App() {
       // Auto-advance autoAdvance messages (but not if progress already handles it)
       if (message.content?.autoAdvance && !message.content?.progress) {
         setTimeout(() => addNextMigrationMessage(index + 1), 2500)
+      }
+      
+      // Auto-advance migrationProgress messages after the progress duration
+      if (message.content?.migrationProgress) {
+        const duration = (message.content.migrationProgress.duration || 4) * 1000
+        setTimeout(() => addNextMigrationMessage(index + 1), duration + 500)
       }
     }, 1000)
   }
@@ -2501,6 +2537,17 @@ function App() {
       const historyValue = selectedLakehouseHistoryRef.current
       if (message.content?.workspaceRecommendation?.history) {
         message.content.workspaceRecommendation.history = historyValue
+        // Scale workspace size and estimated data based on history duration
+        const historyScaling = {
+          'Last 1 month': { size: 'S-00', estimatedData: '~8 GB' },
+          'Last 3 months': { size: 'S-0', estimatedData: '~22 GB' },
+          'Last 6 months': { size: 'S-32', estimatedData: '~45 GB' },
+          'Last 1 year': { size: 'S-64', estimatedData: '~90 GB' },
+          'Last 2 years': { size: 'S-128', estimatedData: '~180 GB' }
+        }
+        const scaling = historyScaling[historyValue] || historyScaling['Last 6 months']
+        message.content.workspaceRecommendation.size = scaling.size
+        message.content.workspaceRecommendation.estimatedData = scaling.estimatedData
       }
       if (message.content?.speedLayerStats?.stats) {
         message.content.speedLayerStats.stats = message.content.speedLayerStats.stats.map(stat => 
@@ -2543,7 +2590,8 @@ function App() {
       if (message.content?.progress) {
         const hasSteps = message.content?.steps?.length > 0
         const stepsCount = message.content?.steps?.length || 0
-        const stepsDelay = hasSteps ? (800 + (stepsCount * 700) + 400 + 500) : 2500
+        // For steps: 3000ms thinking + 800ms per step + 500ms buffer
+        const stepsDelay = hasSteps ? (3000 + (stepsCount * 800) + 500) : 2500
         
         setTimeout(() => {
           if (message.content?.completedState) {
@@ -2554,7 +2602,7 @@ function App() {
                   : msg
               )
             )
-            setTimeout(() => addNextLakehouseMessage(index + 1), 2000)
+            setTimeout(() => addNextLakehouseMessage(index + 1), 500)
           } else {
             addNextLakehouseMessage(index + 1)
           }
@@ -2591,7 +2639,8 @@ function App() {
       if (message.content?.progress) {
         const hasSteps = message.content?.steps?.length > 0
         const stepsCount = message.content?.steps?.length || 0
-        const stepsDelay = hasSteps ? (800 + (stepsCount * 700) + 400 + 500) : 2500
+        // For steps: 3000ms thinking + 800ms per step + 500ms buffer
+        const stepsDelay = hasSteps ? (3000 + (stepsCount * 800) + 500) : 2500
         
         setTimeout(() => {
           if (message.content?.completedState) {
@@ -2602,7 +2651,7 @@ function App() {
                   : msg
               )
             )
-            setTimeout(() => addNextPositionsDataMessage(index + 1), 2000)
+            setTimeout(() => addNextPositionsDataMessage(index + 1), 500)
           } else {
             addNextPositionsDataMessage(index + 1)
           }
@@ -4875,6 +4924,13 @@ function PortalView({
   onNavigate
 }) {
   const selectedAgent = AURA_AGENTS.find(a => a.name === agentName) || AURA_AGENTS[0]
+  
+  // Scroll to bottom function for auto-scroll during thinking steps
+  const scrollToBottom = useCallback(() => {
+    if (chatEndRef?.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [chatEndRef])
 
   const handleAgentSelect = (agent) => {
     if (agent.name !== selectedAgent.name && onAgentChange) {
@@ -4914,6 +4970,7 @@ function PortalView({
                   compact={true}
                   onNavigate={onNavigate}
                   hideHeader={hideHeader}
+                  onScrollToBottom={scrollToBottom}
                 />
               )
             })}
@@ -5177,7 +5234,97 @@ function AnimatedResizeProgress({ resizeProgress }) {
   )
 }
 
-function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete, agentName = 'Aura Agent', compact = false, onAdvanceSilently, onNavigate, hideHeader = false }) {
+function AnimatedMigrationProgress({ migrationProgress, onComplete }) {
+  const [progress, setProgress] = useState(0)
+  const [timeLeft, setTimeLeft] = useState(migrationProgress.duration)
+  const [rowsLoaded, setRowsLoaded] = useState(0)
+  const [isComplete, setIsComplete] = useState(false)
+  const duration = migrationProgress.duration * 1000
+  const totalRows = parseFloat(migrationProgress.rows) * 1000000 // Convert "142.8M" to number
+  
+  useEffect(() => {
+    const startTime = Date.now()
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const newProgress = Math.min((elapsed / duration) * 100, 100)
+      const newTimeLeft = Math.max(Math.ceil((duration - elapsed) / 1000), 0)
+      const newRowsLoaded = Math.min(Math.floor((elapsed / duration) * totalRows), totalRows)
+      
+      setProgress(newProgress)
+      setTimeLeft(newTimeLeft)
+      setRowsLoaded(newRowsLoaded)
+      
+      if (elapsed >= duration) {
+        clearInterval(interval)
+        setIsComplete(true)
+        if (onComplete) onComplete()
+      }
+    }, 50)
+    
+    return () => clearInterval(interval)
+  }, [duration, totalRows, onComplete])
+  
+  const formatRows = (num) => {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
+    if (num >= 1000) return (num / 1000).toFixed(0) + 'K'
+    return num.toString()
+  }
+  
+  return (
+    <div className={`migration-progress-card fade-in ${isComplete ? 'complete' : ''}`}>
+      <div className="migration-progress-header">
+        <div className="migration-progress-title">
+          {isComplete ? (
+            <span className="migration-complete-icon"><IconFA name="circle-check" size={18} /></span>
+          ) : (
+            <AiLogoMinimal size={18} />
+          )}
+          <span>{isComplete ? 'Data loaded successfully' : migrationProgress.text}</span>
+        </div>
+        {!isComplete && <button className="migration-progress-cancel">Cancel</button>}
+      </div>
+      <div className="migration-progress-divider" />
+      <div className="migration-progress-content">
+        <div className={`migration-progress-icon ${isComplete ? 'complete' : ''}`}>
+          <IconFA name="database" size={20} />
+          {isComplete ? (
+            <div className="migration-check-overlay">
+              <IconFA name="check" size={10} />
+            </div>
+          ) : (
+            <div className="migration-spinner-overlay">
+              <PurpleSpinner size={16} />
+            </div>
+          )}
+        </div>
+        <div className="migration-progress-info">
+          <span className="migration-progress-tables">{migrationProgress.tables}</span>
+          <div className="migration-progress-rows">
+            <span className={`rows-loaded ${isComplete ? 'complete' : ''}`}>{formatRows(rowsLoaded)}</span>
+            <span className="rows-separator">/</span>
+            <span className="rows-total">{migrationProgress.rows}</span>
+          </div>
+        </div>
+        <div className="migration-progress-bar-section">
+          <div className={`migration-progress-bar ${isComplete ? 'complete' : ''}`}>
+            <div className="migration-progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="migration-progress-stats">
+            <span className={`migration-progress-percent ${isComplete ? 'complete' : ''}`}>{Math.round(progress)}%</span>
+            {!isComplete && (
+              <>
+                <span className="migration-progress-dot" />
+                <span className="migration-progress-time">~ {timeLeft}s</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete, agentName = 'Aura Agent', compact = false, onAdvanceSilently, onNavigate, hideHeader = false, onScrollToBottom }) {
   // Only treat text as items if it's an array (not a string)
   const textItems = message.type === 'agent' && Array.isArray(message.content?.text) ? message.content.text : []
   const analysisTextItems = message.type === 'agent' && Array.isArray(message.content?.analysisText) ? message.content.analysisText : []
@@ -5670,11 +5817,15 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         {content.footer && (!isTyping || paragraphsCompleted) && <p className="message-text fade-in">{content.footer}</p>}
 
         {content.progress && (
-          <AnimatedProgressCard content={content} />
+          <AnimatedProgressCard content={content} onStepChange={onScrollToBottom} />
         )}
 
         {content.resizeProgress && (!isTyping || paragraphsCompleted) && (
           <AnimatedResizeProgress resizeProgress={content.resizeProgress} />
+        )}
+
+        {content.migrationProgress && (!isTyping || paragraphsCompleted) && (
+          <AnimatedMigrationProgress migrationProgress={content.migrationProgress} />
         )}
 
         {content.success && (!isTyping || paragraphsCompleted) && (
@@ -6298,7 +6449,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                       className="aura-catalog-option-btn"
                       onClick={() => onAction(opt.label)}
                     >
-                      <IconFA name="database" size={16} />
+                      <IconFA name="book" size={16} />
                       <span>{opt.label}</span>
                     </button>
                   ))}
@@ -6315,7 +6466,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                       className="aura-catalog-option-btn external"
                       onClick={() => onAction(opt.label)}
                     >
-                      <IconFA name="database" size={16} />
+                      <IconFA name="book" size={16} />
                       <span>{opt.label}</span>
                     </button>
                   ))}
@@ -7352,6 +7503,7 @@ function IconFA({ name, weight = 'regular', size = 16 }) {
     'rotate': '\uf2f1',
     'calendar': '\uf133',
     'circle-xmark': '\uf057',
+    'book': '\uf02d',
   }
   
   const weightClass = weight === 'solid' ? 'fa-solid' : weight === 'light' ? 'fa-light' : 'fa-regular'
@@ -8037,62 +8189,96 @@ function AgentMessageContent({ message, isTyped, renderMigrationMessage, onTypin
   return renderMigrationMessage(message, isTyped, typingState)
 }
 
-function ThinkingBlock({ content, isExpanded: controlledExpanded, onToggle }) {
-  // States: 'thinking' | 'streaming' | 'completed'
-  const [phase, setPhase] = useState(content.completed ? 'completed' : 'thinking')
-  const [visibleStepCount, setVisibleStepCount] = useState(content.completed ? (content.steps?.length || 0) : 0)
-  const [isExpanded, setIsExpanded] = useState(controlledExpanded ?? false)
-  const [hasStarted, setHasStarted] = useState(false)
+function ThinkingBlock({ content, isExpanded: controlledExpanded, onToggle, onStepChange }) {
   const steps = content.steps || []
   const hasSteps = steps.length > 0
   
-  // Sync with external completed state
+  // Use ref to track if animation has played (persists across re-renders)
+  const hasAnimatedRef = useRef(false)
+  const prevStepCountRef = useRef(0)
+  
+  // States: 'thinking' | 'streaming' | 'collapsing' | 'completed'
+  const [phase, setPhase] = useState('thinking')
+  const [visibleStepCount, setVisibleStepCount] = useState(0)
+  const [isExpanded, setIsExpanded] = useState(controlledExpanded ?? false)
+  
+  // Trigger scroll only when NEW steps are added during streaming (not during collapse)
   useEffect(() => {
-    if (content.completed && phase !== 'completed') {
+    if (phase === 'streaming' && visibleStepCount > prevStepCountRef.current && onStepChange) {
+      onStepChange()
+    }
+    prevStepCountRef.current = visibleStepCount
+  }, [phase, visibleStepCount, onStepChange])
+  
+  // On mount, decide if we should animate or skip to completed
+  useEffect(() => {
+    // If already animated or content says completed AND we've animated before, skip
+    if (hasAnimatedRef.current && content.completed) {
       setPhase('completed')
       setVisibleStepCount(steps.length)
+      return
     }
-  }, [content.completed, phase, steps.length])
-  
-  // Phase 1: THINKING (2-3 seconds of "Thinking...")
-  useEffect(() => {
-    if (hasStarted || content.completed) return
-    setHasStarted(true)
     
-    const thinkingDuration = 2000 + Math.random() * 1000 // 2-3 seconds
+    // Start the animation sequence
+    hasAnimatedRef.current = true
+    
+    // Phase 1: THINKING (1.5-2 seconds)
+    const thinkingDuration = 1500 + Math.random() * 500
     const thinkingTimer = setTimeout(() => {
       if (hasSteps) {
         setPhase('streaming')
-        setVisibleStepCount(1) // Show first step
+        setVisibleStepCount(1)
       } else {
         setPhase('completed')
       }
     }, thinkingDuration)
     
     return () => clearTimeout(thinkingTimer)
-  }, [hasStarted, content.completed, hasSteps])
+  }, []) // Only run on mount
   
-  // Phase 2: STREAMING STEPS (one by one, 600-800ms each)
+  // Phase 2: STREAMING STEPS (one by one, 700-900ms each)
   useEffect(() => {
     if (phase !== 'streaming' || !hasSteps) return
     
     if (visibleStepCount < steps.length) {
-      const stepDelay = 600 + Math.random() * 200 // 600-800ms
+      const stepDelay = 700 + Math.random() * 200
       const stepTimer = setTimeout(() => {
         setVisibleStepCount(prev => prev + 1)
       }, stepDelay)
       return () => clearTimeout(stepTimer)
     } else {
-      // All steps shown, transition to completed after brief pause
-      const completeTimer = setTimeout(() => {
-        setPhase('completed')
-      }, 400)
-      return () => clearTimeout(completeTimer)
+      // All steps shown, start collapsing transition
+      const collapseTimer = setTimeout(() => {
+        setPhase('collapsing')
+      }, 600)
+      return () => clearTimeout(collapseTimer)
     }
   }, [phase, visibleStepCount, steps.length, hasSteps])
   
+  // Phase 3: COLLAPSING (smooth transition)
+  useEffect(() => {
+    if (phase !== 'collapsing') return
+    
+    const completeTimer = setTimeout(() => {
+      setPhase('completed')
+    }, 400) // Match CSS transition duration
+    
+    return () => clearTimeout(completeTimer)
+  }, [phase])
+  
+  // Sync with external completed state (for when parent marks it done)
+  useEffect(() => {
+    if (content.completed && phase === 'streaming') {
+      // Let the current animation finish naturally
+    } else if (content.completed && phase === 'thinking') {
+      // Fast-forward to streaming then completed
+      setPhase('streaming')
+      setVisibleStepCount(steps.length)
+      setTimeout(() => setPhase('collapsing'), 300)
+    }
+  }, [content.completed])
+  
   const handleToggle = () => {
-    if (phase !== 'completed') return // Only toggle when completed
     const newState = !isExpanded
     setIsExpanded(newState)
     onToggle?.(newState)
@@ -8102,25 +8288,33 @@ function ThinkingBlock({ content, isExpanded: controlledExpanded, onToggle }) {
   if (phase === 'thinking') {
     return (
       <div className="thinking-block thinking">
-        <span className="thinking-text">Thinking...</span>
+        <span className="thinking-gradient-text">Thinking...</span>
       </div>
     )
   }
   
-  if (phase === 'streaming') {
+  if (phase === 'streaming' || phase === 'collapsing') {
     return (
-      <div className="thinking-block streaming">
-        <div className="thinking-block-steps streaming">
+      <div className={`thinking-block streaming ${phase === 'collapsing' ? 'collapsing' : ''}`}>
+        <div className="thinking-block-header">
+          <span className={`thinking-header-text ${phase === 'collapsing' ? 'fading' : ''}`}>
+            Thinking{phase !== 'collapsing' ? '...' : ''}
+          </span>
+          <span className={`thinking-block-chevron collapse-chevron ${phase === 'collapsing' ? 'visible' : ''}`}>
+            <IconFA name="chevron-right" size={10} />
+          </span>
+        </div>
+        <div className={`thinking-block-steps-live ${phase === 'collapsing' ? 'fade-out' : ''}`}>
           {steps.slice(0, visibleStepCount).map((step, i) => {
             const stepText = step.replace(/^[✓→]\s*/, '').replace(/^→\s*/, '')
-            const isLatest = i === visibleStepCount - 1
+            const isLatest = i === visibleStepCount - 1 && phase !== 'collapsing'
             return (
               <div 
                 key={i} 
-                className={`thinking-block-step visible ${isLatest ? 'latest' : ''}`}
+                className={`thinking-step-live ${isLatest ? 'current' : 'done'}`}
               >
-                <span className="thinking-block-step-icon">✓</span>
-                <span className="thinking-block-step-text">{stepText}</span>
+                <span className="thinking-step-icon">{isLatest ? '→' : '✓'}</span>
+                <span className="thinking-step-text">{stepText}</span>
               </div>
             )
           })}
@@ -8133,8 +8327,8 @@ function ThinkingBlock({ content, isExpanded: controlledExpanded, onToggle }) {
   return (
     <div className={`thinking-block completed ${isExpanded ? 'expanded' : ''}`}>
       <button className="thinking-block-toggle" onClick={handleToggle}>
-        <span className="thinking-block-text">
-          Show {steps.length} step{steps.length !== 1 ? 's' : ''}
+        <span className="thinking-block-label">
+          Thinking
         </span>
         <span className={`thinking-block-chevron ${isExpanded ? 'expanded' : ''}`}>
           <IconFA name="chevron-right" size={10} />
@@ -8160,8 +8354,8 @@ function ThinkingBlock({ content, isExpanded: controlledExpanded, onToggle }) {
   )
 }
 
-function AnimatedProgressCard({ content }) {
-  return <ThinkingBlock content={content} />
+function AnimatedProgressCard({ content, onStepChange }) {
+  return <ThinkingBlock content={content} onStepChange={onStepChange} />
 }
 
 // ============================================
@@ -8310,6 +8504,13 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
   const markAsTyped = (messageId) => {
     setTypedMessageIds(prev => new Set([...prev, messageId]))
   }
+  
+  // Scroll to bottom function for auto-scroll during thinking steps
+  const scrollToBottom = useCallback(() => {
+    if (chatEndRef?.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [chatEndRef])
 
   // Sync selectedAgent with agentName prop
   useEffect(() => {
@@ -8617,7 +8818,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                       className="aura-catalog-option-btn"
                       onClick={() => handleAction(opt.label)}
                     >
-                      <IconFA name="database" size={16} />
+                      <IconFA name="book" size={16} />
                       <span>{opt.label}</span>
                     </button>
                   ))}
@@ -8634,7 +8835,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                       className="aura-catalog-option-btn external"
                       onClick={() => handleAction(opt.label)}
                     >
-                      <IconFA name="database" size={16} />
+                      <IconFA name="book" size={16} />
                       <span>{opt.label}</span>
                     </button>
                   ))}
@@ -9215,7 +9416,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
         )}
 
         {content.progress && (
-          <AnimatedProgressCard content={content} />
+          <AnimatedProgressCard content={content} onStepChange={onScrollToBottom} />
         )}
 
         {allDone && content.connections && showConnections && (
@@ -9850,6 +10051,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                   onAdvanceSilently={onAdvanceSilently}
                   onNavigate={onNavigate}
                   hideHeader={hideHeader}
+                  onScrollToBottom={scrollToBottom}
                 />
               )
             })}

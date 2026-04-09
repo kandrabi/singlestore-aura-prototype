@@ -184,6 +184,7 @@ body {
 .unified-create-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 8px;
   border-radius: var(--border-radius-md);
@@ -1578,7 +1579,7 @@ body {
 .message-content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   width: 100%;
 }
 
@@ -1588,6 +1589,7 @@ body {
   line-height: 1.5;
   letter-spacing: 0.28px;
   margin-bottom: 0px;
+  padding-top: 4px;
 }
 
 .message-text strong {
@@ -1694,8 +1696,8 @@ body {
 
 .stat-card {
   flex: 1;
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--border-radius-md);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   padding: 16px;
 }
 
@@ -1751,14 +1753,14 @@ body {
 .action-btn {
   height: 32px;
   padding: 0 10px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--color-neutral-6);
-  background: var(--color-neutral-1);
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: white;
   cursor: pointer;
   font-family: var(--font-family);
-  font-size: var(--font-size-md);
+  font-size: 14px;
   font-weight: 500;
-  color: var(--color-neutral-11);
+  color: #111827;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1783,8 +1785,8 @@ body {
 
 /* Recommendation Card */
 .recommendation-card {
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--border-radius-md);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   padding: 16px;
   width: 100%;
 }
@@ -1954,13 +1956,13 @@ body {
 
 /* Expandable Query Cards */
 .query-card {
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--border-radius-md);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   padding: 12px 14px;
   width: 100%;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: var(--color-white);
+  background: white;
 }
 
 .query-card:hover {
@@ -3716,6 +3718,23 @@ body {
   padding: 12px;
 }
 
+/* Scale down aura-recommendation-card in side panel */
+.aura-panel-messages .aura-recommendation-card {
+  max-width: 100%;
+}
+
+.aura-panel-messages .aura-recommendation-row {
+  padding: 10px 12px;
+}
+
+.aura-panel-messages .aura-recommendation-label {
+  font-size: 12px;
+}
+
+.aura-panel-messages .aura-recommendation-value {
+  font-size: 12px;
+}
+
 /* Scale down query list in side panel */
 .aura-panel-messages .query-list {
   gap: 8px;
@@ -3809,7 +3828,211 @@ body {
 }
 
 /* Scale down resize progress card in side panel */
-.aura-panel-messages .resize-progress-card {
+/* Migration Progress Card */
+.migration-progress-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  width: 100%;
+  max-width: 695px;
+}
+
+.migration-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.migration-progress-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.migration-progress-title span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-neutral-12);
+  letter-spacing: 0.24px;
+}
+
+.migration-progress-cancel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-brand-9);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.migration-progress-cancel:hover {
+  text-decoration: underline;
+}
+
+.migration-progress-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--color-border-default);
+}
+
+.migration-progress-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.migration-progress-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-surface-3);
+  border-radius: var(--border-radius-sm);
+  color: var(--color-brand-10);
+  flex-shrink: 0;
+  position: relative;
+  filter: grayscale(1);
+}
+
+.migration-spinner-overlay {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+}
+
+.migration-progress-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 100px;
+}
+
+.migration-progress-tables {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-neutral-12);
+}
+
+.migration-progress-rows {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.migration-progress-rows .rows-loaded {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.migration-progress-rows .rows-separator {
+  margin: 0 2px;
+}
+
+.migration-progress-bar-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.migration-progress-bar {
+  height: 6px;
+  background: var(--color-bg-surface-3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.migration-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #9810FA 0%, #b44dff 100%);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+.migration-progress-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.migration-progress-percent {
+  font-weight: 500;
+  color: var(--color-neutral-12);
+}
+
+.migration-progress-dot {
+  width: 3px;
+  height: 3px;
+  background: var(--color-text-muted);
+  border-radius: 50%;
+}
+
+.migration-progress-time {
+  color: var(--color-text-muted);
+}
+
+/* Migration Progress Complete State */
+.migration-progress-card.complete {
+  border-color: #10b981;
+}
+
+.migration-complete-icon {
+  color: #10b981;
+  display: flex;
+  align-items: center;
+}
+
+.migration-complete-icon .fa-icon {
+  color: #10b981;
+}
+
+.migration-progress-icon.complete {
+  background: #d1fae5;
+  color: #10b981;
+}
+
+.migration-check-overlay {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #10b981;
+  border-radius: 50%;
+  color: white;
+}
+
+.migration-check-overlay .fa-icon {
+  color: white;
+}
+
+.migration-progress-rows .rows-loaded.complete {
+  color: #10b981;
+}
+
+
+.migration-progress-percent.complete {
+  color: var(--color-neutral-12);
+}
+
+.aura-panel-messages .resize-progress-card,
+.aura-panel-messages .migration-progress-card {
   width: 100%;
   max-width: none;
 }
@@ -3821,7 +4044,7 @@ body {
 
 /* Scale down info cards in side panel */
 .aura-panel-messages .aura-info-card {
-  padding: 12px;
+  padding: 4px 0;
 }
 
 /* Scale down migration stats in side panel */
@@ -4262,7 +4485,7 @@ body {
 .aura-why-card {
   background: #eff6ff;
   border: 1px solid #bedbff;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 12px 16px;
   margin-top: 12px;
 }
@@ -4297,7 +4520,7 @@ body {
   background: #fff;
   border-top: none;
   margin: 12px -16px -16px -16px;
-  padding: 13px 24px;
+  padding: 0px 24px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -4316,14 +4539,14 @@ body {
 .aura-flow-instance-btn {
   height: 32px;
   padding: 0 10px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--color-neutral-6);
-  background: var(--color-neutral-1);
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: white;
   cursor: pointer;
   font-family: var(--font-family);
-  font-size: var(--font-size-md);
+  font-size: 14px;
   font-weight: 500;
-  color: var(--color-neutral-11);
+  color: #111827;
   transition: all 0.2s;
 }
 
@@ -4364,12 +4587,14 @@ body {
 
 .aura-provisioned-stat-row {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   font-size: 12px;
 }
 
 .aura-provisioned-stat-label {
   color: #016630;
+  min-width: 100px;
 }
 
 .aura-provisioned-stat-value {
@@ -4386,7 +4611,7 @@ body {
   background: #fff;
   border-top: none;
   margin: 12px -16px -16px -16px;
-  padding: 13px 24px;
+  padding: 0 24px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -4405,14 +4630,14 @@ body {
 .aura-cdc-selector-btn {
   height: 32px;
   padding: 0 10px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--color-neutral-6);
-  background: var(--color-neutral-1);
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: white;
   cursor: pointer;
   font-family: var(--font-family);
-  font-size: var(--font-size-md);
+  font-size: 14px;
   font-weight: 500;
-  color: var(--color-neutral-11);
+  color: #111827;
   transition: all 0.2s;
 }
 
@@ -4445,70 +4670,158 @@ body {
 }
 
 /* ----------------------------------------
-   STATE 1: THINKING (pulsing animation)
+   GRADIENT TEXT ANIMATION (Cursor-style)
+   ---------------------------------------- */
+.thinking-gradient-text {
+  font-size: 13px;
+  font-weight: 400;
+  background: linear-gradient(
+    90deg,
+    #9ca3af 0%,
+    #6b7280 25%,
+    #374151 50%,
+    #6b7280 75%,
+    #9ca3af 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shimmer 2s ease-in-out infinite;
+}
+
+@keyframes gradient-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ----------------------------------------
+   STATE 1: THINKING (gradient animation)
    ---------------------------------------- */
 .thinking-block.thinking {
   padding: 0;
 }
 
-.thinking-text {
-  font-size: 13px;
-  color: #6b7280;
-  animation: thinking-fade 2s ease-in-out infinite;
-}
-
-@keyframes thinking-fade {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-
 /* ----------------------------------------
-   STATE 2: STREAMING (progressive reveal)
+   STATE 2: STREAMING (steps appearing)
    ---------------------------------------- */
 .thinking-block.streaming {
   padding: 0;
 }
 
-.thinking-block-steps.streaming {
+.thinking-block-header {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: margin-bottom 0.3s ease-out;
+}
+
+.thinking-block.collapsing .thinking-block-header {
+  margin-bottom: 0;
+}
+
+.thinking-header-text {
+  font-size: 13px;
+  font-weight: 400;
+  background: linear-gradient(
+    90deg,
+    #9ca3af 0%,
+    #6b7280 25%,
+    #374151 50%,
+    #6b7280 75%,
+    #9ca3af 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shimmer 2s ease-in-out infinite;
+  transition: all 0.3s ease-out;
+}
+
+.thinking-header-text.fading {
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: #6b7280;
+  background-clip: unset;
+  animation: none;
+}
+
+.collapse-chevron {
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.collapse-chevron.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.thinking-block-steps-live {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding-left: 4px;
+  max-height: 500px;
+  overflow: hidden;
+  transition: max-height 0.4s ease-out, opacity 0.3s ease-out;
 }
 
-.thinking-block-step {
+.thinking-block-steps-live.fade-out {
+  max-height: 0;
+  opacity: 0;
+}
+
+.thinking-step-live {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #6b7280;
   opacity: 0;
-  transform: translateY(8px);
-  animation: step-appear 0.3s ease-out forwards;
+  animation: step-fade-in 0.4s ease-out forwards;
 }
 
-@keyframes step-appear {
+.thinking-step-live.done {
+  color: #6b7280;
+}
+
+.thinking-step-live.current {
+  color: #374151;
+}
+
+.thinking-step-live.done .thinking-step-icon {
+  color: #10b981;
+}
+
+.thinking-step-live.current .thinking-step-icon {
+  color: #9810FA;
+}
+
+.thinking-step-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  width: 14px;
+}
+
+.thinking-step-text {
+  font-size: 13px;
+}
+
+@keyframes step-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.thinking-block-step.latest {
-  color: #374151;
-}
-
-.thinking-block-step-icon {
-  font-size: 11px;
-  color: #10b981;
-  flex-shrink: 0;
-}
-
-.thinking-block-step-text {
-  font-size: 13px;
-}
-
 /* ----------------------------------------
-   STATE 3: COMPLETED (collapsible summary)
+   STATE 3: COMPLETED (collapsible)
    ---------------------------------------- */
 .thinking-block.completed {
   padding: 0;
@@ -4517,7 +4830,7 @@ body {
 .thinking-block-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   padding: 0;
   background: transparent;
   border: none;
@@ -4531,8 +4844,9 @@ body {
   color: #374151;
 }
 
-.thinking-block-text {
+.thinking-block-label {
   font-weight: 400;
+  color: #6b7280;
 }
 
 .thinking-block-chevron {
@@ -4569,25 +4883,36 @@ body {
   flex-direction: column;
   gap: 4px;
   padding-top: 8px;
-  padding-left: 2px;
+  padding-left: 4px;
+}
+
+.thinking-block-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
 }
 
 .thinking-block.completed .thinking-block-step {
-  opacity: 1;
-  transform: none;
-  animation: none;
   color: #6b7280;
 }
 
-.thinking-block.completed .thinking-block-step-icon {
+.thinking-block-step-icon {
+  font-size: 12px;
   color: #10b981;
+  flex-shrink: 0;
+  width: 14px;
+}
+
+.thinking-block-step-text {
+  font-size: 13px;
 }
 
 /* Legacy support - keep old classes working */
 .aura-progress-card {
-  background: var(--color-bg-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
@@ -4717,9 +5042,9 @@ body {
 }
 
 .aura-connection-card {
-  background: var(--color-bg-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   padding: 12px 16px;
   display: flex;
   align-items: flex-start;
@@ -4783,40 +5108,35 @@ body {
 }
 
 .aura-info-card {
-  background: var(--color-bg-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   overflow: hidden;
-}
-
-.aura-info-card.aura-db-profile {
-  background: #eff6ff;
-  border-color: #bedbff;
 }
 
 .aura-info-card.aura-db-profile .aura-info-card-header {
   background: transparent;
   border-bottom: none;
-  color: #1c398e;
+  color: #374151;
   padding-bottom: 4px;
 }
 
-.aura-info-card.aura-db-profile .aura-info-stat-label,
-.aura-info-card.aura-db-profile .aura-info-stat-value {
-  color: #193cb8;
+.aura-info-card.aura-db-profile .aura-info-stat-label {
+  color: #6b7280;
 }
 
 .aura-info-card.aura-db-profile .aura-info-stat-value {
-  font-weight: 600;
+  color: #111827;
+  font-weight: 500;
 }
 
 .aura-info-card-header {
   padding: 10px 14px;
-  font-size: var(--font-size-sm);
+  font-size: 14px;
   font-weight: 500;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-surface-3);
-  border-bottom: 1px solid var(--color-border);
+  color: #6b7280;
+  background: #f9fafb;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .aura-migration-considerations {
@@ -4837,7 +5157,7 @@ body {
   padding: 10px 12px;
   background: #fffbeb;
   border: 1px solid #fee685;
-  border-radius: var(--border-radius-sm);
+  border-radius: 8px;
 }
 
 .aura-consideration-icon {
@@ -4859,30 +5179,30 @@ body {
 }
 
 .aura-consideration-text {
-  font-size: var(--font-size-md);
+  font-size: 13px;
   color: #973c00;
 }
 
-/* Transformation Summary (purple card) */
+/* Transformation Summary (neutral card) */
 .aura-info-card.aura-transformation-summary {
-  background: #faf5ff;
-  border-color: #e9d4ff;
+  background: white;
+  border: 1px solid #e5e7eb;
 }
 
 .aura-info-card.aura-transformation-summary .aura-info-card-header {
   background: transparent;
   border-bottom: none;
-  color: #59168b;
+  color: #374151;
   padding-bottom: 4px;
 }
 
-.aura-info-card.aura-transformation-summary .aura-info-stat-label,
-.aura-info-card.aura-transformation-summary .aura-info-stat-value {
-  color: #6e11b0;
+.aura-info-card.aura-transformation-summary .aura-info-stat-label {
+  color: #6b7280;
 }
 
 .aura-info-card.aura-transformation-summary .aura-info-stat-value {
-  font-weight: 600;
+  color: #111827;
+  font-weight: 500;
 }
 
 .aura-info-card.aura-transformation-summary .aura-info-stat-value.highlight {
@@ -4896,7 +5216,7 @@ body {
   padding: 10px 12px;
   background: #fffbeb;
   border: 1px solid #fee685;
-  border-radius: var(--border-radius-sm);
+  border-radius: 8px;
 }
 
 .aura-action-required-icon {
@@ -4925,7 +5245,7 @@ body {
 /* Manual Review Widget */
 .aura-manual-review {
   border: 1px solid #ffd230;
-  border-radius: var(--border-radius-md);
+  border-radius: 8px;
   overflow: hidden;
   background: #fffbeb;
 }
@@ -5040,7 +5360,7 @@ body {
 /* Interactive Manual Review Widget */
 .aura-manual-review-interactive {
   border: 1px solid #ffd230;
-  border-radius: var(--border-radius-md);
+  border-radius: 8px;
   overflow: hidden;
   background: #fffbeb;
 }
@@ -5123,7 +5443,7 @@ body {
 
 .aura-ddl-panel {
   background: var(--color-neutral-12);
-  border-radius: var(--border-radius-md);
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -5171,12 +5491,13 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  height: 32px;
+  padding: 0 16px;
   background: #00c950;
   color: white;
   border: none;
-  border-radius: var(--border-radius-md);
-  font-size: var(--font-size-sm);
+  border-radius: 4px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -5202,12 +5523,13 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 20px;
+  height: 32px;
+  padding: 0 20px;
   background: var(--color-brand-9, #9810fa);
   color: white;
   border: none;
-  border-radius: var(--border-radius-md);
-  font-size: var(--font-size-sm);
+  border-radius: 4px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -5234,22 +5556,23 @@ body {
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .aura-info-stat {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: var(--font-size-sm);
+  font-size: 14px;
+  gap: 12px;
 }
 
 .aura-info-stat-label {
-  color: var(--color-text-secondary);
+  color: #6b7280;
+  min-width: 150px;
 }
 
 .aura-info-stat-value {
-  color: var(--color-text-primary);
+  color: #111827;
   font-weight: 500;
 }
 
@@ -5281,9 +5604,9 @@ body {
 }
 
 .aura-review-widget {
-  background: var(--color-bg-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -5349,9 +5672,9 @@ body {
 }
 
 .aura-table-selection {
-  background: var(--color-bg-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -5429,9 +5752,9 @@ body {
 
 /* Interactive Table Selector */
 .aura-interactive-table-selector {
-  background: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -5528,12 +5851,13 @@ body {
 }
 
 .aura-confirm-btn {
-  padding: 8px 16px;
+  height: 32px;
+  padding: 0 16px;
   background: var(--color-brand-9);
   color: white;
   border: none;
-  border-radius: var(--border-radius-md);
-  font-size: var(--font-size-sm);
+  border-radius: 4px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -5544,9 +5868,9 @@ body {
 }
 
 .aura-info-box {
-  background: var(--color-bg-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   padding: 12px 16px;
 }
 
@@ -5572,9 +5896,9 @@ body {
 }
 
 .aura-migration-plan {
-  background: var(--color-bg-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -5603,8 +5927,8 @@ body {
 
 .aura-code-preview {
   background: var(--color-neutral-12);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -5654,7 +5978,7 @@ body {
   padding: 14px 16px;
   background: rgba(245, 158, 11, 0.1);
   border: 1px solid rgba(245, 158, 11, 0.3);
-  border-radius: var(--border-radius-md);
+  border-radius: 8px;
 }
 
 .aura-warning-card-icon {
@@ -5705,18 +6029,19 @@ body {
   padding: 17px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .aura-migration-stat {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   font-size: var(--font-size-md);
+  gap: 12px;
 }
 
 .aura-migration-stat-label {
   color: var(--color-text-secondary);
+  min-width: 120px;
 }
 
 .aura-migration-stat-value {
@@ -5731,7 +6056,7 @@ body {
 .aura-migration-stat.divider {
   border-top: 1px solid #7bf1a8;
   padding-top: 9px;
-  margin-top: 1px;
+  margin-top: 3px;
 }
 
 .aura-followup {
@@ -5746,13 +6071,14 @@ body {
 }
 
 .aura-action-btn {
-  padding: 8px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
-  background: var(--color-bg-surface-2);
-  color: var(--color-text-primary);
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: white;
+  color: #111827;
   font-family: var(--font-family);
-  font-size: var(--font-size-sm);
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -9029,9 +9355,9 @@ body {
 
 /* Billing Chart Card */
 .aura-billing-chart {
-  background: #FFFFFF;
-  border: 1px solid #E6E5EA;
-  border-radius: 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   padding: 16px;
   margin: 12px 0;
 }
@@ -9285,9 +9611,9 @@ body {
   align-items: center;
   gap: 8px;
   padding: 16px 24px;
-  background: var(--color-neutral-1);
-  border: 1px solid var(--color-neutral-6);
-  border-radius: var(--border-radius-md);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
   min-width: 100px;
@@ -9317,13 +9643,13 @@ body {
 .aura-catalog-btn {
   height: 32px;
   padding: 0 16px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--color-neutral-6);
-  background: var(--color-neutral-1);
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: white;
   cursor: pointer;
-  font-size: var(--font-size-md);
+  font-size: 14px;
   font-weight: 500;
-  color: var(--color-neutral-11);
+  color: #111827;
   transition: all 0.2s;
 }
 
@@ -9344,13 +9670,13 @@ body {
 .aura-connection-type-btn {
   height: 32px;
   padding: 0 16px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--color-neutral-6);
-  background: var(--color-neutral-1);
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: white;
   cursor: pointer;
-  font-size: var(--font-size-md);
+  font-size: 14px;
   font-weight: 500;
-  color: var(--color-neutral-11);
+  color: #111827;
   transition: all 0.2s;
 }
 
@@ -9374,13 +9700,13 @@ body {
   gap: 10px;
   height: 40px;
   padding: 0 16px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--color-neutral-6);
-  background: var(--color-neutral-1);
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: white;
   cursor: pointer;
-  font-size: var(--font-size-md);
+  font-size: 14px;
   font-weight: 500;
-  color: var(--color-neutral-11);
+  color: #111827;
   transition: all 0.2s;
   text-align: left;
 }
@@ -9424,13 +9750,13 @@ body {
   gap: 10px;
   height: 40px;
   padding: 0 16px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--color-neutral-6);
-  background: var(--color-neutral-1);
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: white;
   cursor: pointer;
-  font-size: var(--font-size-md);
+  font-size: 14px;
   font-weight: 500;
-  color: var(--color-neutral-11);
+  color: #111827;
   transition: all 0.2s;
   text-align: left;
 }
@@ -9515,13 +9841,13 @@ body {
   width: fit-content;
   height: 32px;
   padding: 0 16px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--color-neutral-6);
-  background: var(--color-neutral-1);
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: white;
   cursor: pointer;
-  font-size: var(--font-size-md);
+  font-size: 14px;
   font-weight: 500;
-  color: var(--color-neutral-11);
+  color: #111827;
   transition: all 0.2s;
 }
 
@@ -9757,17 +10083,18 @@ body {
 }
 
 .aura-table-preview {
-  background: var(--color-bg-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   padding: 12px 16px;
   margin-top: 12px;
+  overflow: hidden;
 }
 
 .aura-table-preview-title {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--color-text-secondary);
+  color: #6b7280;
   margin-bottom: 8px;
 }
 
@@ -9779,24 +10106,25 @@ body {
 
 .aura-table-preview-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: 13px;
+  font-size: 14px;
+  gap: 12px;
 }
 
 .aura-table-preview-name {
-  color: var(--color-text-primary);
-  font-weight: 500;
+  color: #6b7280;
+  min-width: 150px;
 }
 
 .aura-table-preview-rows {
-  color: var(--color-text-secondary);
+  color: #111827;
+  font-weight: 500;
 }
 
 .aura-speed-layer-stats {
   background: #f0fdf4;
   border: 1px solid #b9f8cf;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 14px 16px;
   margin-top: 12px;
   display: flex;
@@ -9806,13 +10134,14 @@ body {
 
 .aura-speed-stat {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 12px;
   font-size: var(--font-size-md);
 }
 
 .aura-speed-stat-label {
   color: var(--color-text-secondary);
+  min-width: 120px;
 }
 
 .aura-speed-stat-value {
@@ -9825,25 +10154,26 @@ body {
 }
 
 .aura-speed-layer-status {
-  background: var(--color-bg-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   padding: 14px 16px;
   margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .aura-speed-status-stat {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 12px;
   font-size: var(--font-size-md);
 }
 
 .aura-speed-status-label {
   color: var(--color-text-secondary);
+  min-width: 120px;
 }
 
 .aura-speed-status-value {
@@ -10054,7 +10384,7 @@ body {
   padding: 14px 16px;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: left;
@@ -10187,7 +10517,7 @@ body {
 .materialization-card-row {
   display: flex;
   align-items: center;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f3f4f6;
   gap: 12px;
 }
@@ -10197,13 +10527,13 @@ body {
 }
 
 .materialization-card-label {
-  font-size: 13px;
+  font-size: 14px;
   color: #6b7280;
   min-width: 90px;
 }
 
 .materialization-card-value {
-  font-size: 13px;
+  font-size: 14px;
   color: #111827;
   font-weight: 500;
   background: transparent;
@@ -10422,7 +10752,7 @@ code.materialization-card-value {
   padding: 12px 14px;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: left;
@@ -10863,7 +11193,7 @@ code.materialization-card-value {
   padding: 12px 16px;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
   text-align: left;
@@ -11020,7 +11350,7 @@ code.materialization-card-value {
   padding: 14px 16px;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
   text-align: left;
@@ -11071,13 +11401,14 @@ code.materialization-card-value {
 
 .aura-dropdown-select {
   width: 100%;
-  padding: 12px 40px 12px 16px;
+  height: 32px;
+  padding: 0 40px 0 16px;
   font-size: 14px;
   font-family: inherit;
   color: #101828;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
@@ -11106,17 +11437,18 @@ code.materialization-card-value {
   display: flex;
   align-items: center;
   gap: 12px;
+  height: 32px;
 }
 
 .aura-dropdown-submit {
-  padding: 12px 20px;
+  padding: 8px 20px;
   font-size: 14px;
   font-weight: 500;
   font-family: inherit;
   color: white;
   background: var(--color-brand-8);
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
@@ -11144,8 +11476,8 @@ code.materialization-card-value {
 
 .aura-recommendation-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 16px;
   padding: 12px 16px;
   border-bottom: 1px solid #f3f4f6;
 }
@@ -11161,12 +11493,14 @@ code.materialization-card-value {
 .aura-recommendation-label {
   font-size: 14px;
   color: #6b7280;
+  width: 120px;
+  flex-shrink: 0;
 }
 
 .aura-recommendation-value {
   font-size: 14px;
   font-weight: 500;
-  color: #101828;
+  color: #111827;
 }
 
 /* Replica Selector */
@@ -11186,7 +11520,7 @@ code.materialization-card-value {
   padding: 14px 16px;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
   text-align: left;
@@ -11287,7 +11621,7 @@ code.materialization-card-value {
   padding: 12px 16px;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
   font-size: 13px;
@@ -11326,8 +11660,8 @@ code.materialization-card-value {
 
 .aura-domain-form-row {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
+  gap: 16px;
   padding: 12px 16px;
   border-bottom: 1px solid #f3f4f6;
 }
@@ -11337,17 +11671,16 @@ code.materialization-card-value {
 }
 
 .aura-domain-form-label {
-  font-size: 13px;
+  font-size: 14px;
   color: #6b7280;
-  min-width: 100px;
+  width: 100px;
+  flex-shrink: 0;
 }
 
 .aura-domain-form-value {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  color: #101828;
-  text-align: right;
-  flex: 1;
+  color: #111827;
 }
 
 .aura-domain-form-value.highlight {
