@@ -1594,6 +1594,25 @@ body {
   font-weight: 700;
 }
 
+.highlight-code {
+  font-family: var(--font-family-mono);
+  font-size: 13px;
+  color: #059669;
+  background: transparent;
+  padding: 0;
+}
+
+.text-success {
+  color: #059669;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.text-success svg {
+  flex-shrink: 0;
+}
+
 .message-helper-text {
   font-size: 13px;
   color: #6b7280;
@@ -4432,39 +4451,15 @@ body {
   padding: 0;
 }
 
-.thinking-block-pulse {
-  display: inline-flex;
-  align-items: center;
+.thinking-text {
   font-size: 13px;
   color: #6b7280;
-}
-
-.thinking-text {
-  animation: thinking-fade 1.5s ease-in-out infinite;
+  animation: thinking-fade 2s ease-in-out infinite;
 }
 
 @keyframes thinking-fade {
   0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }
-}
-
-.thinking-dots {
-  display: inline-flex;
-  margin-left: 1px;
-}
-
-.thinking-dots .dot {
-  animation: dot-pulse 1.4s ease-in-out infinite;
-  opacity: 0.3;
-}
-
-.thinking-dots .dot:nth-child(1) { animation-delay: 0s; }
-.thinking-dots .dot:nth-child(2) { animation-delay: 0.2s; }
-.thinking-dots .dot:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes dot-pulse {
-  0%, 80%, 100% { opacity: 0.3; }
-  40% { opacity: 1; }
 }
 
 /* ----------------------------------------
@@ -9947,6 +9942,102 @@ body {
   min-width: 90px;
 }
 
+.aura-dataset-card-description {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.5;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* Sample Data Table */
+.aura-sample-data {
+  margin-top: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.aura-sample-data-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.aura-sample-data-header .aura-dataset-chip-icon {
+  width: 28px;
+  height: 28px;
+  background: #e5e7eb;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.aura-sample-data-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aura-sample-data-header .aura-dataset-chip-name {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-family-mono);
+  color: #111827;
+}
+
+.aura-sample-data-header .aura-dataset-chip-source {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.aura-sample-data-table {
+  overflow-x: auto;
+}
+
+.aura-sample-data-row {
+  display: flex;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aura-sample-data-row:last-child {
+  border-bottom: none;
+}
+
+.aura-sample-data-row.header {
+  background: #fafafa;
+}
+
+.aura-sample-data-row.header span {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.aura-sample-data-row span {
+  flex: 1;
+  min-width: 80px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: var(--font-family-mono);
+  color: #374151;
+  white-space: nowrap;
+  border-right: 1px solid #f3f4f6;
+}
+
+.aura-sample-data-row span:last-child {
+  border-right: none;
+}
+
 /* Scope Options */
 .aura-scope-options {
   display: flex;
@@ -10084,6 +10175,116 @@ body {
   color: #9ca3af;
 }
 
+/* Materialization Card */
+.materialization-card {
+  margin-top: 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.materialization-card-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 12px;
+}
+
+.materialization-card-row:last-child {
+  border-bottom: none;
+}
+
+.materialization-card-label {
+  font-size: 13px;
+  color: #6b7280;
+  min-width: 90px;
+}
+
+.materialization-card-value {
+  font-size: 13px;
+  color: #111827;
+  font-weight: 500;
+  background: transparent;
+  padding: 0;
+}
+
+.materialization-card-value.highlight {
+  color: #059669;
+}
+
+code.materialization-card-value {
+  font-family: var(--font-family-mono);
+}
+
+/* Query Examples */
+.query-examples {
+  margin-top: 12px;
+}
+
+.query-examples-intro {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+
+.query-examples-list {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.query-examples-list li {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+/* Bullet List */
+.bullet-list {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.bullet-list li {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+.bullet-list li strong {
+  font-weight: 600;
+}
+
+/* Footer Text */
+.footer-text {
+  margin-top: 12px;
+}
+
+/* Completion Notes */
+.completion-notes {
+  margin-top: 12px;
+}
+
+.completion-note {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+}
+
+.completion-note:last-child {
+  margin-bottom: 0;
+}
+
+/* Muted text helper */
+.muted {
+  color: #6b7280;
+}
+
 /* Optimized Structure Card */
 .aura-optimized-structure {
   display: flex;
@@ -10142,38 +10343,35 @@ body {
 
 /* Speed Layer Complete Card */
 .aura-speed-layer-complete {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 8px;
-  padding: 16px;
   margin-top: 12px;
 }
 
 .aura-complete-stats {
   display: flex;
-  gap: 24px;
-  padding-bottom: 14px;
-  margin-bottom: 14px;
-  border-bottom: 1px solid #bbf7d0;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .aura-complete-stat {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  padding: 12px 14px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
 }
 
 .aura-complete-stat-label {
-  font-size: 11px;
+  font-size: 12px;
   color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
 }
 
 .aura-complete-stat-value {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-  color: #16a34a;
+  color: #111827;
 }
 
 .aura-complete-benefits {
@@ -10199,18 +10397,13 @@ body {
 }
 
 .aura-complete-routing {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid #bbf7d0;
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
+  line-height: 1.5;
 }
 
 .aura-complete-routing svg {
-  color: #7c3aed;
+  display: none;
 }
 
 /* Next Actions */
@@ -10226,10 +10419,10 @@ body {
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: left;
@@ -10237,14 +10430,14 @@ body {
 
 .aura-next-action-btn:hover {
   background: #f9fafb;
-  border-color: #7c3aed;
+  border-color: #d1d5db;
 }
 
 .aura-next-action-icon {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background: #f3f4f6;
-  border-radius: 6px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;

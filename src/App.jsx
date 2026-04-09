@@ -1950,20 +1950,24 @@ const POSITIONS_DATA_FLOW = [
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'I found this dataset that matches your request:' }
+        { type: 'text', content: 'I found a dataset in your lakehouse (reference datasets) that matches what you\'re looking for: ' },
+        { type: 'highlight', content: 'positions_daily' },
+        { type: 'text', content: '.' },
+        { type: 'break' },
+        { type: 'text', content: 'This appears to be your primary positions dataset based on structure and usage.' }
       ],
-      datasetCard: {
+      datasetChip: {
         name: 'positions_daily',
-        source: 'Lakehouse · Reference Datasets',
-        badge: 'Primary match',
-        schema: [
-          { name: 'account_id', type: 'STRING' },
-          { name: 'as_of_date', type: 'DATE' },
-          { name: 'instrument_id', type: 'STRING' },
-          { name: 'quantity', type: 'DECIMAL' },
-          { name: 'market_value', type: 'DECIMAL' },
-          { name: 'currency', type: 'STRING' },
-          { name: 'book', type: 'STRING' }
+        source: 'Lakehouse · Reference Datasets'
+      },
+      sampleData: {
+        columns: ['account_id', 'as_of_date', 'instrument_id', 'quantity', 'market_value', 'currency'],
+        rows: [
+          ['ACC-001', '2024-03-15', 'AAPL', '1,500', '$284,250.00', 'USD'],
+          ['ACC-001', '2024-03-15', 'GOOGL', '800', '$112,400.00', 'USD'],
+          ['ACC-002', '2024-03-15', 'MSFT', '2,200', '$924,000.00', 'USD'],
+          ['ACC-002', '2024-03-15', 'AMZN', '450', '$78,750.00', 'USD'],
+          ['ACC-003', '2024-03-15', 'NVDA', '1,100', '$962,500.00', 'USD']
         ]
       },
       followUp: 'Does this look right?',
@@ -1998,42 +2002,44 @@ const POSITIONS_DATA_FLOW = [
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: "Here's the speed layer I'll create:" }
+        { type: 'text', content: "Understood. I'll materialize this section:" }
       ],
-      speedLayerPlan: {
-        rows: [
-          { label: 'Source', value: 'positions_daily' },
-          { label: 'Filter', value: 'Last 90 days · US equities' },
-          { label: 'Speed layer', value: 'positions_speed_us_equities', highlight: true }
-        ],
-        benefits: [
-          'Sub-second query performance',
-          'Optimized for analytics and AI workloads'
-        ],
-        exampleQueries: [
+      materializationPlan: {
+        source: 'positions_daily',
+        section: ['Last 90 days', 'US equities'],
+        speedLayer: 'positions_speed_us_equities'
+      },
+      queryExamples: {
+        intro: 'This will give you sub-second access for queries like:',
+        queries: [
           'Current positions by book',
-          'Top exposures by sector',
+          'Top exposures',
           'Day-over-day changes'
         ]
       },
-      followUp: 'How would you like the data structured?',
-      actions: ['Keep it raw', 'Add aggregations']
+      followUp: 'Would you like the raw data or further aggregated?',
+      actions: ['Raw data', 'Add aggregations']
     }
   },
-  // Step 6: Optimized Structure card (when user selects aggregations)
+  // Step 6: Optimized Structure description
   {
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: "I'll create these optimized views:" }
+        { type: 'text', content: "Great — I'll create:" },
+        { type: 'break' },
+        { type: 'bold', content: 'Base layer' },
+        { type: 'break' },
+        { type: 'text', content: 'Filtered positions for your selected section' },
+        { type: 'break' },
+        { type: 'break' },
+        { type: 'bold', content: 'Aggregated views' }
       ],
-      optimizedStructure: {
-        layers: [
-          { name: 'Base Layer', description: 'Filtered positions for US equities (90 days)', type: 'base' },
-          { name: 'Current Positions', description: 'Latest snapshot per account & instrument', type: 'view' },
-          { name: 'Exposure by Sector', description: 'Aggregated market value by sector', type: 'view' }
-        ]
-      },
+      bulletList: [
+        { label: 'Current Positions', description: 'latest per account & instrument' },
+        { label: 'Exposure by Sector', description: 'aggregated market value' }
+      ],
+      footerText: "I'm materializing this now and will keep it continuously in sync.",
       autoAdvance: true
     }
   },
@@ -2042,33 +2048,34 @@ const POSITIONS_DATA_FLOW = [
     type: 'agent',
     content: {
       progress: true,
-      thinkingLabel: 'Building speed layer',
+      thinkingLabel: 'Thinking',
       text: 'Setting up your speed layer...',
       steps: [
-        'Creating base tables',
-        'Loading initial data',
-        'Configuring real-time sync'
+        'Materialization is now in progress',
+        'Loading your initial dataset and preparing optimized structures'
       ],
       completedState: {
-        text: 'Speed layer is ready',
+        text: 'Loading your initial dataset and preparing optimized structures',
         subtext: ''
       }
     }
   },
-  // Step 8: Completion card
+  // Step 8: Completion message
   {
     type: 'agent',
     content: {
-      success: true,
-      title: 'Speed Layer Ready ✓',
-      speedLayerComplete: {
-        stats: [
-          { label: 'Query latency', value: '< 50ms' },
-          { label: 'Sync status', value: 'Real-time' },
-          { label: 'Views created', value: '3' }
-        ],
-        routingNote: "I'll automatically route 'positions data' requests to this layer."
-      },
+      text: [
+        { type: 'success', content: 'Done. Your speed layer is ready.' }
+      ],
+      bulletList: [
+        { text: 'Queries now execute in milliseconds instead of seconds or minutes' },
+        { text: 'Data stays continuously in sync with your source dataset' },
+        { text: 'This layer is optimized for both analytical workloads and AI agents' }
+      ],
+      completionNotes: [
+        'We can repeat this pattern for other sections (for example, EMEA credit or global macro) without you worrying about where the data lives.',
+        'Going forward, I\'ll route all "positions data" requests to this optimized layer by default.'
+      ],
       autoAdvance: true
     }
   },
@@ -5175,6 +5182,26 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
   const textItems = message.type === 'agent' && Array.isArray(message.content?.text) ? message.content.text : []
   const analysisTextItems = message.type === 'agent' && Array.isArray(message.content?.analysisText) ? message.content.analysisText : []
   
+  // Calculate paragraph count (grouped by 'break' type)
+  const getParagraphCount = (items) => {
+    if (!items || items.length === 0) return 0
+    let count = 0
+    let hasContent = false
+    items.forEach(item => {
+      if (item.type === 'break') {
+        if (hasContent) {
+          count++
+          hasContent = false
+        }
+      } else {
+        hasContent = true
+      }
+    })
+    if (hasContent) count++
+    return count
+  }
+  const paragraphCount = getParagraphCount(textItems)
+  
   // Staged rendering: intro text → chart → analysis text → query table
   const hasChart = message.content?.ui?.state === 'placeholder'
   const hasAnalysisText = analysisTextItems.length > 0
@@ -5183,7 +5210,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
   
   // Initialize paragraphsCompleted to true if there are no text items (e.g., progress-only messages, or text is a string)
   const [currentParagraph, setCurrentParagraph] = useState(0)
-  const [paragraphsCompleted, setParagraphsCompleted] = useState(textItems.length === 0)
+  const [paragraphsCompleted, setParagraphsCompleted] = useState(paragraphCount === 0)
   const [showConnections, setShowConnections] = useState(false)
   const [expandedQueryIndex, setExpandedQueryIndex] = useState(null)
   const [expandedOptQueryIndex, setExpandedOptQueryIndex] = useState(null)
@@ -5202,8 +5229,8 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
   const [visibleOptCardCount, setVisibleOptCardCount] = useState(!isTyping ? optimizationCardCount : 0)
 
   useEffect(() => {
-    if (!isTyping || textItems.length === 0) {
-      setCurrentParagraph(textItems.length)
+    if (!isTyping || paragraphCount === 0) {
+      setCurrentParagraph(paragraphCount)
       setParagraphsCompleted(true)
       if (!isMultiStageMessage) {
         setShowChart(true)
@@ -5211,11 +5238,11 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         setShowQueryTable(true)
       }
     }
-  }, [isTyping, textItems.length, isMultiStageMessage])
+  }, [isTyping, paragraphCount, isMultiStageMessage])
 
   // For messages without text array, call onTypingComplete after appropriate delay
   useEffect(() => {
-    if (isTyping && textItems.length === 0) {
+    if (isTyping && paragraphCount === 0) {
       let delay = 500 // default short delay for non-progress messages
       
       if (message.content?.progress) {
@@ -5231,7 +5258,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
       }, delay)
       return () => clearTimeout(timer)
     }
-  }, [isTyping, textItems.length, message.content?.progress, message.content?.steps, onTypingComplete])
+  }, [isTyping, paragraphCount, message.content?.progress, message.content?.steps, onTypingComplete])
 
   // Stage 2: Show chart after intro text completes (for multi-stage messages)
   useEffect(() => {
@@ -5275,7 +5302,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
   }, [hasOptimizationCards, paragraphsCompleted, showOptimizationCards, optimizationCardCount, onTypingComplete])
 
   const handleParagraphComplete = () => {
-    if (currentParagraph < textItems.length - 1) {
+    if (currentParagraph < paragraphCount - 1) {
       setCurrentParagraph(prev => prev + 1)
     } else {
       setParagraphsCompleted(true)
@@ -5317,6 +5344,50 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
   const isLast = content.success
   const timeDisplay = status || (timestamp ? formatTime(timestamp) : 'Just now')
 
+  // Group text items into paragraphs (separated by 'break' type)
+  const groupTextIntoParagraphs = (textArray) => {
+    const paragraphs = []
+    let currentPara = []
+    
+    textArray.forEach((item) => {
+      if (item.type === 'break') {
+        if (currentPara.length > 0) {
+          paragraphs.push(currentPara)
+          currentPara = []
+        }
+      } else if (item.type === 'list') {
+        if (currentPara.length > 0) {
+          paragraphs.push(currentPara)
+          currentPara = []
+        }
+        paragraphs.push([item])
+      } else {
+        currentPara.push(item)
+      }
+    })
+    
+    if (currentPara.length > 0) {
+      paragraphs.push(currentPara)
+    }
+    
+    return paragraphs
+  }
+
+  const renderInlineElement = (item, idx) => {
+    if (item.type === 'text') return <span key={idx}>{item.content}</span>
+    if (item.type === 'bold') return <strong key={idx}>{item.content}</strong>
+    if (item.type === 'highlight') return <code key={idx} className="highlight-code">{item.content}</code>
+    if (item.type === 'success') return <span key={idx} className="text-success"><IconFA name="check" size={12} /> {item.content}</span>
+    if (item.type === 'mixed') {
+      return (
+        <span key={idx}>
+          {item.content}<strong>{item.bold}</strong>{item.after}{item.bold2 && <strong>{item.bold2}</strong>}{item.after2}{item.bold3 && <strong>{item.bold3}</strong>}
+        </span>
+      )
+    }
+    return null
+  }
+
   const renderTextContent = (t, index) => {
     const isCurrentlyTyping = isTyping && index === currentParagraph && !paragraphsCompleted
     const shouldShow = !isTyping || index <= currentParagraph
@@ -5326,6 +5397,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
     const getPlainText = (textItem) => {
       if (textItem.type === 'bold') return textItem.content
       if (textItem.type === 'text') return textItem.content
+      if (textItem.type === 'highlight') return textItem.content
       if (textItem.type === 'mixed') {
         return `${textItem.content}${textItem.bold}${textItem.after || ''}${textItem.bold2 || ''}${textItem.after2 || ''}${textItem.bold3 || ''}`
       }
@@ -5369,6 +5441,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
       <p key={index} className="message-text">
         {t.type === 'bold' && <strong>{t.content}</strong>}
         {t.type === 'text' && t.content}
+        {t.type === 'highlight' && <code className="highlight-code">{t.content}</code>}
         {t.type === 'mixed' && (
           <>
             {t.content}<strong>{t.bold}</strong>{t.after}{t.bold2 && <strong>{t.bold2}</strong>}{t.after2}{t.bold3 && <strong>{t.bold3}</strong>}
@@ -5376,6 +5449,64 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         )}
       </p>
     )
+  }
+
+  // Render grouped paragraphs
+  const renderGroupedText = (textArray) => {
+    const paragraphs = groupTextIntoParagraphs(textArray)
+    
+    return paragraphs.map((para, pIdx) => {
+      // Handle list separately
+      if (para.length === 1 && para[0].type === 'list') {
+        const isCurrentlyTyping = isTyping && pIdx === currentParagraph && !paragraphsCompleted
+        const shouldShow = !isTyping || pIdx <= currentParagraph
+        if (!shouldShow) return null
+        return (
+          <AnimatedList 
+            key={pIdx} 
+            items={para[0].items} 
+            isTyping={isCurrentlyTyping}
+            onComplete={handleParagraphComplete}
+          />
+        )
+      }
+
+      // Handle helper text
+      if (para.length === 1 && para[0].type === 'helper') {
+        const shouldShow = !isTyping || pIdx <= currentParagraph
+        if (!shouldShow) return null
+        return (
+          <p key={pIdx} className="message-text message-helper-text">
+            {para[0].content}
+          </p>
+        )
+      }
+
+      const isCurrentlyTyping = isTyping && pIdx === currentParagraph && !paragraphsCompleted
+      const shouldShow = !isTyping || pIdx <= currentParagraph
+      if (!shouldShow) return null
+
+      if (isCurrentlyTyping) {
+        const plainText = para.map(item => {
+          if (item.type === 'text' || item.type === 'bold' || item.type === 'highlight') return item.content
+          if (item.type === 'mixed') return `${item.content}${item.bold}${item.after || ''}`
+          return ''
+        }).join('')
+        return (
+          <p key={pIdx} className="message-text">
+            <TypedText onComplete={handleParagraphComplete}>
+              {plainText}
+            </TypedText>
+          </p>
+        )
+      }
+
+      return (
+        <p key={pIdx} className="message-text">
+          {para.map((item, idx) => renderInlineElement(item, idx))}
+        </p>
+      )
+    })
   }
 
   return (
@@ -5388,7 +5519,7 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
         </div>
       )}
       <div className="message-content">
-        {content.text && Array.isArray(content.text) && content.text.map((t, i) => renderTextContent(t, i))}
+        {content.text && Array.isArray(content.text) && renderGroupedText(content.text)}
 
         {content.stats && (!isTyping || paragraphsCompleted) && (
           <div className="stats-grid fade-in">
@@ -6015,9 +6146,31 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
+        {content.bulletList && (!isTyping || paragraphsCompleted) && (
+          <ul className="bullet-list fade-in">
+            {content.bulletList.map((item, i) => (
+              <li key={i}>
+                {item.label ? (
+                  <><strong>{item.label}</strong> → {item.description}</>
+                ) : (
+                  item.text
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {content.completionNotes && (!isTyping || paragraphsCompleted) && (
+          <div className="completion-notes fade-in">
+            {content.completionNotes.map((note, i) => (
+              <p key={i} className="completion-note">{note}</p>
+            ))}
+          </div>
+        )}
+
         {/* Migration-specific content types */}
         {content.footerText && (!isTyping || paragraphsCompleted) && (
-          <p className="message-text fade-in"><strong>{content.footerText}</strong></p>
+          <p className="message-text footer-text fade-in">{content.footerText}</p>
         )}
 
         {content.whyCard && (!isTyping || paragraphsCompleted) && (
@@ -6311,17 +6464,52 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                 <span className="aura-dataset-card-badge">{content.datasetCard.badge}</span>
               )}
             </div>
-            <div className="aura-dataset-card-schema">
-              <div className="aura-dataset-schema-row header">
-                {content.datasetCard.schema.map((col, i) => (
-                  <span key={i}>{col.name}</span>
+            {content.datasetCard.description && (
+              <p className="aura-dataset-card-description">{content.datasetCard.description}</p>
+            )}
+            {content.datasetCard.schema && (
+              <div className="aura-dataset-card-schema">
+                <div className="aura-dataset-schema-row header">
+                  {content.datasetCard.schema.map((col, i) => (
+                    <span key={i}>{col.name}</span>
+                  ))}
+                </div>
+                <div className="aura-dataset-schema-row types">
+                  {content.datasetCard.schema.map((col, i) => (
+                    <span key={i}>{col.type}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {content.sampleData && (!isTyping || paragraphsCompleted) && (
+          <div className="aura-sample-data fade-in">
+            {content.datasetChip && (
+              <div className="aura-sample-data-header">
+                <div className="aura-dataset-chip-icon">
+                  <IconFA name="table" size={12} />
+                </div>
+                <div className="aura-sample-data-header-info">
+                  <span className="aura-dataset-chip-name">{content.datasetChip.name}</span>
+                  <span className="aura-dataset-chip-source">{content.datasetChip.source}</span>
+                </div>
+              </div>
+            )}
+            <div className="aura-sample-data-table">
+              <div className="aura-sample-data-row header">
+                {content.sampleData.columns.map((col, i) => (
+                  <span key={i}>{col}</span>
                 ))}
               </div>
-              <div className="aura-dataset-schema-row types">
-                {content.datasetCard.schema.map((col, i) => (
-                  <span key={i}>{col.type}</span>
-                ))}
-              </div>
+              {content.sampleData.rows.map((row, i) => (
+                <div key={i} className="aura-sample-data-row">
+                  {row.map((cell, j) => (
+                    <span key={j}>{cell}</span>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -6373,6 +6561,34 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
           </div>
         )}
 
+        {content.materializationPlan && (!isTyping || paragraphsCompleted) && (
+          <div className="materialization-card fade-in">
+            <div className="materialization-card-row">
+              <span className="materialization-card-label">Source</span>
+              <code className="materialization-card-value">{content.materializationPlan.source}</code>
+            </div>
+            <div className="materialization-card-row">
+              <span className="materialization-card-label">Section</span>
+              <span className="materialization-card-value">{content.materializationPlan.section.join(', ')}</span>
+            </div>
+            <div className="materialization-card-row">
+              <span className="materialization-card-label">Speed layer</span>
+              <code className="materialization-card-value highlight">{content.materializationPlan.speedLayer}</code>
+            </div>
+          </div>
+        )}
+
+        {content.queryExamples && (!isTyping || paragraphsCompleted) && (
+          <div className="query-examples fade-in">
+            <p className="query-examples-intro">{content.queryExamples.intro}</p>
+            <ul className="query-examples-list">
+              {content.queryExamples.queries.map((q, i) => (
+                <li key={i}>{q}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {content.optimizedStructure && (!isTyping || paragraphsCompleted) && (
           <div className="aura-optimized-structure fade-in">
             {content.optimizedStructure.layers.map((layer, i) => (
@@ -6401,20 +6617,9 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                 ))}
               </div>
             )}
-            {content.speedLayerComplete.benefits && (
-              <ul className="aura-complete-benefits">
-                {content.speedLayerComplete.benefits.map((b, i) => (
-                  <li key={i}>
-                    <IconFA name="check" size={12} />
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
+            {content.speedLayerComplete.routingNote && (
+              <p className="aura-complete-routing">{content.speedLayerComplete.routingNote}</p>
             )}
-            <div className="aura-complete-routing">
-              <IconFA name="sparkles" size={12} />
-              <span>{content.speedLayerComplete.routingNote}</span>
-            </div>
           </div>
         )}
 
@@ -7897,14 +8102,7 @@ function ThinkingBlock({ content, isExpanded: controlledExpanded, onToggle }) {
   if (phase === 'thinking') {
     return (
       <div className="thinking-block thinking">
-        <div className="thinking-block-pulse">
-          <span className="thinking-text">Thinking</span>
-          <span className="thinking-dots">
-            <span className="dot">.</span>
-            <span className="dot">.</span>
-            <span className="dot">.</span>
-          </span>
-        </div>
+        <span className="thinking-text">Thinking...</span>
       </div>
     )
   }
@@ -8170,6 +8368,7 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
     const getTextContent = (t) => {
       if (t.type === 'bold') return t.content
       if (t.type === 'text') return t.content
+      if (t.type === 'highlight') return t.content
       if (t.type === 'success') return t.content
       if (t.type === 'mixed') return `${t.content || ''}${t.bold || ''}${t.after || ''}${t.bold2 || ''}${t.after2 || ''}`
       return ''
@@ -8194,33 +8393,69 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
       )
     }
 
-    const textLines = content.text && Array.isArray(content.text) ? content.text : []
+    // Group text items into paragraphs (separated by 'break' type)
+    const groupIntoParagraphs = (textArray) => {
+      const paragraphs = []
+      let currentPara = []
+      
+      textArray.forEach((item) => {
+        if (item.type === 'break') {
+          if (currentPara.length > 0) {
+            paragraphs.push(currentPara)
+            currentPara = []
+          }
+        } else {
+          currentPara.push(item)
+        }
+      })
+      
+      if (currentPara.length > 0) {
+        paragraphs.push(currentPara)
+      }
+      
+      return paragraphs
+    }
+
+    const renderInline = (item, idx) => {
+      if (item.type === 'text') return <span key={idx}>{item.content}</span>
+      if (item.type === 'bold') return <strong key={idx}>{item.content}</strong>
+      if (item.type === 'highlight') return <code key={idx} className="highlight-code">{item.content}</code>
+      if (item.type === 'success') return <span key={idx} className="text-success"><IconFA name="check" size={12} /> {item.content}</span>
+      if (item.type === 'mixed') {
+        return (
+          <span key={idx}>
+            {item.content}<strong>{item.bold}</strong>{item.after}{item.bold2 && <strong>{item.bold2}</strong>}{item.after2}
+          </span>
+        )
+      }
+      return null
+    }
+
+    const textItems = content.text && Array.isArray(content.text) ? content.text : []
+    const paragraphs = groupIntoParagraphs(textItems)
 
     return (
       <div className="aura-message-content">
-        {textLines.map((t, i) => {
-          const isLineTyped = isTyped || i < currentLine
-          const isLineActive = !isTyped && i === currentLine
+        {paragraphs.map((para, pIdx) => {
+          const isLineTyped = isTyped || pIdx < currentLine
+          const isLineActive = !isTyped && pIdx === currentLine
           
           if (!isLineTyped && !isLineActive) return null
+
+          // Get combined text for typing animation
+          const combinedText = para.map(item => getTextContent(item)).join('')
+          const hasSuccess = para.some(item => item.type === 'success')
+          const hasHelper = para.some(item => item.type === 'helper')
           
           return (
-            <p key={i} className={`aura-message-text ${t.type === 'success' ? 'aura-text-success' : ''} ${t.type === 'helper' ? 'aura-helper-text' : ''}`}>
-              {t.type === 'success' && <span className="success-check">✓</span>}
-              {t.type === 'success' && ' '}
-              {t.type === 'bold' ? (
-                <strong>
-                  <TypewriterLine
-                    text={t.content}
-                    isTyped={isLineTyped}
-                    isActive={isLineActive}
-                    onComplete={advanceLine}
-                    speed={18}
-                  />
-                </strong>
+            <p key={pIdx} className={`aura-message-text ${hasSuccess ? 'aura-text-success' : ''} ${hasHelper ? 'aura-helper-text' : ''}`}>
+              {hasSuccess && <span className="success-check">✓</span>}
+              {hasSuccess && ' '}
+              {isLineTyped ? (
+                para.map((item, idx) => renderInline(item, idx))
               ) : (
                 <TypewriterLine
-                  text={getTextContent(t)}
+                  text={combinedText}
                   isTyped={isLineTyped}
                   isActive={isLineActive}
                   onComplete={advanceLine}
@@ -8231,8 +8466,30 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
           )
         })}
 
+        {allDone && content.bulletList && (
+          <ul className="bullet-list aura-fade-in">
+            {content.bulletList.map((item, i) => (
+              <li key={i}>
+                {item.label ? (
+                  <><strong>{item.label}</strong> → {item.description}</>
+                ) : (
+                  item.text
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {allDone && content.completionNotes && (
+          <div className="completion-notes aura-fade-in">
+            {content.completionNotes.map((note, i) => (
+              <p key={i} className="completion-note">{note}</p>
+            ))}
+          </div>
+        )}
+
         {allDone && content.footerText && (
-          <p className="aura-message-text aura-footer-text"><strong>{content.footerText}</strong></p>
+          <p className="aura-message-text footer-text aura-fade-in">{content.footerText}</p>
         )}
 
         {allDone && content.whyCard && (
@@ -8526,17 +8783,52 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                 <span className="aura-dataset-card-badge">{content.datasetCard.badge}</span>
               )}
             </div>
-            <div className="aura-dataset-card-schema">
-              <div className="aura-dataset-schema-row header">
-                {content.datasetCard.schema.map((col, i) => (
-                  <span key={i}>{col.name}</span>
+            {content.datasetCard.description && (
+              <p className="aura-dataset-card-description">{content.datasetCard.description}</p>
+            )}
+            {content.datasetCard.schema && (
+              <div className="aura-dataset-card-schema">
+                <div className="aura-dataset-schema-row header">
+                  {content.datasetCard.schema.map((col, i) => (
+                    <span key={i}>{col.name}</span>
+                  ))}
+                </div>
+                <div className="aura-dataset-schema-row types">
+                  {content.datasetCard.schema.map((col, i) => (
+                    <span key={i}>{col.type}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {allDone && content.sampleData && (
+          <div className="aura-sample-data aura-fade-in">
+            {content.datasetChip && (
+              <div className="aura-sample-data-header">
+                <div className="aura-dataset-chip-icon">
+                  <IconFA name="table" size={12} />
+                </div>
+                <div className="aura-sample-data-header-info">
+                  <span className="aura-dataset-chip-name">{content.datasetChip.name}</span>
+                  <span className="aura-dataset-chip-source">{content.datasetChip.source}</span>
+                </div>
+              </div>
+            )}
+            <div className="aura-sample-data-table">
+              <div className="aura-sample-data-row header">
+                {content.sampleData.columns.map((col, i) => (
+                  <span key={i}>{col}</span>
                 ))}
               </div>
-              <div className="aura-dataset-schema-row types">
-                {content.datasetCard.schema.map((col, i) => (
-                  <span key={i}>{col.type}</span>
-                ))}
-              </div>
+              {content.sampleData.rows.map((row, i) => (
+                <div key={i} className="aura-sample-data-row">
+                  {row.map((cell, j) => (
+                    <span key={j}>{cell}</span>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -8588,6 +8880,34 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
           </div>
         )}
 
+        {allDone && content.materializationPlan && (
+          <div className="materialization-card aura-fade-in">
+            <div className="materialization-card-row">
+              <span className="materialization-card-label">Source</span>
+              <code className="materialization-card-value">{content.materializationPlan.source}</code>
+            </div>
+            <div className="materialization-card-row">
+              <span className="materialization-card-label">Section</span>
+              <span className="materialization-card-value">{content.materializationPlan.section.join(', ')}</span>
+            </div>
+            <div className="materialization-card-row">
+              <span className="materialization-card-label">Speed layer</span>
+              <code className="materialization-card-value highlight">{content.materializationPlan.speedLayer}</code>
+            </div>
+          </div>
+        )}
+
+        {allDone && content.queryExamples && (
+          <div className="query-examples aura-fade-in">
+            <p className="query-examples-intro">{content.queryExamples.intro}</p>
+            <ul className="query-examples-list">
+              {content.queryExamples.queries.map((q, i) => (
+                <li key={i}>{q}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {allDone && content.optimizedStructure && (
           <div className="aura-optimized-structure aura-fade-in">
             {content.optimizedStructure.layers.map((layer, i) => (
@@ -8616,20 +8936,9 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                 ))}
               </div>
             )}
-            {content.speedLayerComplete.benefits && (
-              <ul className="aura-complete-benefits">
-                {content.speedLayerComplete.benefits.map((b, i) => (
-                  <li key={i}>
-                    <IconFA name="check" size={12} />
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
+            {content.speedLayerComplete.routingNote && (
+              <p className="aura-complete-routing">{content.speedLayerComplete.routingNote}</p>
             )}
-            <div className="aura-complete-routing">
-              <IconFA name="sparkles" size={12} />
-              <span>{content.speedLayerComplete.routingNote}</span>
-            </div>
           </div>
         )}
 
