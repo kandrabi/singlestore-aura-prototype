@@ -1932,14 +1932,15 @@ const POSITIONS_DATA_FLOW = [
     type: 'agent',
     content: {
       progress: true,
+      thinkingLabel: 'Searching data sources',
       text: 'Looking for positions data you have access to...',
       steps: [
-        '✓ Scanning connected data sources',
-        '✓ Analyzing schema patterns',
-        '→ Identifying primary dataset'
+        'Scanning connected data sources',
+        'Analyzing schema patterns',
+        'Identifying primary dataset'
       ],
       completedState: {
-        text: 'Found a match.',
+        text: 'Found a match',
         subtext: ''
       }
     }
@@ -2041,14 +2042,15 @@ const POSITIONS_DATA_FLOW = [
     type: 'agent',
     content: {
       progress: true,
+      thinkingLabel: 'Building speed layer',
       text: 'Setting up your speed layer...',
       steps: [
-        '✓ Creating base tables',
-        '✓ Loading initial data',
-        '→ Configuring real-time sync'
+        'Creating base tables',
+        'Loading initial data',
+        'Configuring real-time sync'
       ],
       completedState: {
-        text: 'Speed layer is ready.',
+        text: 'Speed layer is ready',
         subtext: ''
       }
     }
@@ -4885,31 +4887,38 @@ function PortalView({
       <div className="portal-view portal-view-conversation">
         <div className="portal-conversation-area">
           <div className="portal-chat-messages">
-            {auraPanelMessages.map((message, index) => (
-              <Message
-                key={message.id}
-                message={message}
-                onAction={onAction}
-                expandedQueries={true}
-                setExpandedQueries={() => {}}
-                expandedOptions={true}
-                setExpandedOptions={() => {}}
-                isTyping={index === auraPanelMessages.length - 1 && message.type === 'agent' && !message.typingComplete}
-                onTypingComplete={() => {
-                  message.typingComplete = true
-                }}
-                agentName={message.agentName || flowAgentName}
-                compact={true}
-                onNavigate={onNavigate}
-              />
-            ))}
+            {auraPanelMessages.map((message, index) => {
+              const prevMessage = index > 0 ? auraPanelMessages[index - 1] : null
+              const hideHeader = message.type === 'agent' && prevMessage?.type === 'agent'
+              return (
+                <Message
+                  key={message.id}
+                  message={message}
+                  onAction={onAction}
+                  expandedQueries={true}
+                  setExpandedQueries={() => {}}
+                  expandedOptions={true}
+                  setExpandedOptions={() => {}}
+                  isTyping={index === auraPanelMessages.length - 1 && message.type === 'agent' && !message.typingComplete}
+                  onTypingComplete={() => {
+                    message.typingComplete = true
+                  }}
+                  agentName={message.agentName || flowAgentName}
+                  compact={true}
+                  onNavigate={onNavigate}
+                  hideHeader={hideHeader}
+                />
+              )
+            })}
             {isAuraTyping && (
-              <div className="message">
-                <div className="message-header">
-                  <span className="message-sender">{flowAgentName}</span>
-                  <span className="dot" />
-                  <span className="message-time">{formatTime(new Date())}</span>
-                </div>
+              <div className={`message ${auraPanelMessages.length > 0 && auraPanelMessages[auraPanelMessages.length - 1]?.type === 'agent' ? 'no-header' : ''}`}>
+                {!(auraPanelMessages.length > 0 && auraPanelMessages[auraPanelMessages.length - 1]?.type === 'agent') && (
+                  <div className="message-header">
+                    <span className="message-sender">{flowAgentName}</span>
+                    <span className="dot" />
+                    <span className="message-time">{formatTime(new Date())}</span>
+                  </div>
+                )}
                 <div className="typing-indicator">
                   <div className="typing-dot" />
                   <div className="typing-dot" />
@@ -5024,30 +5033,37 @@ function ChatView({ messages, inputValue, setInputValue, isTyping, onAction, exp
   return (
     <div className="chat-view">
       <div className="chat-messages">
-        {messages.map((message, index) => (
-          <Message
-            key={message.id}
-            message={message}
-            onAction={onAction}
-            expandedQueries={expandedQueries}
-            setExpandedQueries={setExpandedQueries}
-            expandedOptions={expandedOptions}
-            setExpandedOptions={setExpandedOptions}
-            isTyping={index === messages.length - 1 && message.type === 'agent' && !message.typingComplete}
-            onTypingComplete={() => {
-              message.typingComplete = true
-            }}
-            agentName={agentName}
-            onNavigate={onNavigate}
-          />
-        ))}
+        {messages.map((message, index) => {
+          const prevMessage = index > 0 ? messages[index - 1] : null
+          const hideHeader = message.type === 'agent' && prevMessage?.type === 'agent'
+          return (
+            <Message
+              key={message.id}
+              message={message}
+              onAction={onAction}
+              expandedQueries={expandedQueries}
+              setExpandedQueries={setExpandedQueries}
+              expandedOptions={expandedOptions}
+              setExpandedOptions={setExpandedOptions}
+              isTyping={index === messages.length - 1 && message.type === 'agent' && !message.typingComplete}
+              onTypingComplete={() => {
+                message.typingComplete = true
+              }}
+              agentName={agentName}
+              onNavigate={onNavigate}
+              hideHeader={hideHeader}
+            />
+          )
+        })}
         {isTyping && (
-          <div className="message">
-            <div className="message-header">
-              <span className="message-sender">{agentName}</span>
-              <span className="dot" />
-              <span className="message-time">{formatTime(new Date())}</span>
-            </div>
+          <div className={`message ${messages.length > 0 && messages[messages.length - 1]?.type === 'agent' ? 'no-header' : ''}`}>
+            {!(messages.length > 0 && messages[messages.length - 1]?.type === 'agent') && (
+              <div className="message-header">
+                <span className="message-sender">{agentName}</span>
+                <span className="dot" />
+                <span className="message-time">{formatTime(new Date())}</span>
+              </div>
+            )}
             <div className="typing-indicator">
               <div className="typing-dot" />
               <div className="typing-dot" />
@@ -5154,7 +5170,7 @@ function AnimatedResizeProgress({ resizeProgress }) {
   )
 }
 
-function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete, agentName = 'Aura Agent', compact = false, onAdvanceSilently, onNavigate }) {
+function Message({ message, onAction, expandedQueries, setExpandedQueries, expandedOptions, setExpandedOptions, isTyping, onTypingComplete, agentName = 'Aura Agent', compact = false, onAdvanceSilently, onNavigate, hideHeader = false }) {
   // Only treat text as items if it's an array (not a string)
   const textItems = message.type === 'agent' && Array.isArray(message.content?.text) ? message.content.text : []
   const analysisTextItems = message.type === 'agent' && Array.isArray(message.content?.analysisText) ? message.content.analysisText : []
@@ -5363,12 +5379,14 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
   }
 
   return (
-    <div className="message">
-      <div className="message-header">
-        <span className="message-sender">{agentName}</span>
-        <span className="dot" />
-        <span className="message-time">{timeDisplay}</span>
-      </div>
+    <div className={`message ${hideHeader ? 'no-header' : ''}`}>
+      {!hideHeader && (
+        <div className="message-header">
+          <span className="message-sender">{agentName}</span>
+          <span className="dot" />
+          <span className="message-time">{timeDisplay}</span>
+        </div>
+      )}
       <div className="message-content">
         {content.text && Array.isArray(content.text) && content.text.map((t, i) => renderTextContent(t, i))}
 
@@ -7814,112 +7832,138 @@ function AgentMessageContent({ message, isTyped, renderMigrationMessage, onTypin
   return renderMigrationMessage(message, isTyped, typingState)
 }
 
-function AnimatedProgressCard({ content }) {
-  // Only skip animation if content.completed is already true in the data
-  const [isCompleted, setIsCompleted] = useState(content.completed === true)
-  const [currentStepIndex, setCurrentStepIndex] = useState(content.completed ? (content.steps?.length || 0) : -1)
-  const [hasAnimated, setHasAnimated] = useState(false)
+function ThinkingBlock({ content, isExpanded: controlledExpanded, onToggle }) {
+  // States: 'thinking' | 'streaming' | 'completed'
+  const [phase, setPhase] = useState(content.completed ? 'completed' : 'thinking')
+  const [visibleStepCount, setVisibleStepCount] = useState(content.completed ? (content.steps?.length || 0) : 0)
+  const [isExpanded, setIsExpanded] = useState(controlledExpanded ?? false)
+  const [hasStarted, setHasStarted] = useState(false)
   const steps = content.steps || []
   const hasSteps = steps.length > 0
   
-  // Sync with external completed state changes
+  // Sync with external completed state
   useEffect(() => {
-    if (content.completed && !isCompleted) {
-      setIsCompleted(true)
-      setCurrentStepIndex(steps.length)
+    if (content.completed && phase !== 'completed') {
+      setPhase('completed')
+      setVisibleStepCount(steps.length)
     }
-  }, [content.completed, isCompleted, steps.length])
+  }, [content.completed, phase, steps.length])
   
-  // Run animation on mount (only once)
+  // Phase 1: THINKING (2-3 seconds of "Thinking...")
   useEffect(() => {
-    if (hasAnimated || content.completed) return
-    setHasAnimated(true)
+    if (hasStarted || content.completed) return
+    setHasStarted(true)
     
-    if (hasSteps) {
-      // Start showing steps after a short delay
-      const initialDelay = setTimeout(() => {
-        setCurrentStepIndex(0)
-      }, 800)
-      
-      return () => clearTimeout(initialDelay)
-    } else {
-      // No steps - just complete after delay (for simple progress like MCP connection)
-      const timer = setTimeout(() => {
-        setIsCompleted(true)
-      }, 2500)
-      
-      return () => clearTimeout(timer)
-    }
-  }, [hasAnimated, content.completed, hasSteps])
+    const thinkingDuration = 2000 + Math.random() * 1000 // 2-3 seconds
+    const thinkingTimer = setTimeout(() => {
+      if (hasSteps) {
+        setPhase('streaming')
+        setVisibleStepCount(1) // Show first step
+      } else {
+        setPhase('completed')
+      }
+    }, thinkingDuration)
+    
+    return () => clearTimeout(thinkingTimer)
+  }, [hasStarted, content.completed, hasSteps])
   
-  // Progress through steps
+  // Phase 2: STREAMING STEPS (one by one, 600-800ms each)
   useEffect(() => {
-    if (content.completed || !hasSteps || currentStepIndex < 0) return
+    if (phase !== 'streaming' || !hasSteps) return
     
-    if (currentStepIndex < steps.length) {
+    if (visibleStepCount < steps.length) {
+      const stepDelay = 600 + Math.random() * 200 // 600-800ms
       const stepTimer = setTimeout(() => {
-        setCurrentStepIndex(prev => prev + 1)
-      }, 700) // 700ms per step
-      
+        setVisibleStepCount(prev => prev + 1)
+      }, stepDelay)
       return () => clearTimeout(stepTimer)
-    } else if (currentStepIndex >= steps.length) {
-      // All steps done, mark as completed
+    } else {
+      // All steps shown, transition to completed after brief pause
       const completeTimer = setTimeout(() => {
-        setIsCompleted(true)
+        setPhase('completed')
       }, 400)
-      
       return () => clearTimeout(completeTimer)
     }
-  }, [currentStepIndex, steps.length, hasSteps, content.completed])
+  }, [phase, visibleStepCount, steps.length, hasSteps])
   
-  const allStepsDone = currentStepIndex >= steps.length
+  const handleToggle = () => {
+    if (phase !== 'completed') return // Only toggle when completed
+    const newState = !isExpanded
+    setIsExpanded(newState)
+    onToggle?.(newState)
+  }
   
-  return (
-    <div className={`aura-progress-card aura-fade-in ${isCompleted ? 'completed' : ''}`}>
-      <div className="aura-progress-content">
-        <div className="aura-progress-icon">
-          {isCompleted ? (
-            <span className="aura-progress-check">✓</span>
-          ) : (
-            <SpinnerIcon />
-          )}
+  // Render based on phase
+  if (phase === 'thinking') {
+    return (
+      <div className="thinking-block thinking">
+        <div className="thinking-block-pulse">
+          <span className="thinking-text">Thinking</span>
+          <span className="thinking-dots">
+            <span className="dot">.</span>
+            <span className="dot">.</span>
+            <span className="dot">.</span>
+          </span>
         </div>
-        <span className={`aura-progress-text ${isCompleted ? 'success' : ''}`}>
-          {isCompleted && content.completedState ? content.completedState.text : content.text}
-        </span>
       </div>
-      {isCompleted && content.completedState?.subtext && (
-        <span className="aura-progress-subtext">{content.completedState.subtext}</span>
-      )}
-      {!isCompleted && content.url && <span className="aura-progress-url">{content.url}</span>}
-      {hasSteps && (
-        <div className="aura-progress-steps">
-          {steps.map((step, i) => {
-            const isStepVisible = i <= currentStepIndex
-            const isStepComplete = i < currentStepIndex || allStepsDone
-            const isStepActive = i === currentStepIndex && !allStepsDone
-            
-            if (!isStepVisible) return null
-            
-            // Remove the checkmark from the step text if present, we'll add our own indicator
-            const stepText = step.replace(/^✓\s*/, '')
-            
+    )
+  }
+  
+  if (phase === 'streaming') {
+    return (
+      <div className="thinking-block streaming">
+        <div className="thinking-block-steps streaming">
+          {steps.slice(0, visibleStepCount).map((step, i) => {
+            const stepText = step.replace(/^[✓→]\s*/, '').replace(/^→\s*/, '')
+            const isLatest = i === visibleStepCount - 1
             return (
               <div 
                 key={i} 
-                className={`aura-progress-step-animated ${isStepComplete ? 'completed' : ''} ${isStepActive ? 'active' : ''}`}
+                className={`thinking-block-step visible ${isLatest ? 'latest' : ''}`}
               >
-                <span className="aura-step-indicator">
-                  {isStepComplete ? '✓' : <SpinnerIcon size={12} />}
-                </span>
-                <span className="aura-step-text">{stepText}</span>
+                <span className="thinking-block-step-icon">✓</span>
+                <span className="thinking-block-step-text">{stepText}</span>
               </div>
             )
           })}
         </div>
-      )}
+      </div>
+    )
+  }
+  
+  // Phase: COMPLETED
+  return (
+    <div className={`thinking-block completed ${isExpanded ? 'expanded' : ''}`}>
+      <button className="thinking-block-toggle" onClick={handleToggle}>
+        <span className="thinking-block-text">
+          Show {steps.length} step{steps.length !== 1 ? 's' : ''}
+        </span>
+        <span className={`thinking-block-chevron ${isExpanded ? 'expanded' : ''}`}>
+          <IconFA name="chevron-right" size={10} />
+        </span>
+      </button>
+      
+      <div className={`thinking-block-steps-container ${isExpanded ? 'expanded' : ''}`}>
+        {hasSteps && (
+          <div className="thinking-block-steps">
+            {steps.map((step, i) => {
+              const stepText = step.replace(/^[✓→]\s*/, '').replace(/^→\s*/, '')
+              return (
+                <div key={i} className="thinking-block-step completed">
+                  <span className="thinking-block-step-icon">✓</span>
+                  <span className="thinking-block-step-text">{stepText}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
+}
+
+function AnimatedProgressCard({ content }) {
+  return <ThinkingBlock content={content} />
 }
 
 // ============================================
@@ -9475,33 +9519,40 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
           </div>
         ) : (
           <div className="aura-panel-messages">
-            {messages.map((message, index) => (
-              <Message
-                key={message.id}
-                message={message}
-                onAction={handleAction}
-                expandedQueries={true}
-                setExpandedQueries={() => {}}
-                expandedOptions={true}
-                setExpandedOptions={() => {}}
-                isTyping={index === messages.length - 1 && message.type === 'agent' && !message.typingComplete}
-                onTypingComplete={() => {
-                  message.typingComplete = true
-                  markAsTyped(message.id)
-                }}
-                agentName={message.agentName || agentName}
-                compact={true}
-                onAdvanceSilently={onAdvanceSilently}
-                onNavigate={onNavigate}
-              />
-            ))}
+            {messages.map((message, index) => {
+              const prevMessage = index > 0 ? messages[index - 1] : null
+              const hideHeader = message.type === 'agent' && prevMessage?.type === 'agent'
+              return (
+                <Message
+                  key={message.id}
+                  message={message}
+                  onAction={handleAction}
+                  expandedQueries={true}
+                  setExpandedQueries={() => {}}
+                  expandedOptions={true}
+                  setExpandedOptions={() => {}}
+                  isTyping={index === messages.length - 1 && message.type === 'agent' && !message.typingComplete}
+                  onTypingComplete={() => {
+                    message.typingComplete = true
+                    markAsTyped(message.id)
+                  }}
+                  agentName={message.agentName || agentName}
+                  compact={true}
+                  onAdvanceSilently={onAdvanceSilently}
+                  onNavigate={onNavigate}
+                  hideHeader={hideHeader}
+                />
+              )
+            })}
             {isTyping && (
-              <div className="message">
-                <div className="message-header">
-                  <span className="message-sender">{agentName}</span>
-                  <span className="dot" />
-                  <span className="message-time">{formatTime(new Date())}</span>
-                </div>
+              <div className={`message ${messages.length > 0 && messages[messages.length - 1]?.type === 'agent' ? 'no-header' : ''}`}>
+                {!(messages.length > 0 && messages[messages.length - 1]?.type === 'agent') && (
+                  <div className="message-header">
+                    <span className="message-sender">{agentName}</span>
+                    <span className="dot" />
+                    <span className="message-time">{formatTime(new Date())}</span>
+                  </div>
+                )}
                 <div className="typing-indicator">
                   <div className="typing-dot" />
                   <div className="typing-dot" />

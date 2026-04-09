@@ -1550,6 +1550,10 @@ body {
   align-items: flex-end;
 }
 
+.message.no-header {
+  margin-top: -4px;
+}
+
 .message-header {
   display: flex;
   align-items: center;
@@ -4411,6 +4415,180 @@ body {
   padding-left: 8px;
 }
 
+/* ============================================
+   THINKING BLOCK - Progressive Reasoning UI
+   3 States: THINKING → STREAMING → COMPLETED
+   ============================================ */
+
+.thinking-block {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ----------------------------------------
+   STATE 1: THINKING (pulsing animation)
+   ---------------------------------------- */
+.thinking-block.thinking {
+  padding: 0;
+}
+
+.thinking-block-pulse {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.thinking-text {
+  animation: thinking-fade 1.5s ease-in-out infinite;
+}
+
+@keyframes thinking-fade {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.thinking-dots {
+  display: inline-flex;
+  margin-left: 1px;
+}
+
+.thinking-dots .dot {
+  animation: dot-pulse 1.4s ease-in-out infinite;
+  opacity: 0.3;
+}
+
+.thinking-dots .dot:nth-child(1) { animation-delay: 0s; }
+.thinking-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots .dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dot-pulse {
+  0%, 80%, 100% { opacity: 0.3; }
+  40% { opacity: 1; }
+}
+
+/* ----------------------------------------
+   STATE 2: STREAMING (progressive reveal)
+   ---------------------------------------- */
+.thinking-block.streaming {
+  padding: 0;
+}
+
+.thinking-block-steps.streaming {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.thinking-block-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #6b7280;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: step-appear 0.3s ease-out forwards;
+}
+
+@keyframes step-appear {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.thinking-block-step.latest {
+  color: #374151;
+}
+
+.thinking-block-step-icon {
+  font-size: 11px;
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.thinking-block-step-text {
+  font-size: 13px;
+}
+
+/* ----------------------------------------
+   STATE 3: COMPLETED (collapsible summary)
+   ---------------------------------------- */
+.thinking-block.completed {
+  padding: 0;
+}
+
+.thinking-block-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: #6b7280;
+  transition: color 0.15s ease;
+}
+
+.thinking-block-toggle:hover {
+  color: #374151;
+}
+
+.thinking-block-text {
+  font-weight: 400;
+}
+
+.thinking-block-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  transition: transform 0.2s ease;
+}
+
+.thinking-block-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+/* Expandable container with smooth height animation */
+.thinking-block-steps-container {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+  overflow: hidden;
+}
+
+.thinking-block-steps-container.expanded {
+  grid-template-rows: 1fr;
+}
+
+.thinking-block-steps-container > .thinking-block-steps {
+  min-height: 0;
+}
+
+/* Steps in completed state */
+.thinking-block.completed .thinking-block-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  padding-left: 2px;
+}
+
+.thinking-block.completed .thinking-block-step {
+  opacity: 1;
+  transform: none;
+  animation: none;
+  color: #6b7280;
+}
+
+.thinking-block.completed .thinking-block-step-icon {
+  color: #10b981;
+}
+
+/* Legacy support - keep old classes working */
 .aura-progress-card {
   background: var(--color-bg-surface-2);
   border: 1px solid var(--color-border);
