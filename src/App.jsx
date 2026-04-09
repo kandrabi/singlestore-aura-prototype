@@ -1484,9 +1484,9 @@ const LAKEHOUSE_CHAT_FLOW = [
         datasetName: 'analytics_prod',
         tables: 2400,
         totalDataSize: '~3.2 TB',
-        speedLayerSize: '~1.6 TB',
+        speedLayerSize: '~800 GB',
         selectedHistory: '6 months',
-        dataReduction: 'Reducing dataset from ~3.2 TB → ~1.6 TB based on 6 months history',
+        dataReduction: 'Reducing dataset from ~3.2 TB → ~800 GB based on 6 months history',
         options: [
           { id: 'auto-schema', label: 'Enable automatic schema updates', defaultChecked: true, description: 'Automatically detect and apply schema changes from source' }
         ]
@@ -1519,10 +1519,10 @@ const LAKEHOUSE_CHAT_FLOW = [
         { type: 'text', content: "Based on your dataset and history window, here's the recommended configuration:" }
       ],
       workspaceRecommendation: {
-        size: 'S-4',
-        sizeMemory: '256 GB',
+        size: 'S-2',
+        sizeMemory: '128 GB',
         totalDataSize: '~3.2 TB',
-        speedLayerSize: '~1.6 TB',
+        speedLayerSize: '~800 GB',
         tables: 2400,
         history: '6 months',
         justification: 'Recommended based on estimated speed layer size and expected query workload'
@@ -1544,9 +1544,9 @@ const LAKEHOUSE_CHAT_FLOW = [
             id: 'existing', 
             label: 'Existing workspace', 
             subOptions: [
-              { id: 'analytics-optimized', name: 'analytics-optimized', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-4', sizeMemory: '256 GB', recommended: true },
-              { id: 'prod-analytics', name: 'prod-analytics', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-2', sizeMemory: '128 GB', sizeNote: 'Below recommended' },
-              { id: 'workspace-2', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-1', sizeMemory: '64 GB', sizeNote: 'Below recommended' }
+              { id: 'analytics-optimized', name: 'analytics-optimized', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-2', sizeMemory: '128 GB', recommended: true },
+              { id: 'prod-analytics', name: 'prod-analytics', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-1', sizeMemory: '64 GB', sizeNote: 'Below recommended' },
+              { id: 'workspace-2', name: 'Workspace-2', group: 'Group 1', env: 'Prod', project: 'Acme', projectType: 'Standard', cloudRegion: 'AWS • US East', status: 'active', size: 'S-0', sizeMemory: '32 GB', sizeNote: 'Below recommended' }
             ]
           },
           { id: 'new', label: 'Create new workspace' }
@@ -2534,17 +2534,15 @@ function App() {
       const historyValue = selectedLakehouseHistoryRef.current
       if (message.content?.workspaceRecommendation?.history) {
         message.content.workspaceRecommendation.history = historyValue
-        // Proportional data reduction based on history window (total dataset ~3.2 TB = 3200 GB)
-        // Data reduction: 1 month = ~8%, 3 months = ~25%, 6 months = ~50%, 1 year = ~85%, 2 years = 100%
+        // Total dataset = ~3.2 TB representing 2 years of data
+        // Proportional: 1mo=1/24, 3mo=3/24, 6mo=6/24, 1yr=12/24, 2yr=24/24
         // Workspace sizing: memory ≈ 10-20% of selected data size
-        // Mapping: ≤200GB→S-1, 200-800GB→S-2, 800GB-2TB→S-4, 2-4TB→S-8, 4-8TB→S-16
-        const totalDataGB = 3200 // 3.2 TB
         const historyScaling = {
-          'Last 1 month': { dataPercent: 0.08, speedLayerSize: '~260 GB', size: 'S-2', sizeMemory: '128 GB' },
-          'Last 3 months': { dataPercent: 0.22, speedLayerSize: '~720 GB', size: 'S-2', sizeMemory: '128 GB' },
-          'Last 6 months': { dataPercent: 0.50, speedLayerSize: '~1.6 TB', size: 'S-4', sizeMemory: '256 GB' },
-          'Last 1 year': { dataPercent: 0.85, speedLayerSize: '~2.7 TB', size: 'S-8', sizeMemory: '512 GB' },
-          'Last 2 years': { dataPercent: 1.00, speedLayerSize: '~3.2 TB', size: 'S-8', sizeMemory: '512 GB' }
+          'Last 1 month': { speedLayerSize: '~130 GB', size: 'S-1', sizeMemory: '64 GB' },
+          'Last 3 months': { speedLayerSize: '~400 GB', size: 'S-2', sizeMemory: '128 GB' },
+          'Last 6 months': { speedLayerSize: '~800 GB', size: 'S-2', sizeMemory: '128 GB' },
+          'Last 1 year': { speedLayerSize: '~1.6 TB', size: 'S-4', sizeMemory: '256 GB' },
+          'Last 2 years': { speedLayerSize: '~3.2 TB', size: 'S-8', sizeMemory: '512 GB' }
         }
         const scaling = historyScaling[historyValue] || historyScaling['Last 6 months']
         message.content.workspaceRecommendation.size = scaling.size
@@ -2563,12 +2561,14 @@ function App() {
         )
       }
       // Update speedLayerConfig based on selected history
+      // Total dataset = ~3.2 TB representing 2 years of data
+      // Proportional: 1mo=1/24, 3mo=3/24, 6mo=6/24, 1yr=12/24, 2yr=24/24
       if (message.content?.speedLayerConfig) {
         const historyScaling = {
-          'Last 1 month': { speedLayerSize: '~260 GB', selectedHistory: '1 month' },
-          'Last 3 months': { speedLayerSize: '~720 GB', selectedHistory: '3 months' },
-          'Last 6 months': { speedLayerSize: '~1.6 TB', selectedHistory: '6 months' },
-          'Last 1 year': { speedLayerSize: '~2.7 TB', selectedHistory: '1 year' },
+          'Last 1 month': { speedLayerSize: '~130 GB', selectedHistory: '1 month' },
+          'Last 3 months': { speedLayerSize: '~400 GB', selectedHistory: '3 months' },
+          'Last 6 months': { speedLayerSize: '~800 GB', selectedHistory: '6 months' },
+          'Last 1 year': { speedLayerSize: '~1.6 TB', selectedHistory: '1 year' },
           'Last 2 years': { speedLayerSize: '~3.2 TB', selectedHistory: '2 years' }
         }
         const scaling = historyScaling[historyValue] || historyScaling['Last 6 months']
