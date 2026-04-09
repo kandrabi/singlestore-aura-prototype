@@ -1698,35 +1698,49 @@ const LAKEHOUSE_CHAT_FLOW = [
     type: 'agent',
     content: {
       progress: true,
-      text: 'Transferring to Analyst agent...',
+      text: 'Transferring to Analyst Agent...',
       steps: [
-        '✓ Preparing query environment...',
-        '✓ Attaching speed layer data...',
-        '→ Creating domain context...'
+        '→ Handing off context to Analyst Agent...'
       ],
       autoAdvance: true
     }
   },
-  // Scene 25: Analyst Agent greeting with pre-filled domain
+  // Scene 25: Analyst Agent greeting
   {
     type: 'agent',
     agentName: 'Analyst Agent',
     content: {
       text: [
-        { type: 'text', content: "I've prepared your data for analysis. Let's create a domain." },
-        { type: 'helper', content: 'Using your newly created workspace for analysis.' }
+        { type: 'text', content: "I'll help you create a domain from your speed layer." },
+        { type: 'helper', content: 'A domain groups your tables and enables SQL querying. Review the configuration below.' }
       ],
       domainForm: {
         name: 'Sales Analytics',
         description: 'Real-time analytics on analytics_prod from your speed layer',
-        connection: 'analytics-optimized',
-        tables: 24,
+        workspace: 'analytics-optimized',
+        dataset: 'analytics_prod',
+        tables: 2400,
         tablesList: ['customer_events', 'orders', 'transactions', 'user_sessions']
       },
-      actions: ['Create Domain', 'Customize']
+      actions: ['Create Domain', 'Edit settings', 'Cancel']
     }
   },
-  // Scene 26: Domain created success
+  // Scene 26: Domain creation in progress
+  {
+    type: 'agent',
+    agentName: 'Analyst Agent',
+    content: {
+      progress: true,
+      text: 'Creating domain...',
+      steps: [
+        '→ Configuring domain schema...',
+        '→ Connecting tables...',
+        '→ Validating configuration...'
+      ],
+      autoAdvance: true
+    }
+  },
+  // Scene 27: Domain created success
   {
     type: 'agent',
     agentName: 'Analyst Agent',
@@ -1737,7 +1751,8 @@ const LAKEHOUSE_CHAT_FLOW = [
       speedLayerStats: {
         stats: [
           { label: 'Domain:', value: 'Sales Analytics', success: true },
-          { label: 'Tables:', value: '24 connected', success: true },
+          { label: 'Dataset:', value: 'analytics_prod', success: true },
+          { label: 'Tables:', value: '2,400 connected', success: true },
           { label: 'Status:', value: 'Ready', success: true }
         ]
       },
@@ -2547,6 +2562,20 @@ function App() {
           stat.label === 'Data history:' ? { ...stat, value: historyValue } : stat
         )
       }
+      // Update speedLayerConfig based on selected history
+      if (message.content?.speedLayerConfig) {
+        const historyScaling = {
+          'Last 1 month': { speedLayerSize: '~260 GB', selectedHistory: '1 month' },
+          'Last 3 months': { speedLayerSize: '~720 GB', selectedHistory: '3 months' },
+          'Last 6 months': { speedLayerSize: '~1.6 TB', selectedHistory: '6 months' },
+          'Last 1 year': { speedLayerSize: '~2.7 TB', selectedHistory: '1 year' },
+          'Last 2 years': { speedLayerSize: '~3.2 TB', selectedHistory: '2 years' }
+        }
+        const scaling = historyScaling[historyValue] || historyScaling['Last 6 months']
+        message.content.speedLayerConfig.selectedHistory = scaling.selectedHistory
+        message.content.speedLayerConfig.speedLayerSize = scaling.speedLayerSize
+        message.content.speedLayerConfig.dataReduction = `Reducing dataset from ~3.2 TB → ${scaling.speedLayerSize} based on ${scaling.selectedHistory} history`
+      }
       
       // Add new speed layer to table when success message is shown (Scene 15, index 14)
       if (index === 14 && message.content?.success && message.content?.title?.includes('Speed layer successfully created')) {
@@ -2930,6 +2959,28 @@ function App() {
         // Jump to status view scene (Scene 20, index 19)
         setLakehouseFlowIndex(20)
         setTimeout(() => addNextLakehouseMessage(19), 500)
+      } else if (actionText === 'Create Domain') {
+        // User confirmed - advance to domain creation progress (Scene 26, index 25)
+        setTimeout(() => addNextLakehouseMessage(25), 500)
+      } else if (actionText === 'Cancel' || actionText === 'Edit settings') {
+        // User cancelled or wants to edit - stay on current scene, just acknowledge
+        setIsAuraTyping(true)
+        setTimeout(() => {
+          setIsAuraTyping(false)
+          const response = {
+            type: 'agent',
+            agentName: 'Analyst Agent',
+            id: Date.now(),
+            timestamp: new Date(),
+            content: {
+              text: [
+                { type: 'text', content: actionText === 'Cancel' ? "No problem. Let me know when you'd like to create a domain." : "You can modify the domain settings. Let me know when you're ready." }
+              ],
+              actions: actionText === 'Cancel' ? ['Create Domain later'] : ['Create Domain', 'Cancel']
+            }
+          }
+          setAuraPanelMessages(prev => [...prev, response])
+        }, 500)
       } else {
         setTimeout(() => addNextLakehouseMessage(lakehouseFlowIndex), 500)
       }
@@ -7155,21 +7206,29 @@ function Message({ message, onAction, expandedQueries, setExpandedQueries, expan
                 <span className="aura-domain-form-label">Description</span>
                 <span className="aura-domain-form-value">{content.domainForm.description}</span>
               </div>
-              <div className="aura-domain-form-row">
-                <span className="aura-domain-form-label">Connection</span>
-                <span className="aura-domain-form-value highlight">{content.domainForm.connection}</span>
-              </div>
+              {content.domainForm.dataset && (
+                <div className="aura-domain-form-row">
+                  <span className="aura-domain-form-label">Dataset</span>
+                  <span className="aura-domain-form-value highlight">{content.domainForm.dataset}</span>
+                </div>
+              )}
+              {(content.domainForm.workspace || content.domainForm.connection) && (
+                <div className="aura-domain-form-row">
+                  <span className="aura-domain-form-label">Workspace</span>
+                  <span className="aura-domain-form-value highlight">{content.domainForm.workspace || content.domainForm.connection}</span>
+                </div>
+              )}
               <div className="aura-domain-form-row">
                 <span className="aura-domain-form-label">Tables</span>
-                <span className="aura-domain-form-value">{content.domainForm.tables} tables selected</span>
+                <span className="aura-domain-form-value">{content.domainForm.tables?.toLocaleString()} tables connected</span>
               </div>
               {content.domainForm.tablesList && (
                 <div className="aura-domain-form-tables">
-                  {content.domainForm.tablesList.map((table, i) => (
+                  {content.domainForm.tablesList.slice(0, 4).map((table, i) => (
                     <span key={i} className="aura-domain-table-tag">{table}</span>
                   ))}
-                  {content.domainForm.tables > content.domainForm.tablesList.length && (
-                    <span className="aura-domain-table-more">+{content.domainForm.tables - content.domainForm.tablesList.length} more</span>
+                  {content.domainForm.tables > 4 && (
+                    <span className="aura-domain-table-more">+{(content.domainForm.tables - 4).toLocaleString()} more</span>
                   )}
                 </div>
               )}
@@ -9633,21 +9692,29 @@ function AuraSidePanel({ isOpen, isFullscreen, sidebarExpanded, width, onClose, 
                 <span className="aura-domain-form-label">Description</span>
                 <span className="aura-domain-form-value">{content.domainForm.description}</span>
               </div>
-              <div className="aura-domain-form-row">
-                <span className="aura-domain-form-label">Connection</span>
-                <span className="aura-domain-form-value highlight">{content.domainForm.connection}</span>
-              </div>
+              {content.domainForm.dataset && (
+                <div className="aura-domain-form-row">
+                  <span className="aura-domain-form-label">Dataset</span>
+                  <span className="aura-domain-form-value highlight">{content.domainForm.dataset}</span>
+                </div>
+              )}
+              {(content.domainForm.workspace || content.domainForm.connection) && (
+                <div className="aura-domain-form-row">
+                  <span className="aura-domain-form-label">Workspace</span>
+                  <span className="aura-domain-form-value highlight">{content.domainForm.workspace || content.domainForm.connection}</span>
+                </div>
+              )}
               <div className="aura-domain-form-row">
                 <span className="aura-domain-form-label">Tables</span>
-                <span className="aura-domain-form-value">{content.domainForm.tables} tables selected</span>
+                <span className="aura-domain-form-value">{content.domainForm.tables?.toLocaleString()} tables connected</span>
               </div>
               {content.domainForm.tablesList && (
                 <div className="aura-domain-form-tables">
-                  {content.domainForm.tablesList.map((table, i) => (
+                  {content.domainForm.tablesList.slice(0, 4).map((table, i) => (
                     <span key={i} className="aura-domain-table-tag">{table}</span>
                   ))}
-                  {content.domainForm.tables > content.domainForm.tablesList.length && (
-                    <span className="aura-domain-table-more">+{content.domainForm.tables - content.domainForm.tablesList.length} more</span>
+                  {content.domainForm.tables > 4 && (
+                    <span className="aura-domain-table-more">+{(content.domainForm.tables - 4).toLocaleString()} more</span>
                   )}
                 </div>
               )}
