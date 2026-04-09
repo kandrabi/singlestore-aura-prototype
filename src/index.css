@@ -640,7 +640,7 @@ body {
   padding: 8px 16px;
   background: #ffffff;
   position: relative;
-  z-index: 100;
+  z-index: 1000;
 }
 
 .header-left {
