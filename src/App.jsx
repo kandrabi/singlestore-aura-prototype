@@ -1364,36 +1364,38 @@ const LAKEHOUSE_CHAT_FLOW = [
       }
     }
   },
-  // Scene 5: Discovering datasets (system-driven)
-  {
-    type: 'agent',
-    content: {
-      progress: true,
-      text: 'Identifying available datasets...',
-      steps: [
-        '✓ Scanning data environment...',
-        '✓ Analyzing dataset metadata...',
-        '→ Estimating data volumes...'
-      ],
-      completedState: {
-        text: 'Dataset discovery complete.',
-        subtext: ''
-      }
-    }
-  },
-  // Scene 6: Dataset selection (replaces catalog + database selection)
+  // Scene 5: Catalog selection (restored)
   {
     type: 'agent',
     content: {
       text: [
-        { type: 'text', content: 'I discovered the following datasets from your connection:' }
+        { type: 'text', content: 'I discovered the following Iceberg catalogs from your connection:' }
+      ],
+      catalogSelector: {
+        availableCatalogs: [
+          { id: 'horizon', label: 'Horizon Catalog' },
+          { id: 'polaris', label: 'Polaris Catalog' }
+        ],
+        externalCatalogs: [
+          { id: 'glue', label: 'Glue Catalog' }
+        ]
+      }
+    }
+  },
+  // Scene 6: Database selection (after catalog)
+  {
+    type: 'agent',
+    content: {
+      text: [
+        { type: 'text', content: 'I found the following databases in this catalog:' },
+        { type: 'helper', content: 'These databases are from your connected data source.' }
       ],
       datasetSelector: {
         datasets: [
-          { id: 'analytics_prod', label: 'analytics_prod', tables: 2400, totalDataSize: '~3.2 TB', totalDataBytes: 3200 },
-          { id: 'customer_360', label: 'customer_360', tables: 1850, totalDataSize: '~2.1 TB', totalDataBytes: 2100 },
-          { id: 'sales_data', label: 'sales_data', tables: 920, totalDataSize: '~1.4 TB', totalDataBytes: 1400 },
-          { id: 'raw_events', label: 'raw_events', tables: 580, totalDataSize: '~890 GB', totalDataBytes: 890 }
+          { id: 'analytics_prod', label: 'analytics_prod', tables: 24, totalDataSize: '', totalDataBytes: 0 },
+          { id: 'customer_360', label: 'customer_360', tables: 18, totalDataSize: '', totalDataBytes: 0 },
+          { id: 'sales_data', label: 'sales_data', tables: 12, totalDataSize: '', totalDataBytes: 0 },
+          { id: 'raw_events', label: 'raw_events', tables: 8, totalDataSize: '', totalDataBytes: 0 }
         ]
       }
     }
@@ -2952,6 +2954,37 @@ function App() {
         setSelectedLakehouseHistory('custom range')
         selectedLakehouseHistoryRef.current = 'custom range'
       }
+
+      // Catalog selection step: show DB discovery progress, then continue flow
+      if (actionText === 'Horizon Catalog' || actionText === 'Polaris Catalog' || actionText === 'Glue Catalog') {
+        setIsAuraTyping(true)
+        setTimeout(() => {
+          setIsAuraTyping(false)
+          const progressMsg = {
+            type: 'agent',
+            id: Date.now(),
+            timestamp: new Date(),
+            content: {
+              progress: true,
+              text: 'Database discovery complete.',
+              steps: [
+                '✓ Connecting to catalog...',
+                '→ Loading database metadata...'
+              ],
+              completedState: {
+                text: 'Database discovery complete.',
+                subtext: ''
+              }
+            }
+          }
+          setAuraPanelMessages(prev => [...prev, progressMsg])
+        }, 350)
+
+        // Continue into the existing database list scene
+        setTimeout(() => addNextLakehouseMessage(lakehouseFlowIndex), 1800)
+        return
+      }
+
       // Handle "Open in Analyst" - jump to Analyst handoff scene (Scene 24, array index 21)
       if (actionText === 'Open in Analyst') {
         setLakehouseFlowIndex(22) // Next will be Scene 25 (index 22)
